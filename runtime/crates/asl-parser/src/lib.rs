@@ -25,7 +25,10 @@ impl ParserPort for CommonMarkYamlParser {
         let mut hasher = Sha256::new();
         for line in raw_content.lines() {
             let trimmed = line.trim();
-            if !trimmed.starts_with("digest:") {
+            if !trimmed.starts_with("digest:")
+                && !trimmed.starts_with("signature:")
+                && !trimmed.starts_with("signer_pubkey:")
+            {
                 hasher.update(line.as_bytes());
                 hasher.update(b"\n");
             }
@@ -200,5 +203,44 @@ def run(ctx, input):
         assert!(doc.deterministic_code.contains("def run(ctx, input)"));
         assert!(doc.semantic_section.contains("Instruções Semânticas"));
         assert!(doc.digest.starts_with("asl:sha256:"));
+    }
+
+    #[test]
+    fn test_digest_invariance_with_signature_and_digest_fields() {
+        let raw1 = r#"---
+asl_version: "3.0"
+name: "signed-skill"
+interface:
+  entrypoint: "run"
+---
+# Semantic
+
+```asl
+def run(ctx, input):
+    return {}
+```
+"#;
+
+        let raw2 = r#"---
+asl_version: "3.0"
+name: "signed-skill"
+interface:
+  entrypoint: "run"
+digest: "asl:sha256:dummy"
+signature: "asl:ed25519:dummy_sig"
+signer_pubkey: "asl:ed25519:pub:dummy_pub"
+---
+# Semantic
+
+```asl
+def run(ctx, input):
+    return {}
+```
+"#;
+
+        let parser = CommonMarkYamlParser::new();
+        let doc1 = parser.parse(raw1).unwrap();
+        let doc2 = parser.parse(raw2).unwrap();
+        assert_eq!(doc1.digest, doc2.digest);
     }
 }

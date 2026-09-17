@@ -44,6 +44,10 @@ pub struct SkillManifest {
     pub asl_version: String,
     #[serde(default)]
     pub digest: Option<String>,
+    #[serde(default)]
+    pub signature: Option<String>,
+    #[serde(default)]
+    pub signer_pubkey: Option<String>,
     pub name: String,
     #[serde(default)]
     pub version: Option<String>,

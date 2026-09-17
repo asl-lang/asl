@@ -4,6 +4,8 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
+pub mod crypto;
+
 /// Contexto de segurança puramente em memória (Mock) para testes herméticos rápidos
 pub struct MockSecurityContext {
     virtual_fs: HashMap<String, String>,

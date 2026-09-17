@@ -232,6 +232,8 @@ mod tests {
             manifest: SkillManifest {
                 asl_version: "3.0".to_string(),
                 digest: Some("asl:sha256:test".to_string()),
+                signature: None,
+                signer_pubkey: None,
                 name: "test-tool".to_string(),
                 version: Some("1.0.0".to_string()),
                 description: "A test tool".to_string(),

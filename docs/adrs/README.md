@@ -24,4 +24,5 @@ Utilize a skill `asl-adr` (`skills/asl-adr/SKILL.md`):
 | **[ADR-0003](./0003-aot-grammar-compiler-gbnf-regex.md)** | Compilador AOT de Gramáticas de Amostragem LLM (GBNF / Regex-CFG) | **Concluído** | 2026-09-17 | `asl-core-traits`, `asl-parser`, `asl-cli` |
 | **[ADR-0004](./0004-low-latency-c-abi-ffi.md)** | Interface C-ABI de Baixa Latência In-Process (`libasl` / `asl-ffi`) | **Concluído** | 2026-09-17 | `asl-ffi`, `runtime/Cargo.toml` |
 | **[ADR-0005](./0005-wasm-wasi-engine-adapter.md)** | Adaptador de Motor de Execução WebAssembly / WASI (`asl-vm-wasm`) | **Concluído** | 2026-09-17 | `asl-vm-wasm`, `runtime/Cargo.toml` |
-| **[ADR-0006](./0006-mcp-http-sse-transport.md)** | Transporte MCP Remoto sobre HTTP / Server-Sent Events (SSE) | **Aceito** | 2026-09-17 | `asl-protocol-http`, `asl-cli`, `runtime/Cargo.toml` |
+| **[ADR-0006](./0006-mcp-http-sse-transport.md)** | Transporte MCP Remoto sobre HTTP / Server-Sent Events (SSE) | **Concluído** | 2026-09-17 | `asl-protocol-http`, `asl-cli`, `runtime/Cargo.toml` |
+| **[ADR-0007](./0007-ed25519-skill-signatures.md)** | Assinatura Criptográfica Ed25519 & Cadeia de Custódia de Skills | **Aceito** | 2026-09-17 | `asl-spec`, `asl-security`, `asl-cli` |
