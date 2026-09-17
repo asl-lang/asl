@@ -345,3 +345,35 @@ def audit(ctx, input):
     assert_eq!(res.output["crypto_hash"], "3847599a5741627e350f9af8c561bf6497535001edb3a5f4cfc8281cd9c58c60");
     assert_eq!(res.output["fuel_ok"], true);
 }
+
+#[test]
+fn test_guardrail_shadow_markdown_projection() {
+    let examples_dir = find_examples_dir();
+    let parser = CommonMarkYamlParser::new();
+    let entries = fs::read_dir(&examples_dir).expect("Deve ler examples/");
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) == Some("skill") {
+            let content = fs::read_to_string(&path).unwrap();
+            let doc = parser.parse(&content).unwrap();
+
+            let md_path = path.with_extension("md");
+            assert!(
+                md_path.exists(),
+                "Projeção sombra {:?} deve existir para a skill canônica {:?}",
+                md_path, path
+            );
+
+            let md_content = fs::read_to_string(&md_path).unwrap();
+            assert!(
+                md_content.contains("<!-- ⚡ ASL AUTO-GENERATED SHADOW PROJECTION"),
+                "Sombra {:?} deve conter watermark do ASL", md_path
+            );
+            assert!(
+                md_content.contains(&format!("DIGEST: {}", doc.digest)),
+                "Sombra {:?} deve conter o digest exato da skill canônica", md_path
+            );
+        }
+    }
+}

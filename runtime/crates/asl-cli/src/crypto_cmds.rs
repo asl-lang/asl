@@ -51,8 +51,13 @@ pub fn handle_sign(skill_file: &Path, key: &str, parser: &CommonMarkYamlParser) 
         .with_context(|| "Falha ao derivar a chave pública da chave privada")?;
 
     let updated_content = inject_or_update_frontmatter(&content, &doc.digest, &sig, &pubkey)?;
-    fs::write(skill_file, updated_content)
+    fs::write(skill_file, &updated_content)
         .with_context(|| format!("Falha ao salvar arquivo assinado: {:?}", skill_file))?;
+
+    // Atualiza projeção sombra com nova assinatura e digest (Zero-Touch)
+    if let Ok(signed_doc) = parser.parse(&updated_content) {
+        let _ = asl_parser::project_shadow_markdown(skill_file, &signed_doc);
+    }
 
     println!("✅ Arquivo .skill assinado com sucesso!");
     println!("Arquivo:       {:?}", skill_file);

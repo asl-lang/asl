@@ -32,3 +32,4 @@ Utilize a skill `asl-plan` (`skills/asl-plan/SKILL.md`):
 | **[PLAN-0006](./0006-mcp-http-sse-transport.md)** | Transporte MCP Remoto sobre HTTP / Server-Sent Events (SSE) | [ADR-0006](../adrs/0006-mcp-http-sse-transport.md) | **Concluído** | 3/3 Fases (100%) |
 | **[PLAN-0007](./0007-ed25519-skill-signatures.md)** | Assinatura Criptográfica Ed25519 & Cadeia de Custódia de Skills | [ADR-0007](../adrs/0007-ed25519-skill-signatures.md) | **Concluído** | 4/4 Fases (100%) |
 | **[PLAN-0008](./0008-static-prefix-kv-cache-optimizer.md)** | Otimizador de Prefixo Estático e Analisador de KV-Cache | [ADR-0008](../adrs/0008-static-prefix-kv-cache-optimizer.md) | **Concluído** | 4/4 Fases (100%) |
+| **[PLAN-0009](./0009-automatic-markdown-shadow-projection.md)** | Projeção Sombra Automática de Markdown (Shadow Projection) | [ADR-0009](../adrs/0009-automatic-markdown-shadow-projection.md) | **Concluído** | 4/4 Fases (100%) |

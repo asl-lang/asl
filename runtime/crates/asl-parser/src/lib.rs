@@ -1,8 +1,10 @@
 pub mod grammar;
 pub mod prefix_analyzer;
+pub mod shadow;
 
 pub use grammar::GbnfGrammarCompiler;
 pub use prefix_analyzer::*;
+pub use shadow::*;
 
 use asl_core_traits::ParserPort;
 use asl_spec::{AslError, Result, SkillDocument, SkillManifest};
@@ -48,9 +50,11 @@ impl ParserPort for CommonMarkYamlParser {
         // 3. Parse de Markdown com pulldown-cmark
         let (semantic_section, deterministic_code) = parse_markdown_blocks(&markdown_str)?;
 
-        if deterministic_code.trim().is_empty() {
-            return Err(AslError::MissingDeterministicBlock);
-        }
+        let deterministic_code = if deterministic_code.trim().is_empty() {
+            "def run(ctx, input):\n    return input".to_string()
+        } else {
+            deterministic_code
+        };
 
         Ok(SkillDocument {
             manifest,
@@ -242,5 +246,23 @@ def run(ctx, input):
         let doc1 = parser.parse(raw1).unwrap();
         let doc2 = parser.parse(raw2).unwrap();
         assert_eq!(doc1.digest, doc2.digest);
+    }
+
+    #[test]
+    fn test_pure_semantic_skill_without_code_block() {
+        let raw = r#"---
+asl_version: "3.0"
+name: "pure-prompt"
+interface:
+  entrypoint: "run"
+---
+# Instruções Puras de Prompt
+Você é um redator de documentação técnica.
+"#;
+        let parser = CommonMarkYamlParser::new();
+        let doc = parser.parse(raw).expect("Skill puramente semântica deve ser válida");
+        assert_eq!(doc.manifest.name, "pure-prompt");
+        assert!(doc.deterministic_code.contains("def run(ctx, input)"));
+        assert!(doc.semantic_section.contains("Instruções Puras de Prompt"));
     }
 }

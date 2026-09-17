@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 
 mod crypto_cmds;
 mod prefix_cmds;
+mod shadow_cmds;
 
 #[derive(Parser)]
 #[command(name = "asl")]
@@ -111,6 +112,24 @@ enum Commands {
         #[arg(short, long)]
         in_place: bool,
     },
+
+    /// Sincroniza todas as projeções sombra de Markdown (.md) para arquivos .skill
+    SyncShadows {
+        /// Caminho para arquivo ou diretório base (padrão: '.')
+        #[arg(default_value = ".")]
+        path: PathBuf,
+    },
+
+    /// Monitora o diretório e projeta as sombras em tempo real
+    Watch {
+        /// Caminho para o diretório a ser monitorado (padrão: '.')
+        #[arg(default_value = ".")]
+        path: PathBuf,
+
+        /// Intervalo de sondagem em milissegundos (padrão: 500ms)
+        #[arg(short, long, default_value = "500")]
+        interval: u64,
+    },
 }
 
 fn main() -> Result<()> {
@@ -131,6 +150,9 @@ fn main() -> Result<()> {
             let doc = parser
                 .parse(&content)
                 .with_context(|| "Erro ao analisar o arquivo .skill")?;
+
+            // Hook de Toque Zero: projeta ou atualiza sombra Markdown
+            let _ = asl_parser::project_shadow_markdown(&skill_file, &doc);
 
             let ep = entrypoint
                 .or_else(|| Some(doc.manifest.interface.entrypoint.clone()))
@@ -194,6 +216,26 @@ fn main() -> Result<()> {
                 }
             } else {
                 println!("Assinatura:  ⚠️ Não assinado");
+            }
+
+            // Hook de Toque Zero: sincroniza e relata status da projeção sombra
+            match asl_parser::project_shadow_markdown(&skill_file, &doc) {
+                Ok(asl_parser::ShadowProjectResult::Created(p)) => {
+                    println!("Projeção Sombra: ⚡ Criada em {:?}", p);
+                }
+                Ok(asl_parser::ShadowProjectResult::Updated(p)) => {
+                    println!("Projeção Sombra: ⚡ Atualizada em {:?}", p);
+                }
+                Ok(asl_parser::ShadowProjectResult::CollisionProtected(p)) => {
+                    println!("Projeção Sombra: ⚠️ Conflito protegido em {:?}", p);
+                }
+                Ok(asl_parser::ShadowProjectResult::Unchanged(_)) => {
+                    println!("Projeção Sombra: ✅ Sincronizada");
+                }
+                Ok(asl_parser::ShadowProjectResult::Skipped(_)) => {}
+                Err(e) => {
+                    eprintln!("Projeção Sombra: ⚠️ Falha ao projetar: {}", e);
+                }
             }
         }
 
@@ -282,6 +324,14 @@ fn main() -> Result<()> {
             in_place,
         } => {
             prefix_cmds::handle_optimize_prefix(&skill_file, in_place)?;
+        }
+
+        Commands::SyncShadows { path } => {
+            shadow_cmds::handle_sync_shadows(&path, &parser)?;
+        }
+
+        Commands::Watch { path, interval } => {
+            shadow_cmds::handle_watch_shadows(&path, &parser, interval)?;
         }
     }
 
