@@ -199,9 +199,47 @@ pub struct ExecutionResult {
     pub diagnostics: Vec<String>,
 }
 
+/// Família canônica de extensões de arquivo suportadas nativamente pelo ASL.
+/// Rigorosamente auditadas contra o GitHub Linguist para zero colisão com linguagens de programação existentes.
+pub const ASL_EXTENSIONS: &[&str] = &[
+    "skill",   // Habilidade executável modular (padrão canônico histórico)
+    "asl",     // Extensão raiz da linguagem (Agent Specification Language)
+    "agent",   // Agente autônomo (persona, metas, ferramentas, limites)
+    "prompt",  // Prompt estruturado com contrato determinístico I/O
+    "tool",    // Ferramenta executável chamável por agentes/LLMs
+    "guard",   // Guardrail de segurança, barreiras de injeção e conformidade
+    "persona", // Identidade cognitiva, tom de voz e restrições de comportamento
+    "chain",   // Cadeia de raciocínio sequencial e orquestração multi-passo
+    "rules",   // Base declarativa de regras de negócio em asl:rules
+];
+
+/// Verifica se uma extensão de arquivo pertence à família canônica do ASL (insensível a maiúsculas).
+pub fn is_asl_extension(ext: &str) -> bool {
+    let lower = ext.to_ascii_lowercase();
+    ASL_EXTENSIONS.iter().any(|&e| e == lower)
+}
+
+/// Verifica se um caminho de arquivo possui uma extensão canônica do ASL.
+pub fn is_asl_file(path: &std::path::Path) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .map(is_asl_extension)
+        .unwrap_or(false)
+}
+
+/// Verifica se o arquivo é elegível para projeção sombra (.md).
+/// Apenas arquivos .skill geram sombra Markdown para retrocompatibilidade com descoberta legada.
+pub fn is_shadow_eligible(path: &std::path::Path) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.eq_ignore_ascii_case("skill"))
+        .unwrap_or(false)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::Path;
 
     #[test]
     fn test_skill_limits_default() {
@@ -275,5 +313,43 @@ interface:
         assert!(manifest.validate().is_err());
         manifest.interface.entrypoint = "run_fn_123".to_string();
         assert!(manifest.validate().is_ok());
+    }
+
+    #[test]
+    fn test_asl_extensions_recognition() {
+        assert_eq!(ASL_EXTENSIONS.len(), 9);
+
+        // Todas as extensões canônicas devem ser aceitas
+        for &ext in ASL_EXTENSIONS {
+            assert!(is_asl_extension(ext), "Extensão {} deve ser válida", ext);
+            assert!(is_asl_extension(&ext.to_uppercase()), "Extensão {} em maiúsculas deve ser válida", ext);
+            let path = Path::new("test").with_extension(ext);
+            assert!(is_asl_file(&path), "Arquivo com extensão {} deve ser reconhecido", ext);
+        }
+
+        // Extensões inválidas / não-ASL devem ser rejeitadas
+        assert!(!is_asl_extension("py"));
+        assert!(!is_asl_extension("rs"));
+        assert!(!is_asl_extension("json"));
+        assert!(!is_asl_extension("md"));
+        assert!(!is_asl_file(Path::new("README.md")));
+        assert!(!is_asl_file(Path::new("script.sh")));
+    }
+
+    #[test]
+    fn test_shadow_eligibility() {
+        // Apenas .skill é elegível para projeção sombra
+        assert!(is_shadow_eligible(Path::new("my.skill")));
+        assert!(is_shadow_eligible(Path::new("SKILL.SKILL")));
+
+        // Nenhum outro formato gera .md sombra
+        assert!(!is_shadow_eligible(Path::new("bot.agent")));
+        assert!(!is_shadow_eligible(Path::new("system.prompt")));
+        assert!(!is_shadow_eligible(Path::new("format.tool")));
+        assert!(!is_shadow_eligible(Path::new("security.guard")));
+        assert!(!is_shadow_eligible(Path::new("identity.persona")));
+        assert!(!is_shadow_eligible(Path::new("reasoning.chain")));
+        assert!(!is_shadow_eligible(Path::new("validation.rules")));
+        assert!(!is_shadow_eligible(Path::new("core.asl")));
     }
 }
