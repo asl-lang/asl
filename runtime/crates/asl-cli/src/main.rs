@@ -25,9 +25,9 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Executa uma função determinística de um arquivo .skill
+    /// Executa uma função determinística de um arquivo ASL (.skill, .agent, .tool, .guard, etc.)
     Run {
-        /// Caminho para o arquivo .skill
+        /// Caminho para o arquivo ASL (.skill, .agent, .prompt, .tool, .guard, etc.)
         skill_file: PathBuf,
 
         /// Nome da função de entrada a executar (opcional se definida no manifesto)
@@ -39,15 +39,15 @@ enum Commands {
         input: String,
     },
 
-    /// Valida e audita a integridade de um arquivo .skill
+    /// Valida e audita a integridade de um arquivo ASL (.skill, .agent, .tool, etc.)
     Check {
-        /// Caminho para o arquivo .skill
+        /// Caminho para o arquivo ASL (.skill, .agent, .prompt, .tool, .guard, etc.)
         skill_file: PathBuf,
     },
 
     /// Inicia um servidor Model Context Protocol (MCP) sobre stdio ou HTTP/SSE
     Serve {
-        /// Caminhos para arquivos .skill ou diretório contendo .skill
+        /// Caminhos para arquivos ASL ou diretório contendo artefatos ASL
         #[arg(default_value = ".")]
         path: PathBuf,
 
@@ -379,7 +379,7 @@ fn load_skills_recursive(dir: &Path, parser: &CommonMarkYamlParser, acc: &mut Ve
             let p = entry.path();
             if p.is_dir() {
                 load_skills_recursive(&p, parser, acc);
-            } else if p.extension().and_then(|e| e.to_str()) == Some("skill")
+            } else if asl_spec::is_asl_file(&p)
                 && !asl_parser::is_ignored_path(&p)
             {
                 if let Ok(content) = fs::read_to_string(&p) {

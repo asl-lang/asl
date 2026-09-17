@@ -21,7 +21,7 @@ pub fn handle_sync_shadows(target_path: &Path, parser: &CommonMarkYamlParser) ->
     let mut stats = SyncStats::default();
 
     if target_path.is_file() {
-        if target_path.extension().and_then(|e| e.to_str()) == Some("skill")
+        if asl_spec::is_shadow_eligible(target_path)
             && !is_ignored_path(target_path)
         {
             let content = fs::read_to_string(target_path)
@@ -77,7 +77,7 @@ fn sync_dir_recursive(
             let path = entry.path();
             if path.is_dir() {
                 sync_dir_recursive(&path, parser, stats)?;
-            } else if path.extension().and_then(|e| e.to_str()) == Some("skill")
+            } else if asl_spec::is_shadow_eligible(&path)
                 && !is_ignored_path(&path)
             {
                 if let Ok(content) = fs::read_to_string(&path) {
