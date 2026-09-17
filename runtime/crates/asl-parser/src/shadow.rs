@@ -114,6 +114,14 @@ pub fn project_shadow_markdown(skill_path: &Path, doc: &SkillDocument) -> Result
         if !existing.contains(SHADOW_WATERMARK) {
             // Colisão com arquivo legítimo manual: protege e cria .asl.md (EC-4)
             let protected_md = skill_path.with_extension("asl.md");
+            let digest_token = format!("DIGEST: {}", doc.digest);
+            if protected_md.exists() {
+                if let Ok(prot_content) = fs::read_to_string(&protected_md) {
+                    if prot_content.contains(&digest_token) {
+                        return Ok(ShadowProjectResult::CollisionProtected(protected_md));
+                    }
+                }
+            }
             let content = generate_shadow_content(doc, skill_file_name);
             write_atomic(&protected_md, &content)?;
             return Ok(ShadowProjectResult::CollisionProtected(protected_md));
@@ -150,9 +158,12 @@ pub fn clean_orphaned_shadows(dir: &Path) -> Result<Vec<PathBuf>> {
             } else if path.extension().and_then(|e| e.to_str()) == Some("md") {
                 if let Ok(content) = fs::read_to_string(&path) {
                     if content.contains(SHADOW_WATERMARK) {
-                        // Deriva o .skill original esperado
-                        let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
-                        let expected_skill = if stem.eq_ignore_ascii_case("SKILL") {
+                        // Deriva o .skill original esperado tratando .asl.md e SKILL.md
+                        let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+                        let expected_skill = if file_name.ends_with(".asl.md") {
+                            let base = file_name.strip_suffix(".asl.md").unwrap_or("");
+                            path.with_file_name(format!("{}.skill", base))
+                        } else if file_name.eq_ignore_ascii_case("SKILL.md") {
                             path.with_file_name("SKILL.skill")
                         } else {
                             path.with_extension("skill")
@@ -171,11 +182,29 @@ pub fn clean_orphaned_shadows(dir: &Path) -> Result<Vec<PathBuf>> {
     Ok(removed)
 }
 
-/// Escreve de forma atômica utilizando arquivo temporário e rename
+/// Escreve de forma atômica utilizando arquivo temporário e rename com suporte a EC-9
 fn write_atomic(target: &Path, content: &str) -> Result<()> {
+    if let Some(parent) = target.parent() {
+        if !parent.exists() {
+            let _ = fs::create_dir_all(parent);
+        }
+    }
     let tmp_path = target.with_extension("tmp");
-    fs::write(&tmp_path, content).map_err(|e| AslError::Io(e.to_string()))?;
-    fs::rename(&tmp_path, target).map_err(|e| AslError::Io(e.to_string()))?;
+    if let Err(e) = fs::write(&tmp_path, content) {
+        // EC-9: Em ambiente somente-leitura (ex: Docker --read-only), loga aviso sem pânico
+        if e.kind() == std::io::ErrorKind::PermissionDenied || e.raw_os_error() == Some(30) {
+            eprintln!("⚠️ [ASL Shadow] Somente-leitura ao escrever {:?}: {}", tmp_path, e);
+            return Ok(());
+        }
+        return Err(AslError::Io(e.to_string()));
+    }
+    if let Err(e) = fs::rename(&tmp_path, target) {
+        if e.kind() == std::io::ErrorKind::PermissionDenied || e.raw_os_error() == Some(30) {
+            eprintln!("⚠️ [ASL Shadow] Somente-leitura ao renomear {:?}: {}", target, e);
+            return Ok(());
+        }
+        return Err(AslError::Io(e.to_string()));
+    }
     Ok(())
 }
 
@@ -255,6 +284,7 @@ mod tests {
         fs::create_dir_all(&temp_dir).unwrap();
 
         let skill_path = temp_dir.join("existing.skill");
+        fs::write(&skill_path, "mock skill").unwrap();
         let manual_md = temp_dir.join("existing.md");
         fs::write(&manual_md, "# Minha documentação manual importante! Não apagar.").unwrap();
 
@@ -264,7 +294,21 @@ mod tests {
         // Não deve sobrescrever existing.md, mas criar existing.asl.md
         assert!(matches!(res, ShadowProjectResult::CollisionProtected(_)));
         assert_eq!(fs::read_to_string(&manual_md).unwrap(), "# Minha documentação manual importante! Não apagar.");
-        assert!(temp_dir.join("existing.asl.md").exists());
+        let protected_path = temp_dir.join("existing.asl.md");
+        assert!(protected_path.exists());
+
+        // Limpeza não deve remover existing.asl.md enquanto existing.skill existir
+        let cleaned_zero = clean_orphaned_shadows(&temp_dir).unwrap();
+        assert_eq!(cleaned_zero.len(), 0);
+        assert!(protected_path.exists());
+
+        // Após deletar existing.skill, existing.asl.md deve ser limpo como órfão
+        fs::remove_file(&skill_path).unwrap();
+        let cleaned_one = clean_orphaned_shadows(&temp_dir).unwrap();
+        assert_eq!(cleaned_one.len(), 1);
+        assert!(!protected_path.exists());
+        // existing.md manual original continua preservado
+        assert!(manual_md.exists());
 
         let _ = fs::remove_dir_all(&temp_dir);
     }

@@ -62,6 +62,41 @@ pub struct SkillManifest {
     pub limits: SkillLimits,
 }
 
+impl SkillManifest {
+    pub fn validate(&self) -> Result<()> {
+        if self.name.trim().is_empty() {
+            return Err(AslError::InvalidFrontmatter(
+                "O campo 'name' no manifesto não pode ser vazio".to_string(),
+            ));
+        }
+
+        if !self.asl_version.starts_with("3.") && self.asl_version != "3.0" {
+            return Err(AslError::InvalidFrontmatter(format!(
+                "Versão ASL '{}' incompatível. Esperado ASL 3.x",
+                self.asl_version
+            )));
+        }
+
+        let ep = self.interface.entrypoint.trim();
+        if ep.is_empty() {
+            return Err(AslError::InvalidFrontmatter(
+                "O campo 'interface.entrypoint' não pode ser vazio".to_string(),
+            ));
+        }
+
+        if !ep.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+            || ep.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false)
+        {
+            return Err(AslError::InvalidFrontmatter(format!(
+                "Entrypoint '{}' inválido: deve ser um identificador válido",
+                ep
+            )));
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkillInterface {
     #[serde(default = "default_protocol")]
@@ -193,5 +228,47 @@ interface:
 
         let err2 = AslError::MissingDeterministicBlock;
         assert!(err2.to_string().contains("Missing deterministic code block"));
+    }
+
+    #[test]
+    fn test_manifest_validation() {
+        let mut manifest = SkillManifest {
+            asl_version: "3.0".to_string(),
+            name: "valid-name".to_string(),
+            description: "".to_string(),
+            version: None,
+            license: None,
+            digest: None,
+            signature: None,
+            signer_pubkey: None,
+            interface: SkillInterface {
+                protocol: "mcp-tool-v1".to_string(),
+                entrypoint: "run".to_string(),
+                input_schema: serde_json::json!({}),
+                output_schema: None,
+            },
+            capabilities: Default::default(),
+            limits: Default::default(),
+        };
+
+        assert!(manifest.validate().is_ok());
+
+        // Nome vazio
+        manifest.name = "   ".to_string();
+        assert!(manifest.validate().is_err());
+        manifest.name = "valid_name".to_string();
+
+        // Versão incompatível
+        manifest.asl_version = "2.0".to_string();
+        assert!(manifest.validate().is_err());
+        manifest.asl_version = "3.0".to_string();
+
+        // Entrypoint inválido com hífens ou iniciando com dígito
+        manifest.interface.entrypoint = "run-fn".to_string();
+        assert!(manifest.validate().is_err());
+        manifest.interface.entrypoint = "1run".to_string();
+        assert!(manifest.validate().is_err());
+        manifest.interface.entrypoint = "run_fn_123".to_string();
+        assert!(manifest.validate().is_ok());
     }
 }

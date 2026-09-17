@@ -62,17 +62,18 @@ impl EnginePort for WasmEngine {
         let mut args: Vec<Val> = Vec::new();
 
         if !param_types.is_empty() {
-            if let Some(arr) = input_args.as_array() {
-                for (i, p_ty) in param_types.iter().enumerate() {
-                    let val = arr.get(i);
-                    args.push(json_val_to_wasm_val(val, p_ty));
-                }
-            } else if let Some(obj) = input_args.as_object() {
-                for (i, p_ty) in param_types.iter().enumerate() {
+            for (i, p_ty) in param_types.iter().enumerate() {
+                let val = if let Some(arr) = input_args.as_array() {
+                    arr.get(i)
+                } else if let Some(obj) = input_args.as_object() {
                     let key = format!("arg{}", i);
-                    let val = obj.get(&key);
-                    args.push(json_val_to_wasm_val(val, p_ty));
-                }
+                    obj.get(&key).or_else(|| obj.values().nth(i))
+                } else if i == 0 {
+                    Some(input_args)
+                } else {
+                    None
+                };
+                args.push(json_val_to_wasm_val(val, p_ty));
             }
         }
 
@@ -196,5 +197,29 @@ mod tests {
         assert_eq!(res.output["result"], 42);
         assert!(res.fuel_consumed > 0);
         assert!(res.execution_time_ns > 0);
+    }
+
+    #[test]
+    fn test_wasm_named_object_arguments() {
+        let wat_code = r#"
+            (module
+                (func (export "mul") (param i32 i32) (result i32)
+                    local.get 0
+                    local.get 1
+                    i32.mul
+                )
+            )
+        "#;
+
+        let engine = WasmEngine::new();
+        let limits = SkillLimits::default();
+        let ctx = DummyContext;
+        let args = serde_json::json!({"x": 6, "y": 7});
+
+        let res = engine
+            .execute(wat_code, "mul", &args, &ctx, &limits)
+            .expect("Execução com objeto nomeado deve suceder");
+
+        assert_eq!(res.output["result"], 42);
     }
 }

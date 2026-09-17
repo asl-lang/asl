@@ -70,7 +70,12 @@ impl ConfinedSecurityContext {
             .iter()
             .map(|r| {
                 let p = PathBuf::from(r);
-                std::fs::canonicalize(&p).unwrap_or(p)
+                let abs = if p.is_relative() {
+                    std::env::current_dir().map(|c| c.join(&p)).unwrap_or_else(|_| p.clone())
+                } else {
+                    p.clone()
+                };
+                std::fs::canonicalize(&abs).unwrap_or(abs)
             })
             .collect();
 

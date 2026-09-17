@@ -64,8 +64,14 @@ pub fn handle_optimize_prefix(skill_file: &Path, in_place: bool) -> Result<()> {
 
     if in_place {
         let updated_content = replace_semantic_in_skill(&content, &doc.semantic_section, &optimized_semantic);
-        fs::write(skill_file, updated_content)
+        fs::write(skill_file, &updated_content)
             .with_context(|| format!("Falha ao salvar arquivo otimizado: {:?}", skill_file))?;
+
+        // Hook de Toque Zero: atualiza a sombra Markdown imediatamente
+        if let Ok(new_doc) = parser.parse(&updated_content) {
+            let _ = asl_parser::project_shadow_markdown(skill_file, &new_doc);
+        }
+
         println!("✅ Prefixo estático otimizado e reescrito com sucesso em {:?}", skill_file);
     } else {
         println!("{}", optimized_semantic);
@@ -78,7 +84,32 @@ fn replace_semantic_in_skill(full_content: &str, old_semantic: &str, new_semanti
     if old_semantic.is_empty() {
         return full_content.to_string();
     }
-    full_content.replacen(old_semantic, new_semantic, 1)
+
+    // Encontra o término do frontmatter delimitado pelo segundo '---'
+    let mut dashes_count = 0;
+    let mut split_idx = None;
+
+    for (idx, _) in full_content.match_indices("---") {
+        let line_start = full_content[..idx].rfind('\n').map(|p| p + 1).unwrap_or(0);
+        let line_end = full_content[idx..].find('\n').map(|p| idx + p).unwrap_or(full_content.len());
+        let trimmed = full_content[line_start..line_end].trim();
+        if trimmed == "---" {
+            dashes_count += 1;
+            if dashes_count == 2 {
+                split_idx = Some(line_end);
+                break;
+            }
+        }
+    }
+
+    if let Some(body_start) = split_idx {
+        let frontmatter = &full_content[..body_start];
+        let body = &full_content[body_start..];
+        let new_body = body.replacen(old_semantic, new_semantic, 1);
+        format!("{}{}", frontmatter, new_body)
+    } else {
+        full_content.replacen(old_semantic, new_semantic, 1)
+    }
 }
 
 #[cfg(test)]
@@ -87,9 +118,12 @@ mod tests {
 
     #[test]
     fn test_replace_semantic_in_skill() {
-        let original = "---\nname: test\n---\nOld text\n\n```asl\npass\n```";
+        let original = "---\nname: test\ndescription: Old text\n---\nOld text\n\n```asl\npass\n```";
         let replaced = replace_semantic_in_skill(original, "Old text", "New optimized text");
-        assert!(replaced.contains("New optimized text"));
+        // Frontmatter deve permanecer intocado
+        assert!(replaced.contains("description: Old text"));
+        // Corpo deve ser substituído
+        assert!(replaced.contains("---\nNew optimized text"));
         assert!(replaced.contains("```asl\npass\n```"));
     }
 }

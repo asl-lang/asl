@@ -95,12 +95,8 @@ fn compile_regex_object(schema: &Value) -> Result<String> {
             inner.push_str(&format!(r#"(\s*,\s*{})?"#, opt));
         }
     } else if !optional_props.is_empty() {
-        let first = &optional_props[0];
-        inner.push_str(&format!(r#"({}"#, first));
-        for opt in &optional_props[1..] {
-            inner.push_str(&format!(r#"|(\s*,\s*{})"#, opt));
-        }
-        inner.push_str(r#")?"#);
+        let all_opts = optional_props.join("|");
+        inner.push_str(&format!(r#"(({})(\s*,\s*({}))*)?"#, all_opts, all_opts));
     }
 
     Ok(format!(r#"\{{\s*{}\s*\}}"#, inner))
@@ -144,5 +140,18 @@ mod tests {
         });
         let regex = compile_schema_to_regex(&schema).expect("Deve compilar objeto regex");
         assert!(regex.contains(r#""intent"\s*:\s*"([^"\\]|\\.)*""#));
+    }
+
+    #[test]
+    fn test_regex_all_optional_properties() {
+        let schema = json!({
+            "type": "object",
+            "properties": {
+                "opt1": { "type": "string" },
+                "opt2": { "type": "integer" }
+            }
+        });
+        let regex = compile_schema_to_regex(&schema).expect("Deve compilar objeto com opcionais");
+        assert!(regex.contains(r#"\s*,\s*"#));
     }
 }

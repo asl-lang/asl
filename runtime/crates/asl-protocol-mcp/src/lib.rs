@@ -75,6 +75,12 @@ impl<'a> McpServer<'a> {
                 })),
                 error: None,
             }),
+            "ping" => Some(JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: req.id,
+                result: Some(serde_json::json!({})),
+                error: None,
+            }),
             "notifications/initialized" => None,
             "tools/list" => {
                 let tools: Vec<Value> = self
@@ -99,7 +105,10 @@ impl<'a> McpServer<'a> {
             "tools/call" => {
                 let params = req.params.unwrap_or(Value::Null);
                 let tool_name = params.get("name").and_then(|v| v.as_str()).unwrap_or("");
-                let arguments = params.get("arguments").cloned().unwrap_or(Value::Null);
+                let arguments = match params.get("arguments") {
+                    Some(v) if !v.is_null() => v.clone(),
+                    _ => serde_json::json!({}),
+                };
 
                 let matched_skill = self.skills.iter().find(|s| s.manifest.name == tool_name);
 
@@ -148,15 +157,22 @@ impl<'a> McpServer<'a> {
                     }),
                 }
             }
-            _ => Some(JsonRpcResponse {
-                jsonrpc: "2.0".to_string(),
-                id: req.id,
-                result: None,
-                error: Some(serde_json::json!({
-                    "code": -32601,
-                    "message": "Method not found"
-                })),
-            }),
+            _ => {
+                // Notificações JSON-RPC 2.0 (sem id) nunca recebem resposta de erro
+                if req.id.is_none() {
+                    None
+                } else {
+                    Some(JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id,
+                        result: None,
+                        error: Some(serde_json::json!({
+                            "code": -32601,
+                            "message": "Method not found"
+                        })),
+                    })
+                }
+            }
         }
     }
 
@@ -304,6 +320,15 @@ mod tests {
 
         let unknown = server.handle_message(r#"{"jsonrpc":"2.0","id":9,"method":"foo"}"#).unwrap();
         assert_eq!(unknown.error.unwrap()["code"], -32601);
+
+        // Notificação sem id não deve gerar resposta
+        let notif = server.handle_message(r#"{"jsonrpc":"2.0","method":"unknown/notification"}"#);
+        assert!(notif.is_none());
+
+        // Ping deve retornar sucesso com objeto vazio
+        let ping_resp = server.handle_message(r#"{"jsonrpc":"2.0","id":10,"method":"ping"}"#).unwrap();
+        assert!(ping_resp.error.is_none());
+        assert_eq!(ping_resp.result.unwrap(), serde_json::json!({}));
     }
 
     #[test]

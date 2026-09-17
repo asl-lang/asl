@@ -152,14 +152,11 @@ fn compile_object(
             parts.push(format!("(\",\" ws {})?", opt));
         }
     } else if !optional_props.is_empty() {
-        // Objeto com apenas propriedades opcionais
-        let first = &optional_props[0];
-        let mut opt_expr = format!("({}", first);
-        for opt in &optional_props[1..] {
-            opt_expr.push_str(&format!(" | (\",\" ws {})", opt));
-        }
-        opt_expr.push_str(")?");
-        parts.push(opt_expr);
+        // Objeto com apenas propriedades opcionais: permite qualquer combinação separada por vírgula
+        let all_opts = optional_props.join(" | ");
+        let opt_rule_name = alloc_rule_name(&format!("{}_opt", name_hint), counter);
+        rules.push((opt_rule_name.clone(), all_opts));
+        parts.push(format!("({} (\",\" ws {})*)?", opt_rule_name, opt_rule_name));
     }
 
     parts.push("\"}\" ws".to_string());
@@ -222,5 +219,19 @@ mod tests {
         });
         let gbnf = compile_schema_to_gbnf(&schema).expect("Deve compilar array");
         assert!(gbnf.contains("\"[\" ws (integer (\",\" ws integer)*)? \"]\" ws"));
+    }
+
+    #[test]
+    fn test_gbnf_all_optional_properties() {
+        let schema = json!({
+            "type": "object",
+            "properties": {
+                "opt1": { "type": "string" },
+                "opt2": { "type": "integer" }
+            }
+        });
+        let gbnf = compile_schema_to_gbnf(&schema).expect("Deve compilar objeto com opcionais");
+        assert!(gbnf.contains("_opt_1 ::="));
+        assert!(gbnf.contains("(\",\" ws"));
     }
 }

@@ -46,6 +46,7 @@ impl ParserPort for CommonMarkYamlParser {
         // 2. Parse do YAML em SkillManifest
         let manifest: SkillManifest = serde_yaml::from_str(&frontmatter_str)
             .map_err(|e| AslError::InvalidFrontmatter(e.to_string()))?;
+        manifest.validate()?;
 
         // 3. Parse de Markdown com pulldown-cmark
         let (semantic_section, deterministic_code) = parse_markdown_blocks(&markdown_str)?;

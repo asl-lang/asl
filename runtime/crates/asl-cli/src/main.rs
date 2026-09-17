@@ -256,8 +256,14 @@ fn main() -> Result<()> {
                 load_skills_recursive(&path, &parser, &mut skills);
             }
 
-            let empty_caps = asl_spec::SkillCapabilities::default();
-            let security = ConfinedSecurityContext::from_capabilities(&empty_caps, 1_000_000);
+            let mut server_caps = asl_spec::SkillCapabilities::default();
+            let root_str = if path.is_dir() {
+                path.to_string_lossy().to_string()
+            } else {
+                path.parent().unwrap_or_else(|| Path::new(".")).to_string_lossy().to_string()
+            };
+            server_caps.fs.confined_read_roots.push(root_str);
+            let security = ConfinedSecurityContext::from_capabilities(&server_caps, 1_000_000);
 
             if transport.to_lowercase() == "http" {
                 eprintln!(
@@ -344,7 +350,9 @@ fn load_skills_recursive(dir: &Path, parser: &CommonMarkYamlParser, acc: &mut Ve
             let p = entry.path();
             if p.is_dir() {
                 load_skills_recursive(&p, parser, acc);
-            } else if p.extension().and_then(|e| e.to_str()) == Some("skill") {
+            } else if p.extension().and_then(|e| e.to_str()) == Some("skill")
+                && !asl_parser::is_ignored_path(&p)
+            {
                 if let Ok(content) = fs::read_to_string(&p) {
                     if let Ok(doc) = parser.parse(&content) {
                         acc.push(doc);

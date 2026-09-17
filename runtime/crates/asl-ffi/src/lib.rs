@@ -130,9 +130,17 @@ pub unsafe extern "C" fn asl_skill_execute(
         let args_val: Value = if json_args.is_null() {
             Value::Object(serde_json::Map::new())
         } else {
-            match CStr::from_ptr(json_args).to_str() {
-                Ok(s) => serde_json::from_str(s).unwrap_or(Value::Object(serde_json::Map::new())),
-                Err(_) => Value::Object(serde_json::Map::new()),
+            let str_res = CStr::from_ptr(json_args).to_str();
+            match str_res {
+                Ok(s) => match serde_json::from_str(s) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        return make_error_result(&format!("JSON arguments invalid: {}", e), 0);
+                    }
+                },
+                Err(e) => {
+                    return make_error_result(&format!("JSON arguments not valid UTF-8: {}", e), 0);
+                }
             }
         };
 
@@ -152,7 +160,8 @@ pub unsafe extern "C" fn asl_skill_execute(
                 let duration_ns = start.elapsed().as_nanos() as u64;
                 let json_text = serde_json::to_string(&exec_res.output)
                     .unwrap_or_else(|_| "{}".to_string());
-                let c_json = CString::new(json_text).unwrap_or_default();
+                let sanitized = json_text.replace('\0', "\\u0000");
+                let c_json = CString::new(sanitized).unwrap_or_else(|_| CString::new("{}").unwrap());
                 Box::into_raw(Box::new(asl_exec_result_t {
                     success: 1,
                     json_output: c_json.into_raw(),
@@ -188,7 +197,8 @@ pub unsafe extern "C" fn asl_exec_result_free(res: *mut asl_exec_result_t) {
 
 fn make_error_result(msg: &str, duration_ns: u64) -> *mut asl_exec_result_t {
     let err_json = serde_json::json!({ "error": msg }).to_string();
-    let c_err = CString::new(err_json).unwrap_or_default();
+    let sanitized = err_json.replace('\0', "\\u0000");
+    let c_err = CString::new(sanitized).unwrap_or_else(|_| CString::new("{\"error\":\"unknown\"}").unwrap());
     Box::into_raw(Box::new(asl_exec_result_t {
         success: 0,
         json_output: c_err.into_raw(),
