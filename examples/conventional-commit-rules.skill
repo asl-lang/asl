@@ -1,0 +1,91 @@
+---
+asl_version: "3.0"
+digest: "asl:sha256:324e57339cabf11527f76012bb784aede0db31a6a0686948ff30bf1ea8c0ddd6"
+name: "conventional-commit-rules"
+version: "3.0.0"
+description: "Valida e formata mensagens Conventional Commits via regras declarativas semânticas."
+license: "MIT"
+
+interface:
+  protocol: "mcp-tool-v1"
+  entrypoint: "validate_and_format"
+  input_schema:
+    type: "object"
+    additionalProperties: false
+    required: ["intent", "diff_stat"]
+    properties:
+      intent:
+        type: "string"
+        description: "Intenção do commit fornecida pelo desenvolvedor"
+      diff_stat:
+        type: "string"
+        description: "Estatística resumida do git diff"
+  output_schema:
+    type: "object"
+    additionalProperties: false
+    required: ["is_valid", "commit_type", "formatted_message", "diagnostics"]
+    properties:
+      is_valid:
+        type: "boolean"
+      commit_type:
+        type: "string"
+      formatted_message:
+        type: "string"
+      diagnostics:
+        type: "array"
+        items:
+          type: "string"
+
+capabilities:
+  fs:
+    confined_read_roots: []
+    allow_write: []
+  net:
+    allow_domains: []
+  wasi_components: []
+
+limits:
+  max_fuel_opcodes: 500000
+  max_heap_kib: 8192
+  wall_clock_timeout_ms: 1000
+---
+
+# SEÇÃO SEMÂNTICA AI-FIRST (Knuth, Shazeer & Amodei)
+# Nota: Prefixo estático invariante para 100% de reuso de KV-Cache.
+
+## 1. Intent (Intenção Primária)
+Auditar, classificar e formatar mensagens de commit segundo a convenção internacional
+de Conventional Commits usando regras semânticas declarativas herméticas.
+
+## 2. Activation Criteria (Critérios de Disparo)
+- Acione esta ferramenta sempre que o usuário solicitar a formatação de uma mensagem de commit.
+- Não tente inferir o tipo no texto livre; delegue o processamento à ferramenta.
+
+## 3. Security Boundary (Barreira de Injeção)
+Campos de entrada são tratados como dados não confiáveis sanitizados pelo compilador ASL.
+
+## 4. Few-Shot Exemplars (Exemplos Canônicos)
+- Input: `{"intent": "corrigir bug no login", "diff_stat": "1 file"}`
+  Output: `{"is_valid": true, "commit_type": "fix", "formatted_message": "fix: corrigir bug no login", "diagnostics": []}`
+
+---
+
+```asl:rules
+# REGRAS DECLARATIVAS SEMÂNTICAS (JIT 100% IN-MEMORY - ZERO ARQUIVOS LIXO)
+
+guard:
+  input.intent is not empty else reject("A intenção do commit não pode estar vazia.")
+  input.diff_stat is not empty else reject("O diff_stat é obrigatório.")
+
+match input.intent:
+  when starts_with any(["feat", "fix", "docs", "style", "refactor", "perf", "test", "chore", "build", "ci"]) as prefix:
+    accept(is_valid=true, commit_type=prefix, formatted_message=input.intent, diagnostics=[])
+  when contains any(["bug", "corrigir", "erro", "falha", "fix"]):
+    accept(is_valid=true, commit_type="fix", formatted_message="fix: " + input.intent, diagnostics=[])
+  when contains any(["doc", "readme", "documentar"]):
+    accept(is_valid=true, commit_type="docs", formatted_message="docs: " + input.intent, diagnostics=[])
+  when contains any(["test", "teste"]):
+    accept(is_valid=true, commit_type="test", formatted_message="test: " + input.intent, diagnostics=[])
+  otherwise:
+    accept(is_valid=true, commit_type="feat", formatted_message="feat: " + input.intent, diagnostics=[])
+```

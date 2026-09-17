@@ -377,3 +377,40 @@ fn test_guardrail_shadow_markdown_projection() {
         }
     }
 }
+
+#[test]
+fn test_guardrail_declarative_rules_in_memory_transpilation() {
+    let examples_dir = find_examples_dir();
+    let rules_skill = examples_dir.join("conventional-commit-rules.skill");
+    assert!(rules_skill.exists(), "conventional-commit-rules.skill deve existir");
+
+    let parser = CommonMarkYamlParser::new();
+    let content = fs::read_to_string(&rules_skill).unwrap();
+    let doc = parser.parse(&content).expect("Parsing de rules deve suceder");
+
+    assert!(doc.rules_code.is_some(), "Documento deve reter rules_code original");
+    assert!(doc.deterministic_code.contains("def validate_and_format(ctx, input):"));
+    assert!(doc.deterministic_code.contains("_asl_get(input, [\"intent\"], \"\")"));
+
+    let engine = StarlarkEngine::new();
+    let security = ConfinedSecurityContext::from_capabilities(
+        &doc.manifest.capabilities,
+        doc.manifest.limits.max_fuel_opcodes,
+    );
+
+    let input = serde_json::json!({
+        "intent": "corrigir memory leak no buffer",
+        "diff_stat": "1 file changed"
+    });
+    let res = engine.execute(
+        &doc.deterministic_code,
+        &doc.manifest.interface.entrypoint,
+        &input,
+        &security,
+        &doc.manifest.limits,
+    ).expect("Execução de regras em memória deve suceder");
+
+    assert!(res.success);
+    assert_eq!(res.output["is_valid"], true);
+    assert_eq!(res.output["commit_type"], "fix");
+}

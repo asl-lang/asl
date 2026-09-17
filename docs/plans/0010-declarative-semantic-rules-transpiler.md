@@ -1,6 +1,7 @@
 # Plano de Implementação: Transpilador Semântico Declarativo para Starlark Hermético (ASL Rules)
 
 - **ADR Vinculado**: `docs/adrs/0010-declarative-semantic-rules-transpiler.md`
+- **Status**: Concluído (6/6 Fases - 100%)
 - **Data**: 2026-09-17
 - **Responsável**: Jean Catarina (Cadente)
 - **Meta**: Implementar na íntegra a sintaxe semântica declarativa `asl:rules`, seu parser EBNF, gerador Strict Starlark L1 com verificação AOT, integração in-memory no runtime sem geração de arquivos lixo no disco, subcomando `asl expand` e suite exaustiva de testes.
