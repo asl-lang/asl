@@ -30,4 +30,5 @@ Utilize a skill `asl-adr` (`skills/asl-adr/SKILL.md`):
 | **[ADR-0009](./0009-automatic-markdown-shadow-projection.md)** | Projeção Sombra Automática de Markdown (Shadow Projection) para Adoção de Toque Zero | **Aceito** | 2026-09-17 | `asl-parser`, `asl-cli` |
 | **[ADR-0010](./0010-declarative-semantic-rules-transpiler.md)** | Transpilador Semântico Declarativo para Starlark Hermético (ASL Rules Transpiler) | **Concluído** | 2026-09-17 | `asl-core-traits`, `asl-parser`, `asl-vm-starlark`, `asl-cli` |
 | **[ADR-0011](./0011-multi-extension-ai-ecosystem.md)** | Tríade Canônica de Extensões do ASL (`.skill`, `.tool`, `.asl`) e Isolamento de Sombra | **Aceito** | 2026-09-17 | `asl-spec`, `asl-core-traits`, `asl-parser`, `asl-cli` |
+| **[ADR-0012](./0012-github-pages-documentation-platform.md)** | GitHub Pages Documentation Platform for ASL (Next.js Design Aesthetic) | **Aceito** | 2026-09-17 | `docs/`, `website/`, `.github/workflows/` |
 
