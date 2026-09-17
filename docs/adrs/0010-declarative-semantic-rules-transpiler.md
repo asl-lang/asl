@@ -13,7 +13,7 @@
 
 O **Agent Skill Language (ASL 3.0)** consolidou o padrão tripartite para habilidades autônomas: Contrato Formal (YAML), Semântica AI-First (Markdown com prefixo estável) e Execução Hermética Determinística (`asl:deterministic` via Starlark ou Wasm).
 
-Contudo, a auditoria de cientistas da computação e a análise de atrito cognitivo identificaram 6 gaps fundamentais na escrita imperativa pura:
+Contudo, a auditoria de cientistas da computação e a análise de atrito cognitivo identificaram 7 gaps fundamentais na escrita imperativa pura:
 
 1. **Complexidade Acidental Imperativa (Backus & Hickey)**: Escrever Starlark manual puro exige código procedural com variáveis temporárias mutáveis, laços `for`, manipulação defensiva de strings e verificações repetitivas de dicionários (`input.get("campo", "")`). Isso polui o documento `.skill` com cerimonial técnico que reduz a legibilidade humana.
 2. **Diluição Semântica para o LLM (Amodei & Shazeer)**: Quando um modelo de linguagem lê blocos de código imperativo extensos, ele gasta preciosos tokens de sua janela de contexto para entender a mecânica de iteração em vez de focar na regra de negócio pura.
@@ -21,8 +21,9 @@ Contudo, a auditoria de cientistas da computação e a análise de atrito cognit
 4. **Vulnerabilidade de Injeção de Starlark por Interpolação Ingênua (Miller & Lampson)**: Se um transpilador ingênuo usar formatação de texto (`format!` ou strings literais brutas) para gerar código Starlark, entradas contendo caracteres de quebra de linha ou aspas podem injetar código arbitrário no motor determinístico.
 5. **Risco de Incompletude de Padrões e Retornos Nulos (Lamport & Liskov)**: Se um conjunto de regras não for matematicamente exaustivo e nenhum padrão casar, a função poderia retornar `None` implicitamente, quebrando o contrato do `output_schema` em tempo de execução.
 6. **Divergência entre Implementações de Starlark**: Embora a especificação do Starlark seja padronizada, versões diferentes (ex: `starlark-rust 0.14`, `0.15`, implementações em Go ou Bazel C++) divergem em métodos embutidos de strings e coleções.
+7. **Risco de Poluição de Disco e Fricção de Build (Atrito de Ferramental)**: Compiladores tradicionais (como TypeScript ou Babel) geram arquivos intermediários (`.js`, `.py`, pastas `.cache/`), poluindo o repositório git, exigindo configuração de `.gitignore` e quebrando o fluxo simples do desenvolvedor, que só quer renomear `.md` para `.skill`, escrever suas regras e deixar a IA rodar diretamente sem artefatos lixo.
 
-Esta decisão propõe a especificação matemática e de engenharia do **ASL Rules Transpiler**: uma DSL declarativa, determinística e imutável (`asl:rules`) que compila AOT para o subconjunto estrito **Strict Starlark Core L1**, com prova formal de terminação, tipagem estática contra o esquema e imunidade total a falhas em tempo de execução.
+Esta decisão propõe a especificação matemática e de engenharia do **ASL Rules Transpiler**: uma DSL declarativa, determinística e imutável (`asl:rules`) que compila AOT **exclusivamente em memória (RAM)** para o subconjunto estrito **Strict Starlark Core L1**, com prova formal de terminação, tipagem estática contra o esquema, zero arquivos residuais no disco e experiência de toque zero (*Zero-Touch Ingestion*).
 
 ---
 
@@ -82,8 +83,9 @@ O compilador opera como uma máquina de estados estritamente determinística:
                                     │
                                     ▼
 ┌────────────────────────────────────────────────────────────────────────┐
-│               STARLARK CORE DETERMINÍSTICO HERMÉTICO                   │
+│         EXECUÇÃO JIT 100% EM MEMÓRIA RAM (ZERO ARQUIVOS LIXO)          │
 │                                                                        │
+│ • Zero arquivos intermediários (.py, .starlark, .tmp, .cache) em disco │
 │ • Imunidade a KeyError, AttributeError e NoneType                     │
 │ • Imunidade a Starlark Injection (escapamento estrito RFC 8259)       │
 │ • Término linear O(N) comprovado com Fuel Metering (Axioma 5)         │
@@ -180,7 +182,29 @@ pub struct TranspileError {
 
 ---
 
-### 2.5 Matriz Exaustiva de Resolução de Edge Cases (10 Provas Científicas)
+### 2.5 Princípio de Zero Fricção & Zero Poluição de Disco (In-Memory Compilation)
+
+Para manter a experiência do usuário e do agente de IA perfeitamente transparente, o ASL Rules Transpiler adota o **Princípio da Não-Intrusão no Sistema de Arquivos**:
+
+1. **Fluxo Natural do Usuário**:
+   - O usuário simplesmente renomeia `deploy.md` para `deploy.skill` (ou cria direto um `.skill`).
+   - Escreve as regras desejadas no bloco ````asl:rules``` (ou Starlark direto no bloco ````asl:deterministic```).
+   - Não há comandos adicionais de compilação, nem `asl build`, `make`, ou passos prévios manuais.
+2. **Execução Transparente pela IA**:
+   - A IA lê o arquivo canônico `.skill` (ou a projeção sombra `.md` que o ADR-0009 gera para harnesses legados).
+   - A IA executa a ferramenta normalmente chamando:
+     ```bash
+     asl run deploy.skill -i '{"ambiente": "prod"}'
+     ```
+   - O ASL realiza a transpilação e interpretação **100% em memória RAM**, em menos de $1\text{ ms}$.
+3. **Zero Arquivos Residuais (Zero Trash Files)**:
+   - Nenhum arquivo `.py`, `.starlark`, `.tmp`, `.cache`, `.pyc` ou diretório oculto é gravado no disco.
+   - O repositório Git permanece 100% limpo, sem criar sujeira em `git status` nem exigir entradas em `.gitignore`.
+   - Se o desenvolvedor ou auditor desejar inspecionar o Starlark gerado, ele roda `asl expand deploy.skill`, que imprime o código diretamente no stdout do terminal, sem criar arquivos no disco a menos que redirecionado explicitamente (`>`).
+
+---
+
+### 2.6 Matriz Exaustiva de Resolução de Edge Cases (11 Provas Científicas)
 
 | ID | Cenário de Borda | Revisor Científico | Risco Potencial | Solução Formal do ASL Rules Transpiler |
 | :--- | :--- | :--- | :--- | :--- |
@@ -194,6 +218,7 @@ pub struct TranspileError {
 | **EC-8** | **Garantia de Não-Regressão e Verificação Pré-Voo (Pre-Flight)**<br>Risco de gerar Starlark com bug sintático sutil. | **Butler Lampson** | Crash inesperado durante a execução de uma skill em produção. | O compilador invoca `starlark::syntax::AstModule::parse` em memória sobre o código gerado antes de qualquer emissão. Se houver erro, a compilação é abortada com diagnóstico. |
 | **EC-9** | **Prova de Término e Função Variante Decrescente**<br>Risco de laços infinitos ou livelock do agente. | **Leslie Lamport** | Exaustão de memória ou CPU em loops não limitados. | As regras declarativas não possuem sintaxe para laços `while`. As iterações geradas operam estritamente sobre coleções de cardinalidade finita $N$ com variante monotônica $V(s) = N - i$, garantindo término com cota finita de Fuel. |
 | **EC-10** | **Invariância de Prefixo Estático de KV-Cache**<br>Risco de variáveis dinâmicas poluírem o bloco de regras. | **Noam Shazeer** | Queda no índice de cache-hit durante inferência do LLM. | O bloco `asl:rules` é estático, colocado após as instruções semânticas, assegurando 100% de estabilidade de prefixo para servidores como vLLM e SGLang. |
+| **EC-11** | **Poluição de Disco e Arquivos Temporários (*Zero-Artifact Guarantee*)**<br>Compilação gerando arquivos `.py` ou `.starlark` soltos no diretório do projeto. | **Jean Catarina & Butler Lampson** | Sujeira no repositório git, confusão para agentes de IA que leem pastas, atrito de build manual. | **Transpilação JIT 100% In-Memory**. O código gerado vive exclusivamente na RAM durante o ciclo de execução de `asl run`. Zero arquivos lixo gravados em disco. |
 
 ---
 
@@ -207,15 +232,17 @@ pub struct TranspileError {
 - **Descrição**: Usar um modelo de linguagem para traduzir regras em código no momento da invocação.
 - **Por que foi descartada**: Viola frontalmente os Axiomas 2 e 5. Introduz estocasticidade, alucinações, latência em segundos (em vez de microssegundos), custo financeiro por chamada e vulnerabilidade grave de injeção de prompt.
 
-### Alternativa C (Escolhida): Transpilador AOT Determinístico para Strict Starlark L1
-- **Descrição**: Compilador formal em Rust, puro, com gramática EBNF e verificação estática pré-voo.
-- **Por que foi escolhida**: Garante latência em microssegundos ($< 35\ \mu\text{s}$), determinismo de 100%, imunidade a exceções de runtime e simplicidade máxima para humanos e agentes.
+### Alternativa C (Escolhida): Transpilador AOT Determinístico In-Memory para Strict Starlark L1
+- **Descrição**: Compilador formal em Rust, puro, com gramática EBNF, execução in-memory e verificação estática pré-voo.
+- **Por que foi escolhida**: Garante latência em microssegundos ($< 35\ \mu\text{s}$), determinismo de 100%, zero arquivos lixo no disco, imunidade a exceções de runtime e simplicidade máxima para humanos e agentes.
 
 ---
 
 ## 4. Consequências e Trade-offs
 
 ### Positivas:
+- **Zero Fricção de Adopção**: Renomear `.md` para `.skill`, escrever as regras e executar imediatamente. A IA consome e roda sem etapas extras.
+- **Repositório 100% Limpo (Zero Trash Files)**: Nenhuma pasta `.cache` ou arquivo `.py` gerado no sistema de arquivos. O `.skill` permanece único e atômico.
 - **Simplicidade Radical**: Desenvolvedores e pessoas de produto escrevem regras limpas como `guard:` e `match:` sem lidar com cerimonial técnico.
 - **Grounding e Precisão para IAs**: LLMs compreendem a intenção declarativa perfeitamente, reduzindo alucinações e erros sintáticos a zero.
 - **Robustez Absoluta**: Eliminação matemática de `KeyError`, `AttributeError` e `TypeError` em produção graças aos helpers do preâmbulo e à checagem estática de esquemas.
@@ -231,7 +258,7 @@ pub struct TranspileError {
 
 ## 5. Conformidade com os 7 Axiomas do ASL
 
-- [x] **Axioma 1 (Atomicidade do .skill)**: O bloco `asl:rules` é parte integrante e autocontida do arquivo `.skill`.
+- [x] **Axioma 1 (Atomicidade do .skill)**: O bloco `asl:rules` é parte integrante e autocontida do arquivo `.skill`. Zero arquivos auxiliares necessários.
 - [x] **Axioma 2 (Zero Dependências Externas)**: O transpilador é implementado em Rust nativo, sem ferramentas ou linters externos.
 - [x] **Axioma 3 (Confinamento OCap)**: As regras respeitam estritamente as permissões de filesystem e rede do manifesto.
 - [x] **Axioma 4 (Isolamento Hexagonal)**: A porta `RulesTranspilerPort` reside em `asl-core-traits`; o adaptador compilador em `asl-parser`.
@@ -248,5 +275,5 @@ pub struct TranspileError {
    - Fase 1: Portas e estruturas em `asl-core-traits`
    - Fase 2: Lexer e Parser EBNF em `asl-parser`
    - Fase 3: Gerador de código Strict Starlark L1 com sanitização RFC 8259
-   - Fase 4: Subcomando `asl expand` na CLI
+   - Fase 4: Integração JIT In-Memory no `asl run` e subcomando `asl expand` na CLI
    - Fase 5: Integração de guardrails e testes unitários exaustivos
