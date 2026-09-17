@@ -1,9 +1,11 @@
 pub mod grammar;
 pub mod prefix_analyzer;
+pub mod rules;
 pub mod shadow;
 
 pub use grammar::GbnfGrammarCompiler;
 pub use prefix_analyzer::*;
+pub use rules::{parse_rules, Action, GuardClause, MatchSection, PathExpr, PatternCondition, RulesBlock, WhenClause};
 pub use shadow::*;
 
 use asl_core_traits::ParserPort;
