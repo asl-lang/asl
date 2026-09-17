@@ -1,0 +1,73 @@
+---
+asl_version: "3.0"
+digest: "asl:sha256:36deaf21121083333f9a441deaf8038c843c910ad32f083e98a895546a760cac"
+name: "code-reviewer"
+version: "1.0.0"
+description: "Agente autônomo para auditoria e revisão estática de trechos de código."
+license: "MIT"
+
+interface:
+  protocol: "mcp-tool-v1"
+  entrypoint: "review_code"
+  input_schema:
+    type: "object"
+    additionalProperties: false
+    required: ["code", "language"]
+    properties:
+      code:
+        type: "string"
+        description: "Código-fonte a ser analisado"
+      language:
+        type: "string"
+        description: "Linguagem de programação"
+  output_schema:
+    type: "object"
+    additionalProperties: false
+    required: ["status", "severity", "recommendations"]
+    properties:
+      status:
+        type: "string"
+      severity:
+        type: "string"
+      recommendations:
+        type: "array"
+        items:
+          type: "string"
+
+capabilities:
+  fs:
+    confined_read_roots: []
+    allow_write: []
+  net:
+    allow_domains: []
+  wasi_components: []
+
+limits:
+  max_fuel_opcodes: 500000
+  max_heap_kib: 8192
+  wall_clock_timeout_ms: 1000
+---
+
+# SEÇÃO SEMÂNTICA AI-FIRST (Prefixo Estático Invariante)
+
+## 1. Intent (Persona do Agente)
+Atuar como revisor sênior de código focado em segurança, limites cognitivos e conformidade de tipos.
+
+## 2. Activation Criteria
+- Dispare este agente sempre que novos patches ou funções precisarem de inspeção estática.
+
+---
+
+```asl:rules
+guard:
+  input.code is not empty else reject("Código-fonte não pode ser vazio.")
+  input.language is not empty else reject("Linguagem de programação é obrigatória.")
+
+match input.code:
+  when contains any(["eval(", "exec(", "system(", "popen("]):
+    accept(status="flagged", severity="critical", recommendations=["Remover chamadas dinâmicas inseguras de execução de código."])
+  when contains any(["TODO", "FIXME", "XXX"]):
+    accept(status="needs_work", severity="low", recommendations=["Resolver anotações de pendência técnica antes do merge."])
+  otherwise:
+    accept(status="approved", severity="none", recommendations=[])
+```

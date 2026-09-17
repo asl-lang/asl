@@ -1,0 +1,76 @@
+---
+asl_version: "3.0"
+digest: "asl:sha256:f44f2f972bce4b7bb3874416d9dbb7516bcd50e68fd5b6f676980347f8b8af18"
+name: "security-validator"
+version: "1.0.0"
+description: "Guardrail de segurança para inspeção e mitigação de prompt injection em LLMs."
+license: "MIT"
+
+interface:
+  protocol: "mcp-tool-v1"
+  entrypoint: "validate_prompt"
+  input_schema:
+    type: "object"
+    additionalProperties: false
+    required: ["payload", "source"]
+    properties:
+      payload:
+        type: "string"
+        description: "Texto ou prompt a ser submetido ao modelo"
+      source:
+        type: "string"
+        description: "Origem dos dados (ex: user, web, webhook)"
+  output_schema:
+    type: "object"
+    additionalProperties: false
+    required: ["is_safe", "threat_level", "verdict", "sanitized_payload"]
+    properties:
+      is_safe:
+        type: "boolean"
+      threat_level:
+        type: "string"
+      verdict:
+        type: "string"
+      sanitized_payload:
+        type: "string"
+
+capabilities:
+  fs:
+    confined_read_roots: []
+    allow_write: []
+  net:
+    allow_domains: []
+  wasi_components: []
+
+limits:
+  max_fuel_opcodes: 500000
+  max_heap_kib: 8192
+  wall_clock_timeout_ms: 1000
+---
+
+# SEÇÃO SEMÂNTICA AI-FIRST (Prefixo Estático Invariante)
+
+## 1. Intent (Intenção Primária)
+Auditar payloads de entrada e detectar ataques de prompt injection, jailbreak ou vazamento de sistema antes que alcancem o LLM.
+
+## 2. Activation Criteria (Critérios de Disparo)
+- Acione este guardrail para qualquer entrada vinda de fontes externas ou desconfiadas.
+
+## 3. Security Boundary
+Este artefato atua como barreira de segurança formal (Guardrail) isolada na borda.
+
+---
+
+```asl:rules
+guard:
+  input.payload is not empty else reject("Payload de entrada não pode ser vazio.")
+  input.source is not empty else reject("Origem dos dados é obrigatória.")
+
+match input.payload:
+  when contains any(["ignore previous instructions", "ignore all instructions", "disregard system prompt", "jailbreak", "dan mode"]):
+    accept(is_safe=false, threat_level="high", verdict="prompt_injection_blocked", sanitized_payload="")
+  when contains any(["system prompt", "internal directive", "base prompt", "leaked token"]):
+    accept(is_safe=false, threat_level="medium", verdict="sensitive_probe_flagged", sanitized_payload="")
+  otherwise:
+    accept(is_safe=true, threat_level="none", verdict="allow", sanitized_payload=input.payload)
+```

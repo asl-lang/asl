@@ -35,13 +35,15 @@ echo "▶️  [4/5] Executando testes unitários e de arquitetura..."
 (cd "${RUNTIME_DIR}" && cargo test --quiet)
 echo "   ✅ Todos os testes unitários e guardrails foram aprovados."
 
-# 5. Verificação de integridade dos arquivos .skill em examples/
-echo "▶️  [5/5] Auditando integridade e hashes dos arquivos .skill..."
-for skill in "${ROOT_DIR}/examples"/*.skill; do
-    if [ -f "${skill}" ]; then
-        (cd "${RUNTIME_DIR}" && cargo run --quiet --bin asl -- check "${skill}")
-    fi
+# 5. Verificação de integridade dos arquivos do ecossistema ASL em examples/
+echo "▶️  [5/5] Auditando integridade e hashes dos arquivos do ecossistema ASL..."
+for ext in skill asl agent prompt tool guard persona chain rules; do
+    for file in "${ROOT_DIR}/examples"/*.${ext}; do
+        if [ -f "${file}" ]; then
+            (cd "${RUNTIME_DIR}" && cargo run --quiet --bin asl -- check "${file}")
+        fi
+    done
 done
-echo "   ✅ Todos os arquivos .skill canônicos possuem digests válidos."
+echo "   ✅ Todos os arquivos canônicos do ecossistema ASL possuem digests válidos."
 
 echo "🎉 PARABÉNS: Todos os Guardrails do ASL 3.0 foram rigorosamente atendidos!"
