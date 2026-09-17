@@ -28,3 +28,5 @@ Utilize a skill `asl-adr` (`skills/asl-adr/SKILL.md`):
 | **[ADR-0007](./0007-ed25519-skill-signatures.md)** | Assinatura Criptográfica Ed25519 & Cadeia de Custódia de Skills | **Concluído** | 2026-09-17 | `asl-spec`, `asl-security`, `asl-cli` |
 | **[ADR-0008](./0008-static-prefix-kv-cache-optimizer.md)** | Otimizador de Prefixo Estático e Analisador de KV-Cache para LLMs | **Concluído** | 2026-09-17 | `asl-parser`, `asl-cli` |
 | **[ADR-0009](./0009-automatic-markdown-shadow-projection.md)** | Projeção Sombra Automática de Markdown (Shadow Projection) para Adoção de Toque Zero | **Aceito** | 2026-09-17 | `asl-parser`, `asl-cli` |
+| **[ADR-0010](./0010-declarative-semantic-rules-transpiler.md)** | Transpilador Semântico Declarativo para Starlark Hermético (ASL Rules Transpiler) | **Proposto** | 2026-09-17 | `asl-core-traits`, `asl-parser`, `asl-vm-starlark`, `asl-cli` |
+
