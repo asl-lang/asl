@@ -14,3 +14,8 @@ Thumbs.db
 # Logs & temporary files
 *.log
 scratch/
+
+# Website build & dependencies
+website/node_modules/
+website/.next/
+website/out/
