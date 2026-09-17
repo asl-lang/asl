@@ -9,6 +9,7 @@ members = [
     "crates/asl-protocol-mcp",
     "crates/asl-cli",
     "crates/asl-ffi",
+    "crates/asl-vm-wasm",
 ]
 
 [workspace.package]

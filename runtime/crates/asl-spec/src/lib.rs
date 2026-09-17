@@ -21,6 +21,9 @@ pub enum AslError {
     #[error("Starlark execution error: {0}")]
     StarlarkError(String),
 
+    #[error("WASM execution error: {0}")]
+    WasmError(String),
+
     #[error("Entrypoint '{0}' not found in skill code")]
     EntrypointNotFound(String),
 
