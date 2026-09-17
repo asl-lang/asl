@@ -61,6 +61,7 @@ impl ParserPort for CommonMarkYamlParser {
             manifest,
             semantic_section,
             deterministic_code,
+            rules_code: None,
             digest,
         })
     }

@@ -163,6 +163,7 @@ interface:
             manifest,
             semantic_section: "Test".into(),
             deterministic_code: "def run(ctx, input): return {'ok': True}".into(),
+            rules_code: None,
             digest: "sha256:test".into(),
         };
 

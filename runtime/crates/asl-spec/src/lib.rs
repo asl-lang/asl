@@ -35,6 +35,9 @@ pub enum AslError {
 
     #[error("Schema violation: {0}")]
     SchemaViolation(String),
+
+    #[error("Rules transpilation error: {0}")]
+    RulesTranspileError(String),
 }
 
 pub type Result<T> = std::result::Result<T, AslError>;
@@ -182,6 +185,8 @@ pub struct SkillDocument {
     pub manifest: SkillManifest,
     pub semantic_section: String,
     pub deterministic_code: String,
+    #[serde(default)]
+    pub rules_code: Option<String>,
     pub digest: String,
 }
 

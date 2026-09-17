@@ -265,6 +265,7 @@ mod tests {
             },
             semantic_section: "Test".to_string(),
             deterministic_code: "def run(ctx, input): return input".to_string(),
+            rules_code: None,
             digest: "asl:sha256:test".to_string(),
         }
     }

@@ -1,4 +1,5 @@
-use asl_spec::{ExecutionResult, Limits, Result, SkillDocument};
+use asl_spec::{ExecutionResult, Limits, Result, SkillDocument, SkillManifest};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// Porta de execução de lógica determinística (Hexagonal Engine Port)
@@ -34,4 +35,43 @@ pub trait ParserPort: Send + Sync {
 pub trait GrammarCompilerPort: Send + Sync {
     fn compile_to_gbnf(&self, json_schema: &Value) -> Result<String>;
     fn compile_to_regex_cfg(&self, json_schema: &Value) -> Result<String>;
+}
+
+/// Porta do Transpilador Semântico de Regras (asl:rules)
+pub trait RulesTranspilerPort: Send + Sync {
+    /// Transpila regras declarativas para código Starlark L1 verificável
+    fn transpile(
+        &self,
+        rules_source: &str,
+        manifest: &SkillManifest,
+    ) -> Result<TranspilationResult>;
+}
+
+/// Resultado atômico da transpilação de regras
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TranspilationResult {
+    /// Código Starlark L1 hermético compilado
+    pub starlark_code: String,
+    /// Mapeamento de linhas para depuração e rastreabilidade
+    pub source_map: Vec<SourceMapEntry>,
+    /// Invariantes semânticos extraídos para o otimizador de KV-Cache
+    pub static_invariants: Vec<String>,
+}
+
+/// Mapeamento de linhas fonte (Rules -> Starlark)
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SourceMapEntry {
+    pub rules_line: usize,
+    pub starlark_line: usize,
+    pub description: String,
+}
+
+/// Erro de transpilação detalhado com linha e sugestão
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TranspileError {
+    pub message: String,
+    pub line: usize,
+    pub column: usize,
+    pub snippet: String,
+    pub suggestion: Option<String>,
 }

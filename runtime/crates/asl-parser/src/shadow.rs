@@ -235,6 +235,7 @@ mod tests {
             },
             semantic_section: "# Regras Semânticas\nSiga sempre as convenções.".to_string(),
             deterministic_code: "def run(ctx, input): return input".to_string(),
+            rules_code: None,
             digest: digest.to_string(),
         }
     }
