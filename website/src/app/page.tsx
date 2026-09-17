@@ -202,7 +202,7 @@ export default function HomePage() {
 
           <div className="mt-5 space-y-3 font-mono text-xs">
             <div className="rounded-lg border border-zinc-800 bg-black p-3.5 text-zinc-300 flex items-center justify-between">
-              <code>curl -fsSL https://raw.githubusercontent.com/cadente-hub/asl/main/install.sh | bash</code>
+              <code>curl -fsSL https://raw.githubusercontent.com/asl-lang/asl/main/install.sh | bash</code>
             </div>
             <div className="rounded-lg border border-zinc-800 bg-black p-3.5 text-zinc-300 flex items-center justify-between">
               <code>asl run examples/git-conventional-commit.skill --input &#39;&#123;&quot;intent&quot;: &quot;fix parser bug&quot;&#125;&#39;</code>

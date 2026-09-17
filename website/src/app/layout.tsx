@@ -5,7 +5,7 @@ import { AppShell } from "@/components/AppShell";
 export const metadata: Metadata = {
   title: "Agent Skill Language (ASL 3.0) — Deterministic Runtime for AI Agents",
   description:
-    "An AI-First, hermetic, capability-secure execution framework and deterministic orchestration runtime for autonomous AI agents by Cadente.",
+    "An AI-First, hermetic, capability-secure execution framework and deterministic orchestration runtime for autonomous AI agents.",
   keywords: [
     "ASL",
     "Agent Skill Language",
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     "Starlark",
     "Model Context Protocol",
   ],
-  authors: [{ name: "Jean Catarina", url: "https://github.com/cadente-hub" }],
+  authors: [{ name: "Jean Catarina" }],
 };
 
 export default function RootLayout({

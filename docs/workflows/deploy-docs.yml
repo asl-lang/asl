@@ -50,7 +50,7 @@ jobs:
       - name: Build Next.js Static Export
         run: npm run build
         env:
-          NEXT_PUBLIC_BASE_PATH: /asl
+          NEXT_PUBLIC_BASE_PATH: ""
 
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3

@@ -37,7 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch }) => {
                 </span>
               </span>
               <span className="text-[10px] font-medium text-zinc-500 tracking-wider uppercase">
-                Cadente
+                Language
               </span>
             </div>
           </Link>
@@ -78,7 +78,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch }) => {
           </button>
 
           <a
-            href="https://github.com/cadente-hub/asl"
+            href="https://github.com/asl-lang/asl"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:border-zinc-700 hover:bg-zinc-800/60 hover:text-white transition-colors"

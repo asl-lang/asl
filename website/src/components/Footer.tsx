@@ -10,7 +10,7 @@ export const Footer: React.FC = () => {
           <div className="md:col-span-2 space-y-3">
             <div className="flex items-center gap-2">
               <span className="font-mono text-base font-bold text-white tracking-tighter">λ ASL 3.0</span>
-              <span className="text-xs text-zinc-500">by Cadente</span>
+              <span className="text-xs text-zinc-500">Open Specification</span>
             </div>
             <p className="text-xs text-zinc-400 max-w-md leading-relaxed">
               Agent Skill Language is an AI-First, hermetic, capability-secure execution framework and deterministic orchestration runtime for autonomous AI agents.
@@ -35,14 +35,14 @@ export const Footer: React.FC = () => {
             <ul className="space-y-1.5 text-xs">
               <li><Link href="/paper" className="hover:text-white transition-colors">Scientific Paper (Full-Text)</Link></li>
               <li><Link href="/playground" className="hover:text-white transition-colors">WebAssembly Playground</Link></li>
-              <li><a href="https://github.com/cadente-hub/asl" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub Repository</a></li>
-              <li><a href="https://github.com/cadente-hub/asl/blob/main/LICENSE-MIT" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">MIT / Apache-2.0 License</a></li>
+              <li><a href="https://github.com/asl-lang/asl" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub Repository</a></li>
+              <li><a href="https://github.com/asl-lang/asl/blob/main/LICENSE-MIT" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">MIT / Apache-2.0 License</a></li>
             </ul>
           </div>
         </div>
 
         <div className="mt-8 pt-6 border-t border-zinc-900 flex flex-col sm:flex-row items-center justify-between text-[11px] text-zinc-500">
-          <p>© {new Date().getFullYear()} Cadente Hub & Jean Catarina. Open-source under MIT / Apache 2.0.</p>
+          <p>© {new Date().getFullYear()} ASL Project & Jean Catarina. Open-source under MIT / Apache 2.0.</p>
           <p className="mt-2 sm:mt-0 font-mono">Zero Ambient Authority • 100% KV-Cache Invariant</p>
         </div>
       </div>

@@ -234,7 +234,7 @@ export const CommandMenu: React.FC<CommandMenuProps> = ({ isOpen, onClose }) => 
             <span>↵ Select</span>
             <span>ESC Close</span>
           </div>
-          <span>Cadente ASL Engine 3.0</span>
+          <span>ASL Engine 3.0</span>
         </div>
       </div>
     </div>

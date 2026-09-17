@@ -8,9 +8,9 @@ import { MathBlock } from "@/components/MathBlock";
 const BIBTEX = `@article{catarina2026asl,
   title={Agent Skill Language (ASL): Uma Linguagem AI-First Hermética para Execução Determinística e Orquestração Semântica de Agentes Autônomos},
   author={Catarina, Jean},
-  journal={Cadente Research & Systems Architecture},
+  journal={ASL Open Systems & Architecture Group},
   year={2026},
-  url={https://github.com/cadente-hub/asl}
+  url={https://github.com/asl-lang/asl}
 }`;
 
 export default function ScientificPaperPage() {
@@ -31,7 +31,7 @@ export default function ScientificPaperPage() {
             <span className="rounded bg-blue-500/10 px-2 py-0.5 border border-blue-500/20">
               Formal Architecture Paper
             </span>
-            <span>Cadente Systems Group</span>
+            <span>ASL Architecture Group</span>
           </div>
           <button
             onClick={handleCopyBibtex}
@@ -47,7 +47,7 @@ export default function ScientificPaperPage() {
             Agent Skill Language (ASL): Uma Linguagem AI-First Hermética para Execução Determinística e Orquestração Semântica de Agentes Autônomos
           </h1>
           <div className="text-sm font-medium text-zinc-300">
-            Autor: <span className="text-white font-semibold">Jean Catarina</span> <span className="text-zinc-500">(Cadente)</span>
+            Autor: <span className="text-white font-semibold">Jean Catarina</span>
           </div>
         </div>
 
