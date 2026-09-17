@@ -109,24 +109,37 @@ impl RulesTranspilerPort for RulesTranspiler {
             let path_get = render_path_get(&match_sec.target);
             lines.push(format!("    {} = str({}).strip()", target_var, path_get));
 
+            // Pré-avaliação de padrões com variáveis para garantir cadeia if/elif contígua
             for (w_idx, when) in match_sec.when_clauses.iter().enumerate() {
-                let is_first = w_idx == 0;
-                let if_keyword = if is_first { "if" } else { "elif" };
-
                 match &when.condition {
                     PatternCondition::StartsWithAny(prefixes) => {
                         let pref_var = format!("_p_{}_{}", m_idx, w_idx);
                         let prefixes_json = serde_json::to_string(prefixes).unwrap_or_else(|_| "[]".to_string());
                         lines.push(format!("    {} = _asl_starts_with_any({}, {})", pref_var, target_var, prefixes_json));
-                        lines.push(format!("    {} {} != None:", if_keyword, pref_var));
-                        if let Some(alias) = &when.alias {
-                            lines.push(format!("        {} = {}", alias, pref_var));
-                        }
                     }
                     PatternCondition::EndsWithAny(suffixes) => {
                         let suff_var = format!("_s_{}_{}", m_idx, w_idx);
                         let suffixes_json = serde_json::to_string(suffixes).unwrap_or_else(|_| "[]".to_string());
                         lines.push(format!("    {} = _asl_ends_with_any({}, {})", suff_var, target_var, suffixes_json));
+                    }
+                    _ => {}
+                }
+            }
+
+            for (w_idx, when) in match_sec.when_clauses.iter().enumerate() {
+                let is_first = w_idx == 0;
+                let if_keyword = if is_first { "if" } else { "elif" };
+
+                match &when.condition {
+                    PatternCondition::StartsWithAny(_) => {
+                        let pref_var = format!("_p_{}_{}", m_idx, w_idx);
+                        lines.push(format!("    {} {} != None:", if_keyword, pref_var));
+                        if let Some(alias) = &when.alias {
+                            lines.push(format!("        {} = {}", alias, pref_var));
+                        }
+                    }
+                    PatternCondition::EndsWithAny(_) => {
+                        let suff_var = format!("_s_{}_{}", m_idx, w_idx);
                         lines.push(format!("    {} {} != None:", if_keyword, suff_var));
                         if let Some(alias) = &when.alias {
                             lines.push(format!("        {} = {}", alias, suff_var));
