@@ -130,6 +130,12 @@ enum Commands {
         #[arg(short, long, default_value = "500")]
         interval: u64,
     },
+
+    /// Inspeciona o código Starlark transpilado em memória a partir de regras declarativas
+    Expand {
+        /// Caminho para o arquivo .skill
+        skill_file: PathBuf,
+    },
 }
 
 fn main() -> Result<()> {
@@ -237,6 +243,10 @@ fn main() -> Result<()> {
                     eprintln!("Projeção Sombra: ⚠️ Falha ao projetar: {}", e);
                 }
             }
+
+            if doc.rules_code.is_some() {
+                println!("Regras Semânticas: ✅ Transpiladas em memória (Strict Starlark L1)");
+            }
         }
 
         Commands::Serve {
@@ -338,6 +348,25 @@ fn main() -> Result<()> {
 
         Commands::Watch { path, interval } => {
             shadow_cmds::handle_watch_shadows(&path, &parser, interval)?;
+        }
+
+        Commands::Expand { skill_file } => {
+            let content = fs::read_to_string(&skill_file)
+                .with_context(|| format!("Falha ao ler arquivo: {:?}", skill_file))?;
+
+            let doc = parser
+                .parse(&content)
+                .with_context(|| "Erro ao analisar o arquivo .skill")?;
+
+            if let Some(rules) = &doc.rules_code {
+                println!("# --- REGRAS SEMÂNTICAS ORIGINAIS (asl:rules) ---");
+                println!("{}\n", rules.trim());
+                println!("# --- CÓDIGO DETERMINÍSTICO STARLARK L1 GERADO (JIT IN-MEMORY) ---");
+                println!("{}", doc.deterministic_code);
+            } else {
+                println!("# --- CÓDIGO DETERMINÍSTICO STARLARK (ORIGINAL) ---");
+                println!("{}", doc.deterministic_code);
+            }
         }
     }
 
