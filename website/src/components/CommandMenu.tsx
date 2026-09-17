@@ -15,6 +15,14 @@ interface SearchItem {
 
 const SEARCH_INDEX: SearchItem[] = [
   {
+    id: "syntax",
+    title: "Language Syntax Reference",
+    category: "Language",
+    href: "/docs/syntax",
+    icon: BookOpen,
+    description: "Complete formal grammar, frontmatter manifest, Starlark L1, and asl:rules DSL.",
+  },
+  {
     id: "tokenomics",
     title: "93.2% Token Reduction Theorem",
     category: "Tokenomics",

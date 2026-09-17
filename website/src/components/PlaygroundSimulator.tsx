@@ -192,18 +192,18 @@ export const PlaygroundSimulator: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
           {Object.entries(PRESETS).map(([key, preset]) => (
             <button
               key={key}
               onClick={() => handleSelectPreset(key)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+              className={`rounded-lg px-2.5 py-1 text-xs font-mono transition-all ${
                 selectedPresetKey === key
                   ? "bg-zinc-800 text-white border border-zinc-700 shadow-sm"
-                  : "bg-zinc-900/60 text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200 border border-zinc-850"
+                  : "bg-zinc-900/60 text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200 border border-zinc-800"
               }`}
             >
-              {preset.name}
+              .{preset.extension}
             </button>
           ))}
         </div>

@@ -1,212 +1,196 @@
 import React from "react";
 import Link from "next/link";
-import { ArrowRight, Sparkles, Terminal, Shield, Zap, Layers, Cpu, CheckCircle2, Lock, GitBranch } from "lucide-react";
+import { ArrowRight, Terminal, Shield, Layers, Cpu, Code2, Check, Copy } from "lucide-react";
 import { CodeSwitcher } from "@/components/CodeSwitcher";
 import { PlaygroundSimulator } from "@/components/PlaygroundSimulator";
-import { MathBlock } from "@/components/MathBlock";
 
 export default function HomePage() {
   return (
-    <div className="relative overflow-hidden">
-      {/* Subtle background grid & gradient glow */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f1f1f0a_1px,transparent_1px),linear-gradient(to_bottom,#1f1f1f0a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[350px] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none" />
-
+    <div className="relative">
       {/* Hero Section */}
-      <section className="relative mx-auto max-w-6xl px-4 pt-20 pb-16 sm:px-6 lg:px-8 text-center">
-        {/* Release badge */}
-        <div className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-1 text-xs text-zinc-300 backdrop-blur-md mb-8 hover:border-zinc-700 transition-colors">
-          <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-medium">ASL 3.0 Released</span>
+      <section className="mx-auto max-w-5xl px-4 pt-16 pb-16 sm:px-6 sm:pt-24 lg:px-8 text-center">
+        {/* Subtle version badge */}
+        <div className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs text-zinc-400 mb-6">
+          <span className="font-mono text-zinc-200">ASL 3.0</span>
           <span className="text-zinc-600">•</span>
-          <span className="text-zinc-400">Formal Tokenomics & Hexagonal Runtime</span>
-          <ArrowRight className="h-3 w-3 text-zinc-400" />
+          <span>Open Language Specification</span>
         </div>
 
-        {/* Hero headline */}
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-white max-w-4xl mx-auto leading-[1.1]">
-          The Deterministic Runtime for{" "}
-          <span className="gradient-text">Autonomous AI Agents.</span>
+        {/* Clean Headline */}
+        <h1 className="text-4xl sm:text-6xl font-bold tracking-tight text-white max-w-3xl mx-auto leading-[1.12]">
+          The Hermetic Language for AI Agents.
         </h1>
 
-        <p className="mt-6 text-base sm:text-lg text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-          Eliminate stochastic script failures, ambient authority exploits, and exploratory prompt bloat.
-          Execute atomic skills with provable termination, zero external dependencies, and{" "}
-          <span className="text-white font-medium">93.2% fewer tokens</span>.
+        {/* Professional Subtitle */}
+        <p className="mt-5 text-sm sm:text-base text-zinc-400 max-w-2xl mx-auto leading-relaxed">
+          Agent Skill Language (ASL) is a deterministic language and execution runtime for autonomous AI agent skills.
+          Combine natural language semantic prompts with sandboxed Starlark logic, strict capability security, and zero ambient authority.
         </p>
 
-        {/* CTA Buttons */}
+        {/* Primary CTA Buttons */}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
             href="/docs"
-            className="flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-xs font-semibold text-black hover:bg-zinc-200 transition-colors shadow-lg shadow-white/5"
+            className="flex items-center gap-2 rounded-md bg-white px-4 py-2.5 text-xs font-semibold text-black hover:bg-zinc-200 transition-colors"
           >
             <span>Get Started</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
+
           <Link
-            href="/docs/tokenomics"
-            className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/90 px-5 py-3 text-xs font-semibold text-zinc-200 hover:border-zinc-700 hover:bg-zinc-800 transition-colors"
+            href="/docs/syntax"
+            className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/60 px-4 py-2.5 text-xs font-medium text-zinc-300 hover:border-zinc-700 hover:text-white transition-colors"
           >
-            <Sparkles className="h-3.5 w-3.5 text-blue-400" />
-            <span>93.2% Token Reduction</span>
+            <Code2 className="h-3.5 w-3.5" />
+            <span>Syntax Reference</span>
           </Link>
+
           <Link
             href="/paper"
-            className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 px-5 py-3 text-xs font-semibold text-zinc-400 hover:border-zinc-700 hover:text-white transition-colors"
+            className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/40 px-4 py-2.5 text-xs font-medium text-zinc-400 hover:border-zinc-700 hover:text-white transition-colors"
           >
             <Terminal className="h-3.5 w-3.5" />
-            <span>Scientific Paper 🔬</span>
+            <span>Architecture Paper</span>
           </Link>
         </div>
 
-        {/* Metrics Grid */}
-        <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
-          <div className="glow-card rounded-xl p-4 text-center">
-            <div className="text-2xl sm:text-3xl font-bold font-mono text-emerald-400">-93.2%</div>
-            <div className="text-xs font-medium text-zinc-300 mt-1">Token Reduction</div>
-            <div className="text-[10px] text-zinc-500 mt-0.5">Single-turn atomic AOT vs ReAct</div>
-          </div>
-          <div className="glow-card rounded-xl p-4 text-center">
-            <div className="text-2xl sm:text-3xl font-bold font-mono text-blue-400">&lt; 35 µs</div>
-            <div className="text-xs font-medium text-zinc-300 mt-1">In-Process Latency</div>
-            <div className="text-[10px] text-zinc-500 mt-0.5">High-speed Rust VM engine</div>
-          </div>
-          <div className="glow-card rounded-xl p-4 text-center">
-            <div className="text-2xl sm:text-3xl font-bold font-mono text-purple-400">100%</div>
-            <div className="text-xs font-medium text-zinc-300 mt-1">KV-Cache Invariance</div>
-            <div className="text-[10px] text-zinc-500 mt-0.5">Axiom 6 static immutable prefix</div>
-          </div>
-          <div className="glow-card rounded-xl p-4 text-center">
-            <div className="text-2xl sm:text-3xl font-bold font-mono text-amber-400">0%</div>
-            <div className="text-xs font-medium text-zinc-300 mt-1">Syntax Hallucination</div>
-            <div className="text-[10px] text-zinc-500 mt-0.5">AOT GBNF grammar constraints</div>
+        {/* Clean CLI Install Snippet */}
+        <div className="mt-10 max-w-md mx-auto">
+          <div className="rounded-lg border border-zinc-800 bg-black px-3.5 py-2.5 flex items-center justify-between font-mono text-xs text-zinc-300">
+            <span className="truncate mr-2">
+              <span className="text-zinc-500 select-none">$ </span>
+              curl -fsSL https://raw.githubusercontent.com/asl-lang/asl/main/install.sh | bash
+            </span>
           </div>
         </div>
       </section>
 
-      {/* Code Triad Section */}
-      <section className="relative mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="text-center mb-10">
-          <div className="text-xs font-mono font-semibold uppercase tracking-wider text-blue-400">
-            The Canonical Triad
+      {/* Code Architecture Triad Section */}
+      <section className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8 border-t border-zinc-800">
+        <div className="mb-8">
+          <div className="text-xs font-mono font-semibold uppercase tracking-wider text-zinc-500">
+            Atomic Architecture
           </div>
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mt-1">
-            One Core Language. Three Focused Formats.
+          <h2 className="text-2xl font-bold tracking-tight text-white mt-1">
+            The Canonical Triad: One Specification, Three Formats
           </h2>
-          <p className="text-xs sm:text-sm text-zinc-400 max-w-xl mx-auto mt-2">
-            Write atomic specifications that compile deterministically across skills, tools, and native agent units with automatic shadow projection.
+          <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl mt-1.5 leading-relaxed">
+            Every ASL unit encapsulates manifest metadata, model instructions, and deterministic execution bytecode in a single atomic file.
           </p>
         </div>
 
         <CodeSwitcher />
       </section>
 
-      {/* Tokenomics Formula Highlight */}
-      <section className="relative mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="glow-card rounded-2xl p-8 border border-zinc-800 bg-gradient-to-b from-zinc-900/80 to-black">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-            <div className="md:col-span-7 space-y-4">
-              <div className="inline-flex items-center gap-1.5 rounded-md bg-blue-500/10 px-2.5 py-1 text-xs font-mono font-medium text-blue-400 border border-blue-500/20">
-                <Sparkles className="h-3.5 w-3.5" />
-                Scientifically Grounded Tokenomics
-              </div>
-              <h3 className="text-2xl font-bold text-white tracking-tight">
-                How 93.2% Token Reduction is Measured
-              </h3>
-              <p className="text-xs text-zinc-400 leading-relaxed">
-                Traditional agent execution relies on an unpredictable multi-turn ReAct loop (reading documentation markdown, inspecting filesystem with <code className="text-zinc-200">cat</code>, executing shell commands, parsing error tracebacks, and repeating).
-              </p>
-              <p className="text-xs text-zinc-400 leading-relaxed">
-                ASL compiles specifications Ahead-of-Time into a closed-form schema, turning a 4-turn exploratory conversation into an atomic 1-turn call:
-              </p>
+      {/* Core Architectural Pillars */}
+      <section className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8 border-t border-zinc-800">
+        <div className="mb-10">
+          <div className="text-xs font-mono font-semibold uppercase tracking-wider text-zinc-500">
+            Engine Design
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight text-white mt-1">
+            Built for Robust Agent Workflows
+          </h2>
+        </div>
 
-              <div className="rounded-lg border border-zinc-800 bg-black/60 p-4 font-mono text-xs">
-                <div className="flex justify-between text-zinc-400 mb-1">
-                  <span>Legacy Multi-Turn ReAct:</span>
-                  <span className="text-red-400 font-semibold">~2,100 tokens</span>
-                </div>
-                <div className="flex justify-between text-zinc-400 mb-2">
-                  <span>ASL 3.0 In-Process Call:</span>
-                  <span className="text-emerald-400 font-semibold">~142 tokens</span>
-                </div>
-                <div className="pt-2 border-t border-zinc-800 text-center text-sm font-bold text-white">
-                  Efficiency Gain: <span className="text-emerald-400">93.24% Reduction</span>
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-6 space-y-2.5 hover:border-zinc-700 transition-colors">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-zinc-900 border border-zinc-800">
+                <Code2 className="h-4 w-4 text-white" />
               </div>
-
-              <div className="pt-2">
-                <Link
-                  href="/docs/tokenomics"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-400 hover:text-blue-300"
-                >
-                  <span>Read the complete mathematical breakdown</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
+              <h3 className="text-sm font-semibold text-white">Dual-Consumer AST</h3>
             </div>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Consumable simultaneously by neural language models as an invariant semantic directive and by a hermetic host runtime as a closed deterministic specification.
+            </p>
+          </div>
 
-            <div className="md:col-span-5 flex flex-col items-center justify-center p-6 rounded-xl border border-zinc-800/80 bg-black/40">
-              <div className="text-[11px] font-mono text-zinc-400 uppercase tracking-widest mb-3">
-                Formal Theorem Formulation
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-6 space-y-2.5 hover:border-zinc-700 transition-colors">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-zinc-900 border border-zinc-800">
+                <Shield className="h-4 w-4 text-white" />
               </div>
-              <MathBlock
-                block
-                math={`\\Delta_{\\text{tokens}} = \\left(1 - \\frac{\\mathcal{T}_{\\text{ASL}}}{\\mathcal{T}_{\\text{Legacy}}}\\right) \\times 100\\%`}
-              />
-              <MathBlock
-                block
-                math={`\\Delta_{\\text{tokens}} = \\left(1 - \\frac{142}{2{,}100}\\right) \\approx \\mathbf{93.24\\%}`}
-              />
-              <div className="mt-4 text-[10px] text-zinc-500 text-center font-mono">
-                Verified across 100 benchmark trials with Claude 3.5 & GPT-4o
-              </div>
+              <h3 className="text-sm font-semibold text-white">Capability Confinement (OCap)</h3>
             </div>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Strictly zero ambient authority. All filesystem, network, and environment interactions require explicitly passed capability handles bounded at compile time.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-6 space-y-2.5 hover:border-zinc-700 transition-colors">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-zinc-900 border border-zinc-800">
+                <Cpu className="h-4 w-4 text-white" />
+              </div>
+              <h3 className="text-sm font-semibold text-white">Bounded Fuel Termination</h3>
+            </div>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Every execution cycle is bounded by a monotonic fuel counter. Unbounded loops (<code className="text-zinc-300 font-mono">while</code>) and recursion are strictly disallowed.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-6 space-y-2.5 hover:border-zinc-700 transition-colors">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-zinc-900 border border-zinc-800">
+                <Terminal className="h-4 w-4 text-white" />
+              </div>
+              <h3 className="text-sm font-semibold text-white">Zero Host Dependencies</h3>
+            </div>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              The core engine (<code className="text-zinc-300 font-mono">libasl</code> and <code className="text-zinc-300 font-mono">asl-cli</code>) is written in pure Rust. Runs without Python, pip, Node.js, or virtual environment breaks.
+            </p>
           </div>
         </div>
       </section>
 
       {/* Interactive In-Browser Playground Section */}
-      <section className="relative mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="text-center mb-10">
-          <div className="text-xs font-mono font-semibold uppercase tracking-wider text-purple-400">
-            Zero Install Simulation
+      <section className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8 border-t border-zinc-800">
+        <div className="mb-8">
+          <div className="text-xs font-mono font-semibold uppercase tracking-wider text-zinc-500">
+            Interactive Environment
           </div>
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mt-1">
-            Test ASL in Your Browser
+          <h2 className="text-2xl font-bold tracking-tight text-white mt-1">
+            Test ASL in the Browser
           </h2>
-          <p className="text-xs sm:text-sm text-zinc-400 max-w-xl mx-auto mt-2">
-            Experiment with declarative rules, instant Starlark compilation, and KV-cache inspection live in the browser.
+          <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl mt-1.5 leading-relaxed">
+            Write declarative semantic rules, simulate AOT transpilation to Starlark L1 bytecode, and test execution directly in WebAssembly.
           </p>
         </div>
 
         <PlaygroundSimulator />
       </section>
 
-      {/* CLI Quickstart */}
-      <section className="relative mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-6 sm:p-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-5">
-            <div>
-              <h3 className="text-lg font-semibold text-white">Install via Single Shell Pipeline</h3>
-              <p className="text-xs text-zinc-400 mt-1">Pure standalone Rust binary with zero system dependencies.</p>
+      {/* Quickstart Reference */}
+      <section className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8 border-t border-zinc-800 mb-12">
+        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-6 sm:p-8">
+          <h2 className="text-lg font-bold text-white tracking-tight">CLI Quickstart Reference</h2>
+          <p className="text-xs text-zinc-400 mt-1">Common commands for developing and executing ASL skills.</p>
+
+          <div className="mt-5 space-y-2.5 font-mono text-xs">
+            <div className="rounded-lg border border-zinc-800/80 bg-black p-3 text-zinc-300 flex items-center justify-between">
+              <code>asl run examples/git-conventional-commit.skill --input &#39;&#123;&quot;intent&quot;: &quot;fix parser bug&quot;&#125;&#39;</code>
+              <span className="text-zinc-500 font-sans text-[11px] hidden sm:inline">Execute</span>
             </div>
-            <Link
-              href="/docs/cli"
-              className="text-xs font-medium text-blue-400 hover:text-blue-300 flex items-center gap-1"
-            >
-              <span>View full CLI reference</span>
-              <ArrowRight className="h-3 w-3" />
-            </Link>
+            <div className="rounded-lg border border-zinc-800/80 bg-black p-3 text-zinc-300 flex items-center justify-between">
+              <code>asl check examples/conventional-commit-rules.skill</code>
+              <span className="text-zinc-500 font-sans text-[11px] hidden sm:inline">Validate</span>
+            </div>
+            <div className="rounded-lg border border-zinc-800/80 bg-black p-3 text-zinc-300 flex items-center justify-between">
+              <code>asl serve --mcp</code>
+              <span className="text-zinc-500 font-sans text-[11px] hidden sm:inline">Start MCP</span>
+            </div>
           </div>
 
-          <div className="mt-5 space-y-3 font-mono text-xs">
-            <div className="rounded-lg border border-zinc-800 bg-black p-3.5 text-zinc-300 flex items-center justify-between">
-              <code>curl -fsSL https://raw.githubusercontent.com/asl-lang/asl/main/install.sh | bash</code>
-            </div>
-            <div className="rounded-lg border border-zinc-800 bg-black p-3.5 text-zinc-300 flex items-center justify-between">
-              <code>asl run examples/git-conventional-commit.skill --input &#39;&#123;&quot;intent&quot;: &quot;fix parser bug&quot;&#125;&#39;</code>
-            </div>
+          <div className="mt-6 pt-5 border-t border-zinc-800/80 flex items-center justify-between">
+            <span className="text-xs text-zinc-400">Ready to build deterministic skills?</span>
+            <Link
+              href="/docs"
+              className="flex items-center gap-1.5 text-xs font-semibold text-white hover:text-zinc-300 transition-colors"
+            >
+              <span>Explore Documentation</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
         </div>
       </section>

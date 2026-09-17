@@ -94,13 +94,13 @@ export default function DocsOverviewPage() {
           </div>
         </div>
 
-        <div className="pt-6 flex items-center justify-between border-t border-zinc-850">
+        <div className="pt-6 flex items-center justify-between border-t border-zinc-800">
           <span className="text-xs text-zinc-500">Next Track</span>
           <Link
-            href="/docs/tokenomics"
-            className="flex items-center gap-1.5 text-xs font-semibold text-blue-400 hover:text-blue-300"
+            href="/docs/syntax"
+            className="flex items-center gap-1.5 text-xs font-semibold text-white hover:text-zinc-300 transition-colors"
           >
-            <span>93.2% Token Reduction Theorem</span>
+            <span>Complete Syntax Reference</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>

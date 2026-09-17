@@ -152,7 +152,7 @@ export const CodeSwitcher: React.FC = () => {
   return (
     <div className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 shadow-2xl overflow-hidden">
       {/* Tab bar */}
-      <div className="flex flex-wrap items-center justify-between border-b border-zinc-800 bg-zinc-900/60 px-4 py-2.5">
+      <div className="flex flex-wrap items-center justify-between border-b border-zinc-800 bg-zinc-900/60 px-4 py-2.5 gap-2">
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => setActiveTab("skill")}
@@ -189,8 +189,8 @@ export const CodeSwitcher: React.FC = () => {
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className={`text-[11px] font-mono px-2 py-0.5 rounded border ${active.badgeColor}`}>
+        <div className="flex items-center gap-2.5">
+          <span className={`text-[10px] sm:text-[11px] font-mono px-2 py-0.5 rounded border ${active.badgeColor}`}>
             {active.badge}
           </span>
           <button
@@ -204,9 +204,9 @@ export const CodeSwitcher: React.FC = () => {
       </div>
 
       {/* Shadow Projection status indicator */}
-      <div className="border-b border-zinc-850 bg-zinc-900/30 px-4 py-1.5 text-[11px] font-mono text-zinc-400 flex items-center justify-between">
+      <div className="border-b border-zinc-800 bg-zinc-900/30 px-4 py-2 text-[11px] font-mono text-zinc-400 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
         <span className="text-zinc-300 font-semibold">{active.filename}</span>
-        <span>{active.shadowNote}</span>
+        <span className="text-[10px] sm:text-[11px] text-zinc-400">{active.shadowNote}</span>
       </div>
 
       {/* Code body */}
