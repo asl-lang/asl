@@ -1,0 +1,11 @@
+# .cursorrules: Configuração e Guardrails do Cursor & Windsurf para ASL
+
+- Project: Agent Skill Language (ASL 3.0)
+- Architecture: Hexagonal (Ports & Adapters) using Rust micro-crates
+- Core Rule 1: NEVER create external companion scripts (Python/Bash) for .skill files. A .skill file MUST be single-file atomic.
+- Core Rule 2: NEVER add Python/Node/JVM runtime dependencies. ASL runtime is 100% pure Rust (`asl` / `libasl`).
+- Core Rule 3: Adapters in `runtime/crates/asl-*` MUST NOT import each other directly. They only depend on `asl-spec` and `asl-core-traits`.
+- Core Rule 4: Starlark deterministic logic runs with Fuel Metering and strict ocap context `ctx`.
+- Core Rule 5: Keep all source code files under 400 lines for AI context window containment.
+- Core Rule 6: Spec-Driven Development (SDD): Always create ADR in docs/adrs/ and phase plan in docs/plans/ with code examples before implementing.
+- Always run `cargo test` and `./scripts/guardrail_check.sh` after modifying code.

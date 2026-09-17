@@ -1,0 +1,214 @@
+use asl_core_traits::CapabilityContext;
+use asl_spec::{AslError, Result, SkillCapabilities};
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+
+/// Contexto de segurança puramente em memória (Mock) para testes herméticos rápidos
+pub struct MockSecurityContext {
+    virtual_fs: HashMap<String, String>,
+    fuel_budget: u64,
+    fuel_consumed: AtomicU64,
+}
+
+impl MockSecurityContext {
+    pub fn new(initial_fuel: u64) -> Self {
+        Self {
+            virtual_fs: HashMap::new(),
+            fuel_budget: initial_fuel,
+            fuel_consumed: AtomicU64::new(0),
+        }
+    }
+
+    pub fn with_file(mut self, path: impl Into<String>, content: impl Into<String>) -> Self {
+        self.virtual_fs.insert(path.into(), content.into());
+        self
+    }
+
+    pub fn consume_fuel(&self, amount: u64) {
+        self.fuel_consumed.fetch_add(amount, Ordering::Relaxed);
+    }
+}
+
+impl CapabilityContext for MockSecurityContext {
+    fn read_file(&self, path: &str) -> Result<Option<String>> {
+        self.consume_fuel(1);
+        Ok(self.virtual_fs.get(path).cloned())
+    }
+
+    fn sha256(&self, data: &str) -> String {
+        self.consume_fuel(1);
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(data.as_bytes());
+        hex::encode(hasher.finalize())
+    }
+
+    fn check_fuel(&self) -> Result<u64> {
+        Ok(self.fuel_budget.saturating_sub(self.fuel_consumed.load(Ordering::Relaxed)))
+    }
+
+    fn fuel_consumed(&self) -> u64 {
+        self.fuel_consumed.load(Ordering::Relaxed)
+    }
+}
+
+/// Contexto de segurança para execução real com confinamento de diretórios raiz
+pub struct ConfinedSecurityContext {
+    allowed_read_roots: Vec<PathBuf>,
+    fuel_budget: u64,
+    fuel_consumed: AtomicU64,
+}
+
+impl ConfinedSecurityContext {
+    pub fn from_capabilities(caps: &SkillCapabilities, initial_fuel: u64) -> Self {
+        let roots = caps
+            .fs
+            .confined_read_roots
+            .iter()
+            .map(|r| {
+                let p = PathBuf::from(r);
+                std::fs::canonicalize(&p).unwrap_or(p)
+            })
+            .collect();
+
+        Self {
+            allowed_read_roots: roots,
+            fuel_budget: initial_fuel,
+            fuel_consumed: AtomicU64::new(0),
+        }
+    }
+
+    pub fn consume_fuel(&self, amount: u64) {
+        self.fuel_consumed.fetch_add(amount, Ordering::Relaxed);
+    }
+}
+
+impl CapabilityContext for ConfinedSecurityContext {
+    fn read_file(&self, path_str: &str) -> Result<Option<String>> {
+        self.consume_fuel(1);
+        let target_path = Path::new(path_str);
+
+        // Se nenhuma raiz foi autorizada, o acesso é sumariamente negado
+        if self.allowed_read_roots.is_empty() {
+            return Err(AslError::CapabilityViolation(format!(
+                "Acesso de leitura negado: nenhuma raiz confinada autorizada para '{}'",
+                path_str
+            )));
+        }
+
+        // Canonicaliza o caminho alvo ou seu diretório pai
+        let canonical_target = if target_path.exists() {
+            std::fs::canonicalize(target_path).map_err(|e| AslError::Io(e.to_string()))?
+        } else if let Some(parent) = target_path.parent() {
+            let canonical_parent = if parent.as_os_str().is_empty() {
+                std::fs::canonicalize(".").map_err(|e| AslError::Io(e.to_string()))?
+            } else if parent.exists() {
+                std::fs::canonicalize(parent).map_err(|e| AslError::Io(e.to_string()))?
+            } else {
+                parent.to_path_buf()
+            };
+            if let Some(file_name) = target_path.file_name() {
+                canonical_parent.join(file_name)
+            } else {
+                canonical_parent
+            }
+        } else {
+            target_path.to_path_buf()
+        };
+
+        // Verifica se o caminho canônico reside estritamente dentro de uma raiz autorizada
+        let is_allowed = self
+            .allowed_read_roots
+            .iter()
+            .any(|root| canonical_target.starts_with(root));
+
+        if !is_allowed {
+            return Err(AslError::CapabilityViolation(format!(
+                "Tentativa de fuga de diretório confinado para '{}'",
+                path_str
+            )));
+        }
+
+        if !canonical_target.exists() {
+            return Ok(None);
+        }
+
+        match std::fs::read_to_string(&canonical_target) {
+            Ok(content) => Ok(Some(content)),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(AslError::Io(e.to_string())),
+        }
+    }
+
+    fn sha256(&self, data: &str) -> String {
+        self.consume_fuel(1);
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(data.as_bytes());
+        hex::encode(hasher.finalize())
+    }
+
+    fn check_fuel(&self) -> Result<u64> {
+        Ok(self.fuel_budget.saturating_sub(self.fuel_consumed.load(Ordering::Relaxed)))
+    }
+
+    fn fuel_consumed(&self) -> u64 {
+        self.fuel_consumed.load(Ordering::Relaxed)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mock_security_context() {
+        let ctx = MockSecurityContext::new(1000).with_file("test.txt", "hello world");
+        let content = ctx.read_file("test.txt").unwrap();
+        assert_eq!(content, Some("hello world".to_string()));
+
+        let missing = ctx.read_file("missing.txt").unwrap();
+        assert_eq!(missing, None);
+    }
+
+    #[test]
+    fn test_confined_security_context_escape_prevention() {
+        // Sem permissão: deve falhar
+        let empty_caps = SkillCapabilities::default();
+        let ctx_denied = ConfinedSecurityContext::from_capabilities(&empty_caps, 1000);
+        let res = ctx_denied.read_file("Cargo.toml");
+        assert!(matches!(res, Err(AslError::CapabilityViolation(_))));
+
+        // Com raiz em '.', tentar escapar para /etc ou diretório pai
+        let mut caps = SkillCapabilities::default();
+        caps.fs.confined_read_roots.push(".".to_string());
+        let ctx_allowed = ConfinedSecurityContext::from_capabilities(&caps, 1000);
+
+        // Acesso legal dentro da raiz
+        let valid_read = ctx_allowed.read_file("Cargo.toml");
+        assert!(valid_read.is_ok());
+
+        // Tentativa maliciosa de Directory Traversal
+        let escape_attempt = ctx_allowed.read_file("../../../../../etc/passwd");
+        assert!(matches!(escape_attempt, Err(AslError::CapabilityViolation(_))));
+    }
+
+    #[test]
+    fn test_security_context_crypto_and_fuel() {
+        let mock_ctx = MockSecurityContext::new(5000);
+        assert_eq!(mock_ctx.fuel_consumed(), 0);
+        let hash = mock_ctx.sha256("hello");
+        assert_eq!(hash, "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824");
+        assert_eq!(mock_ctx.fuel_consumed(), 1);
+        assert_eq!(mock_ctx.check_fuel().unwrap(), 4999);
+
+        let empty_caps = SkillCapabilities::default();
+        let confined_ctx = ConfinedSecurityContext::from_capabilities(&empty_caps, 7777);
+        assert_eq!(confined_ctx.fuel_consumed(), 0);
+        assert_eq!(confined_ctx.check_fuel().unwrap(), 7777);
+        assert_eq!(confined_ctx.sha256("asl"), "a12e45b23513ff84c05054772fedffc35f0b8a1bc87fb819906b3318b86dfd7a");
+        assert_eq!(confined_ctx.fuel_consumed(), 1);
+        assert_eq!(confined_ctx.check_fuel().unwrap(), 7776);
+    }
+}

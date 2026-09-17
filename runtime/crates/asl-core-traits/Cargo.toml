@@ -1,0 +1,9 @@
+[package]
+name = "asl-core-traits"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+asl-spec.workspace = true
+serde_json.workspace = true

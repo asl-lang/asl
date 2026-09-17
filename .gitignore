@@ -1,0 +1,16 @@
+# Rust build targets
+/target
+/runtime/target
+**/target
+
+# IDE & OS files
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# Logs & temporary files
+*.log
+scratch/
