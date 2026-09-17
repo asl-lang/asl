@@ -1,0 +1,17 @@
+[package]
+name = "asl-ffi"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "asl"
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+asl-spec.workspace = true
+asl-core-traits.workspace = true
+asl-parser.workspace = true
+asl-security.workspace = true
+asl-vm-starlark.workspace = true
+serde_json.workspace = true

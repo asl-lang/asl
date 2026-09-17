@@ -27,3 +27,4 @@ Utilize a skill `asl-plan` (`skills/asl-plan/SKILL.md`):
 | **[PLAN-0001](./0001-modular-hexagonal-runtime.md)** | Construção do Runtime Modular Hexagonal em Rust | [ADR-0001](../adrs/0001-hexagonal-ports-adapters.md) | **Concluído** | 5/5 Fases (100%) |
 | **[PLAN-0002](./0002-starlark-capability-context-stdlib.md)** | Implementação da Biblioteca Padrão de Capabilities no Starlark | [ADR-0002](../adrs/0002-starlark-capability-context-stdlib.md) | **Concluído** | 3/3 Fases (100%) |
 | **[PLAN-0003](./0003-aot-grammar-compiler-gbnf-regex.md)** | Compilador AOT de Gramáticas de Amostragem LLM (GBNF / Regex-CFG) | [ADR-0003](../adrs/0003-aot-grammar-compiler-gbnf-regex.md) | **Concluído** | 4/4 Fases (100%) |
+| **[PLAN-0004](./0004-low-latency-c-abi-ffi.md)** | Interface C-ABI de Baixa Latência In-Process (`libasl` / `asl-ffi`) | [ADR-0004](../adrs/0004-low-latency-c-abi-ffi.md) | **Concluído** | 3/3 Fases (100%) |

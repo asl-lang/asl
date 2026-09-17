@@ -8,6 +8,7 @@ members = [
     "crates/asl-vm-starlark",
     "crates/asl-protocol-mcp",
     "crates/asl-cli",
+    "crates/asl-ffi",
 ]
 
 [workspace.package]

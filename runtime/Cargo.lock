@@ -153,6 +153,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "asl-ffi"
+version = "0.3.0"
+dependencies = [
+ "asl-core-traits",
+ "asl-parser",
+ "asl-security",
+ "asl-spec",
+ "asl-vm-starlark",
+ "serde_json",
+]
+
+[[package]]
 name = "asl-parser"
 version = "0.3.0"
 dependencies = [
