@@ -1,0 +1,16 @@
+[package]
+name = "asl-protocol-http"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+asl-spec.workspace = true
+asl-core-traits.workspace = true
+asl-protocol-mcp.workspace = true
+serde_json.workspace = true
+tiny_http = "0.12"
+
+[dev-dependencies]
+asl-vm-starlark.workspace = true
+serde_yaml.workspace = true

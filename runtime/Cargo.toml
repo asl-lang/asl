@@ -10,6 +10,7 @@ members = [
     "crates/asl-cli",
     "crates/asl-ffi",
     "crates/asl-vm-wasm",
+    "crates/asl-protocol-http",
 ]
 
 [workspace.package]
@@ -36,3 +37,6 @@ asl-parser = { path = "crates/asl-parser" }
 asl-security = { path = "crates/asl-security" }
 asl-vm-starlark = { path = "crates/asl-vm-starlark" }
 asl-protocol-mcp = { path = "crates/asl-protocol-mcp" }
+asl-protocol-http = { path = "crates/asl-protocol-http" }
+asl-vm-wasm = { path = "crates/asl-vm-wasm" }
+asl-ffi = { path = "crates/asl-ffi" }

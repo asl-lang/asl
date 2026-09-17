@@ -41,11 +41,19 @@ enum Commands {
         skill_file: PathBuf,
     },
 
-    /// Inicia um servidor Model Context Protocol (MCP) sobre stdio
+    /// Inicia um servidor Model Context Protocol (MCP) sobre stdio ou HTTP/SSE
     Serve {
         /// Caminhos para arquivos .skill ou diretório contendo .skill
         #[arg(default_value = ".")]
         path: PathBuf,
+
+        /// Transporte de comunicação (stdio ou http)
+        #[arg(short, long, default_value = "stdio")]
+        transport: String,
+
+        /// Porta para o servidor HTTP (utilizado apenas quando --transport http)
+        #[arg(short, long, default_value = "8080")]
+        port: u16,
     },
 
     /// Compila o esquema JSON do .skill em gramáticas de amostragem para LLMs
@@ -125,7 +133,11 @@ fn main() -> Result<()> {
             );
         }
 
-        Commands::Serve { path } => {
+        Commands::Serve {
+            path,
+            transport,
+            port,
+        } => {
             let mut skills = Vec::new();
 
             if path.is_file() {
@@ -138,21 +150,34 @@ fn main() -> Result<()> {
                 load_skills_recursive(&path, &parser, &mut skills);
             }
 
-            eprintln!(
-                "[ASL MCP Server] Iniciado sobre stdio com {} skill(s) carregada(s)",
-                skills.len()
-            );
-
             let empty_caps = asl_spec::SkillCapabilities::default();
             let security = ConfinedSecurityContext::from_capabilities(&empty_caps, 1_000_000);
 
-            let server = McpServer::new(skills, &engine, &security);
-            let stdin = std::io::stdin();
-            let stdout = std::io::stdout();
+            if transport.to_lowercase() == "http" {
+                eprintln!(
+                    "[ASL MCP Server] Iniciado sobre HTTP/SSE em http://0.0.0.0:{} com {} skill(s) carregada(s)",
+                    port,
+                    skills.len()
+                );
+                let mcp_server = McpServer::new(skills, &engine, &security);
+                let http_server = asl_protocol_http::McpHttpServer::new(mcp_server, port);
+                let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+                http_server
+                    .run(running)
+                    .with_context(|| "Erro no servidor HTTP do MCP")?;
+            } else {
+                eprintln!(
+                    "[ASL MCP Server] Iniciado sobre stdio com {} skill(s) carregada(s)",
+                    skills.len()
+                );
+                let server = McpServer::new(skills, &engine, &security);
+                let stdin = std::io::stdin();
+                let stdout = std::io::stdout();
 
-            server
-                .run_stdio_loop(stdin.lock(), stdout.lock())
-                .with_context(|| "Erro no loop de mensagens stdio do MCP")?;
+                server
+                    .run_stdio_loop(stdin.lock(), stdout.lock())
+                    .with_context(|| "Erro no loop de mensagens stdio do MCP")?;
+            }
         }
 
         Commands::CompileGrammar { skill_file, format } => {
