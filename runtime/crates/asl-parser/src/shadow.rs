@@ -92,8 +92,9 @@ pub fn is_ignored_path(path: &Path) -> bool {
 }
 
 /// Projeta e sincroniza atomicamente o arquivo .md sombra correspondente ao .skill
+/// Apenas arquivos .skill geram sombra Markdown; outros formatos de IA operam sem projeção sombra.
 pub fn project_shadow_markdown(skill_path: &Path, doc: &SkillDocument) -> Result<ShadowProjectResult> {
-    if is_ignored_path(skill_path) {
+    if is_ignored_path(skill_path) || !asl_spec::is_shadow_eligible(skill_path) {
         return Ok(ShadowProjectResult::Skipped(
             skill_path.to_string_lossy().to_string(),
         ));
@@ -310,6 +311,26 @@ mod tests {
         assert!(!protected_path.exists());
         // existing.md manual original continua preservado
         assert!(manual_md.exists());
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_non_skill_extensions_skip_shadow_projection() {
+        let temp_dir = std::env::temp_dir().join(format!("asl_test_no_shadow_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let doc = sample_doc("test", "asl:sha256:dummy");
+        let non_skill_exts = ["agent", "prompt", "tool", "guard", "persona", "chain", "rules", "asl"];
+
+        for ext in non_skill_exts {
+            let path = temp_dir.join(format!("artifact.{}", ext));
+            fs::write(&path, "content").unwrap();
+            let res = project_shadow_markdown(&path, &doc).unwrap();
+            assert!(matches!(res, ShadowProjectResult::Skipped(_)), "Extensão .{} deve ser ignorada na projeção sombra", ext);
+            let md = temp_dir.join("artifact.md");
+            assert!(!md.exists(), "Não deve gerar .md para .{}", ext);
+        }
 
         let _ = fs::remove_dir_all(&temp_dir);
     }
