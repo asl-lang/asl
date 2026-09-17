@@ -1,5 +1,5 @@
 # Agent Skill Language (ASL 3.0 - Omni-Spec)
-**Linguagem AI-First para Skills Executáveis Unificadas (`.skill`)**
+**Linguagem AI-First para Skills e Ferramentas Executáveis Unificadas (`.skill`, `.tool`, `.asl`)**
 
 **Autor & Criador**: **Jean Catarina** *(Cadente)*
 
@@ -77,7 +77,11 @@ O ASL implementa a **Escada de Degradação Graciosa em 4 Níveis**:
 - 🔬 **[`ASL_STUDY.md`](./ASL_STUDY.md)**: Estudo técnico completo, histórico de revisão tripartite e garantias de sobrevivência sem MCP.
 - 🏛️ **[`docs/adrs/`](./docs/adrs/)**: Registros de Decisão de Arquitetura contendo propostas técnicas detalhadas e trade-offs.
 - 🎯 **[`docs/plans/`](./docs/plans/)**: Planos de implementação exaustivamente detalhados em fases atômicas com commit e push na main.
-- 🎯 **[`examples/git-conventional-commit.skill`](./examples/git-conventional-commit.skill)**: Arquivo canônico demonstrando o formato ASL 3.0 com digest SHA-256 verificado.
+- 🎯 **Tríade Canônica de Exemplos (`examples/`)**:
+  - [`examples/git-conventional-commit.skill`](./examples/git-conventional-commit.skill): Skill com metadados semânticos, projeção sombra e digest SHA-256 verificado.
+  - [`examples/conventional-commit-rules.skill`](./examples/conventional-commit-rules.skill): Skill com regras declarativas transpiladas (`asl:rules`).
+  - [`examples/security-validator.tool`](./examples/security-validator.tool): Ferramenta atômica MCP sem projeção sombra.
+  - [`examples/summarizer.asl`](./examples/summarizer.asl): Documento raiz ASL determinístico sem projeção sombra.
 
 ### Regras e Guardrails Automáticos para IAs
 - 🤖 **[`AGENTS.md`](./AGENTS.md)**: Os 7 Axiomas Invioláveis, diretrizes de testes em Rust e regras universais para todos os modelos de IA.

@@ -39,11 +39,15 @@ cd runtime && cargo test
 ```
 Todos os testes de todas as micro-crates devem retornar `test result: ok`.
 
-### 5. Auditoria de Validação de Skills Canônicas
+### 5. Auditoria de Validação de Arquivos Canônicos da Tríade
 ```bash
-cd runtime && cargo run --bin asl -- check "../examples/git-conventional-commit.skill"
+for ext in skill tool asl; do
+    for f in ../examples/*.${ext}; do
+        [ -f "$f" ] && cargo run --bin asl -- check "$f"
+    done
+done
 ```
-O digest do arquivo deve bater bit-a-bit com o digest declarado no frontmatter YAML.
+O digest de cada arquivo deve bater bit-a-bit com o digest declarado no frontmatter YAML.
 
 ### 6. Execução Rápida Automatizada (All-in-One)
 A partir da raiz do projeto (`agent skill language/`):

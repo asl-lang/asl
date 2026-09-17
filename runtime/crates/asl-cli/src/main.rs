@@ -155,7 +155,7 @@ fn main() -> Result<()> {
 
             let doc = parser
                 .parse(&content)
-                .with_context(|| "Erro ao analisar o arquivo .skill")?;
+                .with_context(|| "Erro ao analisar o arquivo ASL")?;
 
             // Hook de Toque Zero: projeta ou atualiza sombra Markdown
             let _ = asl_parser::project_shadow_markdown(&skill_file, &doc);
@@ -193,9 +193,9 @@ fn main() -> Result<()> {
 
             let doc = parser
                 .parse(&content)
-                .with_context(|| "Validação falhou: erro ao analisar .skill")?;
+                .with_context(|| "Validação falhou: erro ao analisar arquivo ASL")?;
 
-            println!("✅ Arquivo .skill validado com sucesso!");
+            println!("✅ Arquivo ASL validado com sucesso!");
             println!("Nome:        {}", doc.manifest.name);
             println!("Versão ASL:  {}", doc.manifest.asl_version);
             println!("Digest:      {}", doc.digest);
@@ -215,7 +215,7 @@ fn main() -> Result<()> {
                         println!("Signatário:  {}", pubkey);
                     } else {
                         eprintln!("Assinatura:  ❌ INVÁLIDA (Ed25519)");
-                        anyhow::bail!("Assinatura digital do arquivo .skill é inválida ou foi corrompida.");
+                        anyhow::bail!("Assinatura digital do arquivo ASL é inválida ou foi corrompida.");
                     }
                 } else {
                     println!("Assinatura:  ⚠️ Presente, mas chave pública ausente no manifesto");
@@ -356,7 +356,7 @@ fn main() -> Result<()> {
 
             let doc = parser
                 .parse(&content)
-                .with_context(|| "Erro ao analisar o arquivo .skill")?;
+                .with_context(|| "Erro ao analisar o arquivo ASL")?;
 
             if let Some(rules) = &doc.rules_code {
                 println!("# --- REGRAS SEMÂNTICAS ORIGINAIS (asl:rules) ---");

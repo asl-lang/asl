@@ -26,7 +26,7 @@ pub trait CapabilityContext: Send + Sync {
     fn fuel_consumed(&self) -> u64;
 }
 
-/// Porta de parsing de documentos .skill
+/// Porta de parsing de documentos ASL (.skill, .tool, .asl)
 pub trait ParserPort: Send + Sync {
     fn parse(&self, raw_content: &str) -> Result<SkillDocument>;
 }

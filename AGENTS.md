@@ -12,19 +12,19 @@
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                          OS 7 AXIOMAS IMUTÁVEIS DO ASL                                 │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
-│ 1. ATOMICIDADE DO ARQUIVO .skill: Proibido criar scripts companheiros (.py, .sh, etc.) │
+│ 1. ATOMICIDADE DE DOCUMENTOS ASL: Proibido criar scripts companheiros (.py, .sh, etc.) │
 │ 2. ZERO DEPENDÊNCIA DE ECOSSISTEMAS: Proibido depender de Python, Node.js, JVM ou C/C++│
 │ 3. OBJECT-CAPABILITY ESTRITO (ocap): Proibido autoridade ambiente ou paths abertos    │
 │ 4. DESACOPLAMENTO HEXAGONAL: Adaptadores NUNCA dependem de outros adaptadores          │
 │ 5. TÉRMINO DETERMINÍSTICO: Todo loop deve consumir Fuel em nível de opcode             │
-│ 6. PREFIXO ESTÁTICO IMUTÁVEL: Preservar 100% de reuso de KV-Cache em arquivos .skill   │
+│ 6. PREFIXO ESTÁTICO IMUTÁVEL: Preservar 100% de reuso de KV-Cache em arquivos ASL      │
 │ 7. LIMITE COGNITIVO DE CONTEXTO: Nenhum arquivo de código pode exceder 400 linhas      │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Axioma 1: Atomicidade Absoluta do Arquivo `.skill`
-- **Regra**: Toda e qualquer skill deve ser implementada em um **único arquivo atômico com extensão `.skill`**.
-- **Proibição Estrita**: É terminantemente proibido criar pastas `scripts/`, `requirements.txt`, `package.json` ou arquivos companheiros. Se uma lógica determinística é necessária, ela deve estar contida no bloco ````asl:deterministic dentro do próprio `.skill`.
+### Axioma 1: Atomicidade Absoluta de Documentos ASL (`.skill`, `.tool`, `.asl`)
+- **Regra**: Toda e qualquer skill ou ferramenta deve ser implementada em um **único arquivo atômico com extensão canônica (`.skill`, `.tool`, `.asl`)**.
+- **Proibição Estrita**: É terminantemente proibido criar pastas `scripts/`, `requirements.txt`, `package.json` ou arquivos companheiros. Se uma lógica determinística é necessária, ela deve estar contida no bloco ````asl:deterministic ou ````asl:rules dentro do próprio arquivo.
 
 ### Axioma 2: Zero Dependência de Interpretadores Externos
 - **Regra**: O runtime do ASL é construído exclusivamente em **Rust puro** gerando binário estático e biblioteca C-ABI (`libasl`).
@@ -46,8 +46,8 @@
 - **Proibição Estrita**: É proibido usar temporizadores de relógio de parede (*wall-clock time*) como única garantia de término. O término deve ser garantido matematicamente pelo esgotamento de Fuel.
 
 ### Axioma 6: Otimização de Prefixo Estático (KV-Cache 100%)
-- **Regra**: Em qualquer arquivo `.skill`, o cabeçalho YAML e a seção semântica de instruções devem ser **bit-a-bit idênticos e imutáveis** entre invocações.
-- **Proibição Estrita**: Nunca injete timestamps dinâmicos, IDs de sessão ou dados variáveis no topo do arquivo `.skill`. Parâmetros mutáveis pertencem estritamente aos argumentos de entrada no sufixo de chamada.
+- **Regra**: Em qualquer arquivo ASL (`.skill`, `.tool`, `.asl`), o cabeçalho YAML e a seção semântica de instruções devem ser **bit-a-bit idênticos e imutáveis** entre invocações.
+- **Proibição Estrita**: Nunca injete timestamps dinâmicos, IDs de sessão ou dados variáveis no topo do arquivo. Parâmetros mutáveis pertencem estritamente aos argumentos de entrada no sufixo de chamada.
 
 ### Axioma 7: Limite Cognitivo de Contexto para Agentes de IA
 - **Regra**: Nenhum arquivo-fonte no projeto pode exceder **400 linhas de código**.
@@ -116,7 +116,7 @@ runtime/crates/<crate-name>/
 
 Toda IA que realizar modificações neste projeto DEVE executar e verificar com sucesso:
 1. `cargo test`: Todos os testes unitários e de integração devem passar com 0 falhas (respeitando o padrão de organização de testes acima).
-2. `asl check <skill>`: Todos os arquivos `.skill` devem validar com digest SHA-256 canônico correto.
+2. `asl check <arquivo>`: Todos os arquivos ASL (`.skill`, `.tool`, `.asl`) devem validar com digest SHA-256 canônico correto.
 3. `cargo clippy`: Zero advertências de linter ou código inseguro (*unsafe* sem barreira).
 4. Verificação de acoplamento: Nenhuma nova dependência cruzada entre adaptadores foi introduzida.
 5. Propostas Arquiteturais (`docs/adrs/`): Toda mudança estrutural ou novo componente deve ter seu ADR detalhado via skill `asl-adr`.

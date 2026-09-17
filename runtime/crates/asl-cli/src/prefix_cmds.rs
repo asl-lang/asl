@@ -12,7 +12,7 @@ pub fn handle_analyze_prefix(skill_file: &Path) -> Result<()> {
     let parser = CommonMarkYamlParser::new();
     let doc = parser
         .parse(&content)
-        .with_context(|| "Erro ao analisar arquivo .skill para análise de prefixo")?;
+        .with_context(|| "Erro ao analisar arquivo ASL para análise de prefixo")?;
 
     let report = analyze_semantic_prefix(&doc.semantic_section);
 
@@ -58,7 +58,7 @@ pub fn handle_optimize_prefix(skill_file: &Path, in_place: bool) -> Result<()> {
     let parser = CommonMarkYamlParser::new();
     let doc = parser
         .parse(&content)
-        .with_context(|| "Erro ao analisar arquivo .skill para otimização de prefixo")?;
+        .with_context(|| "Erro ao analisar arquivo ASL para otimização de prefixo")?;
 
     let optimized_semantic = optimize_semantic_prefix(&doc.semantic_section);
 

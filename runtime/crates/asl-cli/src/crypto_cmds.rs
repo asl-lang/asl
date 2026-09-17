@@ -42,7 +42,7 @@ pub fn handle_sign(skill_file: &Path, key: &str, parser: &CommonMarkYamlParser) 
 
     let doc = parser
         .parse(&content)
-        .with_context(|| "Erro ao analisar o arquivo .skill para assinatura")?;
+        .with_context(|| "Erro ao analisar o arquivo ASL para assinatura")?;
 
     let sig = asl_security::crypto::sign_digest(&key_str, &doc.digest)
         .with_context(|| "Falha ao assinar o digest com a chave privada fornecida")?;
@@ -59,7 +59,7 @@ pub fn handle_sign(skill_file: &Path, key: &str, parser: &CommonMarkYamlParser) 
         let _ = asl_parser::project_shadow_markdown(skill_file, &signed_doc);
     }
 
-    println!("✅ Arquivo .skill assinado com sucesso!");
+    println!("✅ Arquivo ASL assinado com sucesso!");
     println!("Arquivo:       {:?}", skill_file);
     println!("Digest:        {}", doc.digest);
     println!("Assinatura:    asl:ed25519:{}", sig);
@@ -79,13 +79,13 @@ pub fn handle_verify(
 
     let doc = parser
         .parse(&content)
-        .with_context(|| "Erro ao analisar arquivo .skill para verificação")?;
+        .with_context(|| "Erro ao analisar arquivo ASL para verificação")?;
 
     let sig = doc
         .manifest
         .signature
         .as_ref()
-        .with_context(|| "Arquivo .skill não possui campo 'signature' no manifesto")?;
+        .with_context(|| "Arquivo ASL não possui campo 'signature' no manifesto")?;
 
     let key_to_use = match pubkey {
         Some(k) => {
@@ -143,7 +143,7 @@ pub fn inject_or_update_frontmatter(
 
     let (s, e) = match (start_idx, end_idx) {
         (Some(s), Some(e)) if s < e => (s, e),
-        _ => anyhow::bail!("Arquivo .skill não possui delimitadores '---' válidos no frontmatter"),
+        _ => anyhow::bail!("Arquivo ASL não possui delimitadores '---' válidos no frontmatter"),
     };
 
     let mut new_frontmatter = Vec::new();

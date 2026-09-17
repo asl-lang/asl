@@ -82,7 +82,7 @@ agent skill language/runtime/
 - **Dependências Externas**: Apenas `serde` e `thiserror`.
 - **Estruturas Principais**:
   - `SkillManifest`: Modelo de metadados, versões, esquemas de entrada/saída.
-  - `SkillDocument`: Representação em memória do arquivo `.skill` parseado.
+  - `SkillDocument`: Representação em memória do arquivo ASL (`.skill`, `.tool`, `.asl`) parseado.
   - `Capability`: Enum de permissões atenuadas (`Fs(ConfinedRoot)`, `Net(Domain)`).
   - `Limits`: Orçamento de combustível (`fuel`), memória (`heap_kib`) e timeout.
   - `ExecutionResult`: Saída determinística padronizada com diagnósticos.
@@ -122,10 +122,10 @@ pub trait CapabilityContext: Send + Sync {
 ```
 
 ```rust
-// crates/asl-core-traits/src/parser.rs
+// crates/asl-core-traits/src/lib.rs
 use asl_spec::{SkillDocument, Result};
 
-/// Porta abstrata de parsing do arquivo .skill
+/// Porta abstrata de parsing de documentos ASL (.skill, .tool, .asl)
 pub trait ParserPort: Send + Sync {
     fn parse(&self, raw_content: &str) -> Result<SkillDocument>;
 }
@@ -135,13 +135,23 @@ pub trait GrammarCompilerPort: Send + Sync {
     fn compile_to_gbnf(&self, json_schema: &serde_json::Value) -> Result<String>;
     fn compile_to_regex_cfg(&self, json_schema: &serde_json::Value) -> Result<String>;
 }
+
+/// Porta do Transpilador Semântico de Regras (asl:rules)
+pub trait RulesTranspilerPort: Send + Sync {
+    fn transpile(
+        &self,
+        rules_source: &str,
+        manifest: &asl_spec::SkillManifest,
+        entrypoint: &str,
+    ) -> Result<TranspilationResult>;
+}
 ```
 
 ---
 
 ### 4.3 `asl-parser`: O Adaptador de Sintaxe
-- **Responsabilidade**: Ler o arquivo físico `.skill`, separar a AST de Duplo Consumidor (YAML Frontmatter + CommonMark Markdown + Bloco de Código Determinístico) e compilar o esquema JSON em regras GBNF/CFG.
-- **Implementa**: `ParserPort`, `GrammarCompilerPort`.
+- **Responsabilidade**: Ler arquivos ASL (`.skill`, `.tool`, `.asl`), separar a AST de Duplo Consumidor (YAML Frontmatter + CommonMark Markdown + Bloco de Código Determinístico / Regras Semânticas), gerenciar a Projeção Sombra (`.md` exclusivo para `.skill`), transpilar regras (`asl:rules`) e compilar o esquema JSON em regras GBNF/CFG.
+- **Implementa**: `ParserPort`, `GrammarCompilerPort`, `RulesTranspilerPort`.
 - **Substituibilidade**: Pode ser substituído por um parser baseado em `pest`, `nom` ou árvore binária sem que o motor de execução sequer perceba.
 
 ---
