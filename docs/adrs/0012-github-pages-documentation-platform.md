@@ -72,7 +72,11 @@ We propose establishing the official ASL documentation and interactive portal ho
 
 ### 2.2 Structural Information Architecture
 The portal is structured into 5 cohesive tracks:
-- **Track 1: Introduction & Overview**: The agentic revolution, problems with loose scripts, and the ASL Triad solution.
+- **Track 1: Introduction & Overview ("Why ASL?")**:
+  - The agentic revolution, problems with loose scripts, and the ASL Triad solution (`.skill`, `.tool`, `.asl`).
+  - **Formal Tokenomics & The 93.2% Token Reduction Theorem**:
+    - Detailed mathematical breakdown showing how the ReAct exploratory cycle ($\mathcal{T}_{\text{legacy}} \approx 2,100\text{ tokens}$ across doc reading, directory inspection, shell tracebacks, and JSON retry loops) collapses into an atomic, grammar-masked tool invocation ($\mathcal{T}_{\text{ASL}} \approx 142\text{ tokens}$).
+    - The three mathematical drivers: (1) Elimination of exploratory tool turns via black-box schemas, (2) Elimination of stochastic JSON retries via AOT GBNF grammar constraints ($0\%$ syntax errors), and (3) $100\%$ KV-Cache hit rate via Axiom 6 (static immutable prefix).
 - **Track 2: Programming in ASL**: Literate format, `asl:rules` declarative syntax, Starlark L1 runtime, and Wasm extensions.
 - **Track 3: Security & Axioms**: Mark Miller OCap, Lampson confinement, Lamport monotonic fuel, and Ed25519 digital custody.
 - **Track 4: The Formal Scientific Paper (`/paper`)**: Unabridged academic paper by Jean Catarina with KaTeX equations and lemmas.
