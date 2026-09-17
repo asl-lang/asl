@@ -1,7 +1,9 @@
-use asl_core_traits::{GrammarCompilerPort, ParserPort};
+pub mod grammar;
+pub use grammar::GbnfGrammarCompiler;
+
+use asl_core_traits::ParserPort;
 use asl_spec::{AslError, Result, SkillDocument, SkillManifest};
 use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
-use serde_json::Value;
 use sha2::{Digest, Sha256};
 
 pub struct CommonMarkYamlParser;
@@ -53,39 +55,6 @@ impl ParserPort for CommonMarkYamlParser {
     }
 }
 
-pub struct GbnfGrammarCompiler;
-
-impl GbnfGrammarCompiler {
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-impl Default for GbnfGrammarCompiler {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl GrammarCompilerPort for GbnfGrammarCompiler {
-    fn compile_to_gbnf(&self, _json_schema: &Value) -> Result<String> {
-        // Gera regras básicas GBNF para o motor de inferência
-        Ok(r#"root ::= object
-object ::= "{" ws (string ":" ws value ("," ws string ":" ws value)*)? "}" ws
-value ::= object | array | string | number | boolean | null
-string ::= "\"" ([^"\\] | "\\" .)* "\""
-number ::= "-"? [0-9]+ ("." [0-9]+)?
-boolean ::= "true" | "false"
-null ::= "null"
-ws ::= [ \t\n\r]*
-"#
-        .to_string())
-    }
-
-    fn compile_to_regex_cfg(&self, _json_schema: &Value) -> Result<String> {
-        Ok(r#"\{.*?\}"#.to_string())
-    }
-}
 
 fn extract_frontmatter_and_markdown(content: &str) -> Result<(String, String)> {
     let mut in_comment = false;

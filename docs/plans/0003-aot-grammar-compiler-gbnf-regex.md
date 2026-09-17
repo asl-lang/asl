@@ -3,11 +3,12 @@
 - **ADR Vinculado**: `docs/adrs/0003-aot-grammar-compiler-gbnf-regex.md`
 - **Data**: 2026-09-17
 - **Responsável**: Jean Catarina (Cadente)
+- **Status**: Concluído (4/4 Fases - 100%)
 - **Meta**: Transformar esquemas JSON declarados em `.skill` em gramáticas formais compiladas antecipadamente (GBNF para llama.cpp/Ollama e Regex DFA para vLLM/SGLang/Outlines), com 0% de erro sintático na amostragem de tokens.
 
 ---
 
-## Fase 1: Especificação Arquitetural e Plano Canônico
+## Fase 1: [x] Concluída - Especificação Arquitetural e Plano Canônico
 
 ### 1.1 Objetivo da Fase
 Formalizar o ADR-0003 e o Plano 0003 com índices devidamente atualizados, garantindo conformidade com o ciclo de Spec-Driven Development (SDD).
@@ -26,7 +27,7 @@ git push origin main
 
 ---
 
-## Fase 2: Módulo Compilador GBNF (`asl-parser::grammar::gbnf`)
+## Fase 2: [x] Concluída - Módulo Compilador GBNF (`asl-parser::grammar::gbnf`)
 
 ### 2.1 Objetivo da Fase
 Implementar a geração formal de gramáticas GBNF (GGML BNF) para *llama.cpp* e *Ollama* a partir de nós JSON Schema arbitrários.
@@ -104,7 +105,7 @@ git push origin main
 
 ---
 
-## Fase 3: Módulo Compilador Regex / DFA (`asl-parser::grammar::regex_cfg`)
+## Fase 3: [x] Concluída - Módulo Compilador Regex / DFA (`asl-parser::grammar::regex_cfg`)
 
 ### 3.1 Objetivo da Fase
 Implementar a geração formal de expressões regulares estruturadas para motores DFA (*vLLM*, *SGLang*, *Outlines*).
@@ -158,7 +159,7 @@ git push origin main
 
 ---
 
-## Fase 4: Integração no Adaptador `asl-parser`, CLI e Validação de Guardrails
+## Fase 4: [x] Concluída - Integração no Adaptador `asl-parser`, CLI e Validação de Guardrails
 
 ### 4.1 Objetivo da Fase
 Conectar os compiladores em `GbnfGrammarCompiler` (implementando `GrammarCompilerPort`), expor via CLI `asl compile-grammar` e rodar a suíte completa de guardrails.
