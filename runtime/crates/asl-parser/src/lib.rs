@@ -51,19 +51,32 @@ impl ParserPort for CommonMarkYamlParser {
         manifest.validate()?;
 
         // 3. Parse de Markdown com pulldown-cmark
-        let (semantic_section, deterministic_code) = parse_markdown_blocks(&markdown_str)?;
+        let parsed_blocks = parse_markdown_blocks(&markdown_str)?;
 
-        let deterministic_code = if deterministic_code.trim().is_empty() {
-            "def run(ctx, input):\n    return input".to_string()
+        let (deterministic_code, rules_code) = if let Some(rules_src) = parsed_blocks.rules_code {
+            use asl_core_traits::RulesTranspilerPort;
+            let transpiler = rules::RulesTranspiler::new();
+            let transpiled = transpiler.transpile(&rules_src, &manifest)?;
+            let code = if !parsed_blocks.deterministic_code.trim().is_empty() {
+                format!("{}\n\n# --- CÓDIGO DETERMINÍSTICO MANUAL EMBUTIDO ---\n{}", transpiled.starlark_code, parsed_blocks.deterministic_code)
+            } else {
+                transpiled.starlark_code
+            };
+            (code, Some(rules_src))
         } else {
-            deterministic_code
+            let code = if parsed_blocks.deterministic_code.trim().is_empty() {
+                "def run(ctx, input):\n    return input".to_string()
+            } else {
+                parsed_blocks.deterministic_code
+            };
+            (code, None)
         };
 
         Ok(SkillDocument {
             manifest,
-            semantic_section,
+            semantic_section: parsed_blocks.semantic_section,
             deterministic_code,
-            rules_code: None,
+            rules_code,
             digest,
         })
     }
@@ -120,13 +133,21 @@ fn extract_frontmatter_and_markdown(content: &str) -> Result<(String, String)> {
     Ok((frontmatter_lines.join("\n"), markdown_lines.join("\n")))
 }
 
-fn parse_markdown_blocks(markdown_raw: &str) -> Result<(String, String)> {
+struct ParsedBlocks {
+    pub semantic_section: String,
+    pub deterministic_code: String,
+    pub rules_code: Option<String>,
+}
+
+fn parse_markdown_blocks(markdown_raw: &str) -> Result<ParsedBlocks> {
     let parser = Parser::new(markdown_raw).into_offset_iter();
 
-    let mut code_blocks = Vec::new();
+    let mut deterministic_blocks = Vec::new();
+    let mut rules_blocks = Vec::new();
     let mut code_ranges = Vec::new();
 
-    let mut in_target_code_block = false;
+    let mut in_deterministic_block = false;
+    let mut in_rules_block = false;
     let mut current_code = String::new();
     let mut current_start = 0;
 
@@ -134,30 +155,43 @@ fn parse_markdown_blocks(markdown_raw: &str) -> Result<(String, String)> {
         match event {
             Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(lang))) => {
                 let tag_str = lang.trim().to_lowercase();
-                if is_asl_code_tag(&tag_str) {
-                    in_target_code_block = true;
+                if is_rules_code_tag(&tag_str) {
+                    in_rules_block = true;
+                    current_code.clear();
+                    current_start = range.start;
+                } else if is_deterministic_code_tag(&tag_str) {
+                    in_deterministic_block = true;
                     current_code.clear();
                     current_start = range.start;
                 }
             }
             Event::End(TagEnd::CodeBlock) => {
-                if in_target_code_block {
-                    code_blocks.push(current_code.clone());
+                if in_rules_block {
+                    rules_blocks.push(current_code.clone());
                     code_ranges.push(current_start..range.end);
-                    in_target_code_block = false;
+                    in_rules_block = false;
+                } else if in_deterministic_block {
+                    deterministic_blocks.push(current_code.clone());
+                    code_ranges.push(current_start..range.end);
+                    in_deterministic_block = false;
                 }
             }
-            Event::Text(text) if in_target_code_block => {
+            Event::Text(text) if in_rules_block || in_deterministic_block => {
                 current_code.push_str(&text);
             }
-            Event::SoftBreak | Event::HardBreak if in_target_code_block => {
+            Event::SoftBreak | Event::HardBreak if in_rules_block || in_deterministic_block => {
                 current_code.push('\n');
             }
             _ => {}
         }
     }
 
-    let code = code_blocks.join("\n\n");
+    let deterministic_code = deterministic_blocks.join("\n\n");
+    let rules_code = if rules_blocks.is_empty() {
+        None
+    } else {
+        Some(rules_blocks.join("\n\n"))
+    };
 
     let mut semantic_section = String::new();
     let mut last_idx = 0;
@@ -171,15 +205,23 @@ fn parse_markdown_blocks(markdown_raw: &str) -> Result<(String, String)> {
         semantic_section.push_str(&markdown_raw[last_idx..]);
     }
 
-    Ok((semantic_section.trim().to_string(), code.trim().to_string()))
+    Ok(ParsedBlocks {
+        semantic_section: semantic_section.trim().to_string(),
+        deterministic_code: deterministic_code.trim().to_string(),
+        rules_code,
+    })
 }
 
-fn is_asl_code_tag(tag: &str) -> bool {
+fn is_rules_code_tag(tag: &str) -> bool {
+    tag == "asl:rules" || tag == "rules"
+}
+
+fn is_deterministic_code_tag(tag: &str) -> bool {
     tag == "asl"
         || tag == "asl:deterministic"
         || tag == "starlark"
         || tag == "python-deterministic"
-        || tag.starts_with("asl:")
+        || (tag.starts_with("asl:") && tag != "asl:rules")
 }
 
 #[cfg(test)]
@@ -268,5 +310,35 @@ Você é um redator de documentação técnica.
         assert_eq!(doc.manifest.name, "pure-prompt");
         assert!(doc.deterministic_code.contains("def run(ctx, input)"));
         assert!(doc.semantic_section.contains("Instruções Puras de Prompt"));
+    }
+
+    #[test]
+    fn test_rules_skill_parsing_and_in_memory_transpilation() {
+        let raw = r#"---
+asl_version: "3.0"
+name: "rules-skill"
+interface:
+  entrypoint: "validate"
+---
+# Instruções Semânticas
+Regras declarativas em execução.
+
+```asl:rules
+guard:
+  input.text is not empty else reject("Texto vazio")
+
+match input.text:
+  when starts_with "hello":
+    accept(status="greeting")
+  otherwise:
+    accept(status="normal")
+```
+"#;
+        let parser = CommonMarkYamlParser::new();
+        let doc = parser.parse(raw).expect("Skill com regras deve ser parseada e transpilada in-memory");
+        assert_eq!(doc.manifest.name, "rules-skill");
+        assert!(doc.rules_code.is_some());
+        assert!(doc.deterministic_code.contains("def validate(ctx, input):"));
+        assert!(doc.deterministic_code.contains("_asl_get(input, [\"text\"], \"\")"));
     }
 }
