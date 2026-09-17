@@ -1,9 +1,9 @@
 ---
 asl_version: "3.0"
-digest: "asl:sha256:79276c86bfb89d71eac57769f2f9692d8cd4e31d58dd23e084619c4cd0962f5b"
+digest: "asl:sha256:15d1a9bc6d4f3698fe0aa2afda2095f1e1d8ef960091db32a5056d2997a2c357"
 name: "summarizer"
 version: "1.0.0"
-description: "Template de prompt determinístico estruturado para sumarização concisa."
+description: "Módulo determinístico ASL estruturado para sumarização concisa de texto."
 license: "MIT"
 
 interface:
@@ -48,7 +48,7 @@ limits:
 
 # SEÇÃO SEMÂNTICA AI-FIRST (Prefixo Estático Invariante)
 
-## 1. Intent (Diretiva do Prompt)
+## 1. Intent (Diretiva do Módulo)
 Formatar e blindar o prompt de sumarização aplicando cotas rígidas de tamanho.
 
 ---

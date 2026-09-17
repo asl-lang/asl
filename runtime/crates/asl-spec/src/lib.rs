@@ -199,18 +199,12 @@ pub struct ExecutionResult {
     pub diagnostics: Vec<String>,
 }
 
-/// Família canônica de extensões de arquivo suportadas nativamente pelo ASL.
-/// Rigorosamente auditadas contra o GitHub Linguist para zero colisão com linguagens de programação existentes.
+/// Tríade canônica de extensões de arquivo suportadas pelo ASL.
+/// Apenas .skill gera projeção sombra (.md). Os formatos .tool e .asl operam sem sombra.
 pub const ASL_EXTENSIONS: &[&str] = &[
-    "skill",   // Habilidade executável modular (padrão canônico histórico)
-    "asl",     // Extensão raiz da linguagem (Agent Specification Language)
-    "agent",   // Agente autônomo (persona, metas, ferramentas, limites)
-    "prompt",  // Prompt estruturado com contrato determinístico I/O
-    "tool",    // Ferramenta executável chamável por agentes/LLMs
-    "guard",   // Guardrail de segurança, barreiras de injeção e conformidade
-    "persona", // Identidade cognitiva, tom de voz e restrições de comportamento
-    "chain",   // Cadeia de raciocínio sequencial e orquestração multi-passo
-    "rules",   // Base declarativa de regras de negócio em asl:rules
+    "skill", // Habilidade executável modular (com projeção sombra .md)
+    "tool",  // Ferramenta executável / MCP tool (sem projeção sombra)
+    "asl",   // Extensão nativa raiz da linguagem (sem projeção sombra)
 ];
 
 /// Verifica se uma extensão de arquivo pertence à família canônica do ASL (insensível a maiúsculas).
@@ -317,9 +311,9 @@ interface:
 
     #[test]
     fn test_asl_extensions_recognition() {
-        assert_eq!(ASL_EXTENSIONS.len(), 9);
+        assert_eq!(ASL_EXTENSIONS.len(), 3);
 
-        // Todas as extensões canônicas devem ser aceitas
+        // A tríade canônica (.skill, .tool, .asl) deve ser aceita
         for &ext in ASL_EXTENSIONS {
             assert!(is_asl_extension(ext), "Extensão {} deve ser válida", ext);
             assert!(is_asl_extension(&ext.to_uppercase()), "Extensão {} em maiúsculas deve ser válida", ext);
@@ -338,18 +332,13 @@ interface:
 
     #[test]
     fn test_shadow_eligibility() {
-        // Apenas .skill é elegível para projeção sombra
+        // Apenas .skill é elegível para projeção sombra (.md)
         assert!(is_shadow_eligible(Path::new("my.skill")));
         assert!(is_shadow_eligible(Path::new("SKILL.SKILL")));
 
-        // Nenhum outro formato gera .md sombra
-        assert!(!is_shadow_eligible(Path::new("bot.agent")));
-        assert!(!is_shadow_eligible(Path::new("system.prompt")));
+        // Nem .tool nem .asl geram .md sombra
         assert!(!is_shadow_eligible(Path::new("format.tool")));
-        assert!(!is_shadow_eligible(Path::new("security.guard")));
-        assert!(!is_shadow_eligible(Path::new("identity.persona")));
-        assert!(!is_shadow_eligible(Path::new("reasoning.chain")));
-        assert!(!is_shadow_eligible(Path::new("validation.rules")));
         assert!(!is_shadow_eligible(Path::new("core.asl")));
+        assert!(!is_shadow_eligible(Path::new("app.asl")));
     }
 }

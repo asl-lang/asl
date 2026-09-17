@@ -25,9 +25,9 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Executa uma função determinística de um arquivo ASL (.skill, .agent, .tool, .guard, etc.)
+    /// Executa uma função determinística de um arquivo ASL (.skill, .tool, .asl)
     Run {
-        /// Caminho para o arquivo ASL (.skill, .agent, .prompt, .tool, .guard, etc.)
+        /// Caminho para o arquivo ASL (.skill, .tool, .asl)
         skill_file: PathBuf,
 
         /// Nome da função de entrada a executar (opcional se definida no manifesto)
@@ -39,9 +39,9 @@ enum Commands {
         input: String,
     },
 
-    /// Valida e audita a integridade de um arquivo ASL (.skill, .agent, .tool, etc.)
+    /// Valida e audita a integridade de um arquivo ASL (.skill, .tool, .asl)
     Check {
-        /// Caminho para o arquivo ASL (.skill, .agent, .prompt, .tool, .guard, etc.)
+        /// Caminho para o arquivo ASL (.skill, .tool, .asl)
         skill_file: PathBuf,
     },
 

@@ -321,7 +321,7 @@ mod tests {
         fs::create_dir_all(&temp_dir).unwrap();
 
         let doc = sample_doc("test", "asl:sha256:dummy");
-        let non_skill_exts = ["agent", "prompt", "tool", "guard", "persona", "chain", "rules", "asl"];
+        let non_skill_exts = ["tool", "asl"];
 
         for ext in non_skill_exts {
             let path = temp_dir.join(format!("artifact.{}", ext));

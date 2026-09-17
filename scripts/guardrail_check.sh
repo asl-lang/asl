@@ -37,7 +37,7 @@ echo "   ✅ Todos os testes unitários e guardrails foram aprovados."
 
 # 5. Verificação de integridade dos arquivos do ecossistema ASL em examples/
 echo "▶️  [5/5] Auditando integridade e hashes dos arquivos do ecossistema ASL..."
-for ext in skill asl agent prompt tool guard persona chain rules; do
+for ext in skill tool asl; do
     for file in "${ROOT_DIR}/examples"/*.${ext}; do
         if [ -f "${file}" ]; then
             (cd "${RUNTIME_DIR}" && cargo run --quiet --bin asl -- check "${file}")

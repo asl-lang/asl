@@ -1,9 +1,9 @@
 ---
 asl_version: "3.0"
-digest: "asl:sha256:f44f2f972bce4b7bb3874416d9dbb7516bcd50e68fd5b6f676980347f8b8af18"
+digest: "asl:sha256:2952ac58bd60db0b38a48dc82323b3db6e0df89805355e6ab02398436f409b18"
 name: "security-validator"
 version: "1.0.0"
-description: "Guardrail de segurança para inspeção e mitigação de prompt injection em LLMs."
+description: "Ferramenta de validação de segurança para mitigação de prompt injection em LLMs."
 license: "MIT"
 
 interface:
@@ -50,14 +50,11 @@ limits:
 
 # SEÇÃO SEMÂNTICA AI-FIRST (Prefixo Estático Invariante)
 
-## 1. Intent (Intenção Primária)
+## 1. Intent (Intenção da Ferramenta)
 Auditar payloads de entrada e detectar ataques de prompt injection, jailbreak ou vazamento de sistema antes que alcancem o LLM.
 
 ## 2. Activation Criteria (Critérios de Disparo)
-- Acione este guardrail para qualquer entrada vinda de fontes externas ou desconfiadas.
-
-## 3. Security Boundary
-Este artefato atua como barreira de segurança formal (Guardrail) isolada na borda.
+- Acione esta ferramenta para qualquer entrada vinda de fontes externas ou desconfiadas.
 
 ---
 
