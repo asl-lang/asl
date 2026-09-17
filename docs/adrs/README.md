@@ -21,3 +21,4 @@ Utilize a skill `asl-adr` (`skills/asl-adr/SKILL.md`):
 | :--- | :--- | :--- | :--- | :--- |
 | **[ADR-0001](./0001-hexagonal-ports-adapters.md)** | Arquitetura Hexagonal (Ports & Adapters) em Micro-Crates | **Aceito** | 2026-09-17 | Workspace completo (`asl-spec`, `asl-core-traits`, adaptadores) |
 | **[ADR-0002](./0002-starlark-capability-context-stdlib.md)** | Biblioteca Padrão de Capabilities no Starlark (`ctx.fs`, `ctx.crypto`, `ctx.fuel`) | **Concluído** | 2026-09-17 | `asl-core-traits`, `asl-security`, `asl-vm-starlark`, `asl-cli` |
+| **[ADR-0003](./0003-aot-grammar-compiler-gbnf-regex.md)** | Compilador AOT de Gramáticas de Amostragem LLM (GBNF / Regex-CFG) | **Aceito** | 2026-09-17 | `asl-core-traits`, `asl-parser`, `asl-cli` |
