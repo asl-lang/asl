@@ -142,7 +142,7 @@ fn test_guardrail_canonical_skill_digests() {
     let mut audited_count = 0;
     for entry in entries.flatten() {
         let path = entry.path();
-        if path.extension().and_then(|s| s.to_str()) == Some("skill") {
+        if asl_spec::is_asl_file(&path) {
             let content = fs::read_to_string(&path).unwrap();
             let doc = parser
                 .parse(&content)
