@@ -25,4 +25,5 @@ Utilize a skill `asl-adr` (`skills/asl-adr/SKILL.md`):
 | **[ADR-0004](./0004-low-latency-c-abi-ffi.md)** | Interface C-ABI de Baixa Latência In-Process (`libasl` / `asl-ffi`) | **Concluído** | 2026-09-17 | `asl-ffi`, `runtime/Cargo.toml` |
 | **[ADR-0005](./0005-wasm-wasi-engine-adapter.md)** | Adaptador de Motor de Execução WebAssembly / WASI (`asl-vm-wasm`) | **Concluído** | 2026-09-17 | `asl-vm-wasm`, `runtime/Cargo.toml` |
 | **[ADR-0006](./0006-mcp-http-sse-transport.md)** | Transporte MCP Remoto sobre HTTP / Server-Sent Events (SSE) | **Concluído** | 2026-09-17 | `asl-protocol-http`, `asl-cli`, `runtime/Cargo.toml` |
-| **[ADR-0007](./0007-ed25519-skill-signatures.md)** | Assinatura Criptográfica Ed25519 & Cadeia de Custódia de Skills | **Aceito** | 2026-09-17 | `asl-spec`, `asl-security`, `asl-cli` |
+| **[ADR-0007](./0007-ed25519-skill-signatures.md)** | Assinatura Criptográfica Ed25519 & Cadeia de Custódia de Skills | **Concluído** | 2026-09-17 | `asl-spec`, `asl-security`, `asl-cli` |
+| **[ADR-0008](./0008-static-prefix-kv-cache-optimizer.md)** | Otimizador de Prefixo Estático e Analisador de KV-Cache para LLMs | **Aceito** | 2026-09-17 | `asl-parser`, `asl-cli` |

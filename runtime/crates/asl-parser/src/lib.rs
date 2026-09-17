@@ -1,5 +1,8 @@
 pub mod grammar;
+pub mod prefix_analyzer;
+
 pub use grammar::GbnfGrammarCompiler;
+pub use prefix_analyzer::*;
 
 use asl_core_traits::ParserPort;
 use asl_spec::{AslError, Result, SkillDocument, SkillManifest};
@@ -110,59 +113,56 @@ fn extract_frontmatter_and_markdown(content: &str) -> Result<(String, String)> {
 }
 
 fn parse_markdown_blocks(markdown_raw: &str) -> Result<(String, String)> {
-    let parser = Parser::new(markdown_raw);
+    let parser = Parser::new(markdown_raw).into_offset_iter();
 
-    let mut semantic_section = String::new();
     let mut code_blocks = Vec::new();
+    let mut code_ranges = Vec::new();
 
     let mut in_target_code_block = false;
     let mut current_code = String::new();
+    let mut current_start = 0;
 
-    for event in parser {
+    for (event, range) in parser {
         match event {
             Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(lang))) => {
                 let tag_str = lang.trim().to_lowercase();
                 if is_asl_code_tag(&tag_str) {
                     in_target_code_block = true;
                     current_code.clear();
-                } else {
-                    semantic_section.push_str(&format!("\n```{}\n", lang));
+                    current_start = range.start;
                 }
             }
             Event::End(TagEnd::CodeBlock) => {
                 if in_target_code_block {
                     code_blocks.push(current_code.clone());
+                    code_ranges.push(current_start..range.end);
                     in_target_code_block = false;
-                } else {
-                    semantic_section.push_str("```\n");
                 }
             }
-            Event::Text(text) => {
-                if in_target_code_block {
-                    current_code.push_str(&text);
-                } else {
-                    semantic_section.push_str(&text);
-                }
+            Event::Text(text) if in_target_code_block => {
+                current_code.push_str(&text);
             }
-            Event::Code(code) => {
-                if !in_target_code_block {
-                    semantic_section.push('`');
-                    semantic_section.push_str(&code);
-                    semantic_section.push('`');
-                }
-            }
-            Event::SoftBreak | Event::HardBreak => {
-                if in_target_code_block {
-                    current_code.push('\n');
-                } else {
-                    semantic_section.push('\n');
-                }
+            Event::SoftBreak | Event::HardBreak if in_target_code_block => {
+                current_code.push('\n');
             }
             _ => {}
         }
     }
 
     let code = code_blocks.join("\n\n");
+
+    let mut semantic_section = String::new();
+    let mut last_idx = 0;
+    for r in &code_ranges {
+        if r.start > last_idx {
+            semantic_section.push_str(&markdown_raw[last_idx..r.start]);
+        }
+        last_idx = r.end;
+    }
+    if last_idx < markdown_raw.len() {
+        semantic_section.push_str(&markdown_raw[last_idx..]);
+    }
+
     Ok((semantic_section.trim().to_string(), code.trim().to_string()))
 }
 
