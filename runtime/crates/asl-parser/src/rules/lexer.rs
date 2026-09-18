@@ -208,7 +208,7 @@ impl<'a> Lexer<'a> {
                     Token { kind, line: start_line, col: start_col }
                 }
                 other => {
-                    return Err(format!("Linha {}:{}: Caractere inesperado '{}'.", start_line, start_col, other));
+                    return Err(format!("Line {}:{}: Unexpected character '{}'.", start_line, start_col, other));
                 }
             };
 

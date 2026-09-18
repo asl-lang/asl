@@ -223,3 +223,21 @@ Execute this command carefully.
     assert!(doc.digest.starts_with("asl:sha256:"));
 }
 
+#[test]
+fn test_utf8_bom_and_crlf_cross_platform_handling() {
+    let parser = CommonMarkYamlParser::new();
+
+    // 1. Skill with UTF-8 BOM (\u{feff}) and Windows CRLF (\r\n)
+    let bom_crlf_content = "\u{feff}---\r\nasl_version: \"3.0\"\r\nname: \"windows-bom-skill\"\r\ninterface:\r\n  entrypoint: \"run\"\r\n---\r\n# Windows Instructions\r\nHello from Windows.\r\n";
+    let doc = parser.parse(bom_crlf_content).expect("UTF-8 BOM and CRLF must parse flawlessly");
+    assert_eq!(doc.manifest.name, "windows-bom-skill");
+    assert_eq!(doc.manifest.asl_version, "3.0");
+    assert!(doc.semantic_section.contains("Hello from Windows."));
+
+    // 2. 0-byte file with BOM
+    let bom_empty = "\u{feff}";
+    let doc_empty = parser.parse(bom_empty).expect("BOM-only file must parse as draft scaffold");
+    assert_eq!(doc_empty.manifest.name, "draft-skill");
+}
+
+

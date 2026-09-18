@@ -196,13 +196,13 @@ fn test_filenames_with_multiple_dots_and_extensions() {
         assert_eq!(
             is_asl_file(p),
             expected_asl,
-            "Falha em is_asl_file para {}",
+            "Failed is_asl_file for {}",
             fname
         );
         assert_eq!(
             is_shadow_eligible(p),
             expected_shadow,
-            "Falha em is_shadow_eligible para {}",
+            "Failed is_shadow_eligible for {}",
             fname
         );
     }

@@ -253,7 +253,7 @@ impl Parser {
             while !self.check(TokenKind::RParen) && !self.is_at_end() {
                 let key = match self.advance().kind {
                     TokenKind::Ident(s) => s,
-                    other => return Err(format!("Linha {}: Esperado nome de argumento em accept(), encontrado '{:?}'.", line, other)),
+                    other => return Err(format!("Line {}: Expected argument name in accept(), found '{:?}'.", line, other)),
                 };
                 self.consume(TokenKind::Eq)?;
                 let val = self.parse_expression()?;
@@ -356,7 +356,7 @@ impl Parser {
             TokenKind::Int(n) => Ok(n.to_string()),
             TokenKind::Float(f) => Ok(f.to_string()),
             TokenKind::Bool(b) => Ok(b.to_string()),
-            _ => Err(format!("Linha {}: Esperado literal primitivo.", tok.line)),
+            _ => Err(format!("Line {}: Expected primitive literal.", tok.line)),
         }
     }
 
@@ -396,7 +396,7 @@ impl Parser {
             Ok(self.advance())
         } else {
             let tok = self.peek();
-            Err(format!("Linha {}:{}: Esperado '{:?}', encontrado '{:?}'.", tok.line, tok.col, kind, tok.kind))
+            Err(format!("Line {}:{}: Expected '{:?}', found '{:?}'.", tok.line, tok.col, kind, tok.kind))
         }
     }
 

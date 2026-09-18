@@ -154,22 +154,36 @@ fi
 if [ -n "${ASL_BIN}" ]; then
     echo ""
     echo "⚡ Configuring universal zero-touch daemon (LaunchAgent / systemd / background service)..."
-    if "${ASL_BIN}" daemon install &> /dev/null; then
+    if "${ASL_BIN}" daemon install; then
         echo "✅ Zero-touch shadow projection daemon installed and active across your OS!"
     else
         echo "ℹ️  Run '${ASL_BIN} daemon install' to activate automatic zero-touch shadow projection."
     fi
 fi
 
-# 7. Verify PATH accessibility
+# 7. Verify and configure PATH accessibility
 if ! command -v asl &> /dev/null; then
+    SHELL_PROFILE=""
+    if [ -f "$HOME/.zshrc" ]; then
+        SHELL_PROFILE="$HOME/.zshrc"
+    elif [ -f "$HOME/.bashrc" ]; then
+        SHELL_PROFILE="$HOME/.bashrc"
+    elif [ -f "$HOME/.profile" ]; then
+        SHELL_PROFILE="$HOME/.profile"
+    fi
+
+    if [ -n "${SHELL_PROFILE}" ]; then
+        if ! grep -q "${DEST_DIR}" "${SHELL_PROFILE}" 2>/dev/null; then
+            echo "" >> "${SHELL_PROFILE}"
+            echo "# ASL (Agent Skill Language) PATH" >> "${SHELL_PROFILE}"
+            echo "export PATH=\"${DEST_DIR}:\$PATH\"" >> "${SHELL_PROFILE}"
+            echo "✅ Automatically configured PATH in ${SHELL_PROFILE}"
+        fi
+    fi
+
     echo ""
-    echo "⚠️  Note: '${DEST_DIR}' is not yet in your PATH."
-    echo "Add the following line to your shell profile (~/.zshrc or ~/.bashrc):"
+    echo "⚠️  To start using 'asl' immediately in this terminal session, run:"
     echo "    export PATH=\"${DEST_DIR}:\$PATH\""
-    echo ""
-    echo "Then reload your shell:"
-    echo "    source ~/.zshrc  # or source ~/.bashrc"
     echo ""
 fi
 

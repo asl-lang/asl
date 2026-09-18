@@ -32,6 +32,7 @@ impl Default for CommonMarkYamlParser {
 
 impl ParserPort for CommonMarkYamlParser {
     fn parse(&self, raw_content: &str) -> Result<SkillDocument> {
+        let raw_content = raw_content.strip_prefix('\u{feff}').unwrap_or(raw_content);
         if raw_content.trim().is_empty() {
             return Ok(SkillDocument::draft_scaffold("draft-skill"));
         }
@@ -175,6 +176,7 @@ fn infer_manifest_from_markdown(markdown: &str) -> SkillManifest {
 }
 
 fn extract_frontmatter_and_markdown(content: &str) -> Result<(String, String)> {
+    let content = content.strip_prefix('\u{feff}').unwrap_or(content);
     if content.trim().is_empty() {
         return Ok((String::new(), String::new()));
     }

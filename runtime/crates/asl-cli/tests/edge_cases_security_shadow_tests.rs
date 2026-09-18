@@ -17,7 +17,7 @@ impl TempTestDir {
             .unwrap()
             .as_nanos();
         let path = std::env::temp_dir().join(format!("asl_{}_{}_{}", prefix, std::process::id(), nanos));
-        fs::create_dir_all(&path).expect("Falha ao criar diretório temporário para teste");
+        fs::create_dir_all(&path).expect("Failed to create temporary directory for test");
         Self { path }
     }
 }

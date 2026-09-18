@@ -64,7 +64,7 @@ fn test_missing_entrypoint_in_code_fails_safely_across_triad() {
                 assert_eq!(ep, "expected_func");
             }
             other => panic!(
-                "Esperado erro de Starlark ou EntrypointNotFound, obtido: {:?}",
+                "Expected Starlark error or EntrypointNotFound, got: {:?}",
                 other
             ),
         }
@@ -103,7 +103,7 @@ fn test_runtime_division_by_zero_and_exceptions_across_triad() {
                     msg
                 );
             }
-            other => panic!("Esperado StarlarkError, obtido: {:?}", other),
+            other => panic!("Expected StarlarkError, got: {:?}", other),
         }
     }
 }
@@ -164,7 +164,7 @@ match input.action:
                 msg
             );
         }
-        other => panic!("Esperado RulesTranspileError, obtido: {:?}", other),
+        other => panic!("Expected RulesTranspileError, got: {:?}", other),
     }
 }
 

@@ -25,7 +25,10 @@ pub fn generate_shadow_content(doc: &SkillDocument, skill_file_name: &str) -> St
     let clean_stem = skill_file_name
         .strip_suffix(".skill")
         .unwrap_or(skill_file_name);
-    let effective_name = if doc.manifest.name == "draft-skill" || doc.manifest.name.is_empty() {
+    let effective_name = if doc.manifest.name == "draft-skill"
+        || doc.manifest.name == "legacy-skill"
+        || doc.manifest.name.is_empty()
+    {
         clean_stem
     } else {
         &doc.manifest.name
@@ -254,7 +257,7 @@ fn write_atomic(target: &Path, content: &str) -> Result<()> {
         let _ = fs::remove_file(&tmp_path);
         if e.kind() == std::io::ErrorKind::PermissionDenied || e.raw_os_error() == Some(30) {
             eprintln!(
-                "⚠️ [ASL Shadow] Somente-leitura ao renomear {:?}: {}",
+                "⚠️ [ASL Shadow] Read-only filesystem when renaming {:?}: {}",
                 target, e
             );
             return Ok(());

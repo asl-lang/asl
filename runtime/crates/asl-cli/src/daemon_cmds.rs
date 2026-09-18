@@ -40,6 +40,19 @@ pub fn resolve_default_watch_dir() -> PathBuf {
         }
     }
 
+    if let Some(home) = dirs_home() {
+        for candidate in &["Documents/dev", "dev", "projects", "workspace"] {
+            let p = home.join(candidate);
+            if p.exists() {
+                if let Ok(cwd) = std::env::current_dir() {
+                    if cwd.starts_with(&p) {
+                        return p;
+                    }
+                }
+            }
+        }
+    }
+
     if let Ok(cwd) = std::env::current_dir() {
         if let Some(home) = dirs_home() {
             if cwd != home && cwd.exists() {
