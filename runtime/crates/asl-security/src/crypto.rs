@@ -22,12 +22,12 @@ pub fn sign_digest(private_key_hex: &str, digest_str: &str) -> Result<String> {
         .unwrap_or(private_key_hex.trim());
 
     let priv_bytes = hex::decode(clean_hex).map_err(|e| {
-        AslError::CapabilityViolation(format!("Chave privada hexadecimal inválida: {}", e))
+        AslError::CapabilityViolation(format!("Invalid hexadecimal private key: {}", e))
     })?;
 
     if priv_bytes.len() != 32 {
         return Err(AslError::CapabilityViolation(format!(
-            "Chave privada Ed25519 deve ter exatamente 32 bytes (encontrado: {})",
+            "Ed25519 private key must be exactly 32 bytes (found: {})",
             priv_bytes.len()
         )));
     }
@@ -40,7 +40,7 @@ pub fn sign_digest(private_key_hex: &str, digest_str: &str) -> Result<String> {
     Ok(hex::encode(signature.to_bytes()))
 }
 
-/// Deriva a chave pública Ed25519 (hexadecimal) a partir de uma chave privada em hexadecimal
+/// Derives Ed25519 public key (hexadecimal) from a hexadecimal private key
 pub fn get_public_key(private_key_hex: &str) -> Result<String> {
     let clean_hex = private_key_hex
         .trim()
@@ -49,12 +49,12 @@ pub fn get_public_key(private_key_hex: &str) -> Result<String> {
         .unwrap_or(private_key_hex.trim());
 
     let priv_bytes = hex::decode(clean_hex).map_err(|e| {
-        AslError::CapabilityViolation(format!("Chave privada hexadecimal inválida: {}", e))
+        AslError::CapabilityViolation(format!("Invalid hexadecimal private key: {}", e))
     })?;
 
     if priv_bytes.len() != 32 {
         return Err(AslError::CapabilityViolation(format!(
-            "Chave privada Ed25519 deve ter exatamente 32 bytes (encontrado: {})",
+            "Ed25519 private key must be exactly 32 bytes (found: {})",
             priv_bytes.len()
         )));
     }
@@ -66,7 +66,7 @@ pub fn get_public_key(private_key_hex: &str) -> Result<String> {
     Ok(pub_hex)
 }
 
-/// Verifica se a assinatura Ed25519 de 64 bytes é válida para o digest e chave pública
+/// Verifies whether the 64-byte Ed25519 signature is valid for digest and public key
 pub fn verify_signature(
     public_key_hex: &str,
     digest_str: &str,
@@ -79,12 +79,12 @@ pub fn verify_signature(
         .unwrap_or(public_key_hex.trim());
 
     let pub_bytes = hex::decode(clean_pub).map_err(|e| {
-        AslError::CapabilityViolation(format!("Chave pública hexadecimal inválida: {}", e))
+        AslError::CapabilityViolation(format!("Invalid hexadecimal public key: {}", e))
     })?;
 
     if pub_bytes.len() != 32 {
         return Err(AslError::CapabilityViolation(format!(
-            "Chave pública Ed25519 deve ter exatamente 32 bytes (encontrado: {})",
+            "Ed25519 public key must be exactly 32 bytes (found: {})",
             pub_bytes.len()
         )));
     }
@@ -92,7 +92,7 @@ pub fn verify_signature(
     let mut pub_arr = [0u8; 32];
     pub_arr.copy_from_slice(&pub_bytes);
     let verifying_key = VerifyingKey::from_bytes(&pub_arr).map_err(|e| {
-        AslError::CapabilityViolation(format!("Chave pública Ed25519 malformada: {}", e))
+        AslError::CapabilityViolation(format!("Malformed Ed25519 public key: {}", e))
     })?;
 
     let clean_sig = signature_hex
@@ -102,7 +102,7 @@ pub fn verify_signature(
         .unwrap_or(signature_hex.trim());
 
     let sig_bytes = hex::decode(clean_sig).map_err(|e| {
-        AslError::CapabilityViolation(format!("Assinatura hexadecimal inválida: {}", e))
+        AslError::CapabilityViolation(format!("Invalid hexadecimal signature: {}", e))
     })?;
 
     if sig_bytes.len() != 64 {
@@ -126,17 +126,17 @@ mod tests {
         assert_eq!(priv_key.len(), 64);
         assert_eq!(pub_key.len(), 64);
 
-        let derived_pub = get_public_key(&priv_key).expect("Derivação de chave pública deve suceder");
+        let derived_pub = get_public_key(&priv_key).expect("Public key derivation should succeed");
         assert_eq!(derived_pub, pub_key);
 
         let digest = "asl:sha256:19f41c0e7ca32215176eac4acae944be4f7da01fae1dbe4e60e33402efde52cb";
-        let sig = sign_digest(&priv_key, digest).expect("Assinatura deve suceder");
-        assert_eq!(sig.len(), 128); // 64 bytes = 128 caracteres hex
+        let sig = sign_digest(&priv_key, digest).expect("Signing should succeed");
+        assert_eq!(sig.len(), 128); // 64 bytes = 128 hex chars
 
-        let is_valid = verify_signature(&pub_key, digest, &sig).expect("Verificação deve suceder");
+        let is_valid = verify_signature(&pub_key, digest, &sig).expect("Verification should succeed");
         assert!(is_valid);
 
-        // Digest alterado deve falhar na verificação
+        // Tampered digest should fail verification
         let is_tampered = verify_signature(&pub_key, "asl:sha256:corrupted", &sig).unwrap();
         assert!(!is_tampered);
     }

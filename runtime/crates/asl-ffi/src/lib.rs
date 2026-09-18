@@ -112,7 +112,7 @@ pub unsafe extern "C" fn asl_skill_execute(
         let start = Instant::now();
 
         if rt.is_null() || skill.is_null() {
-            return make_error_result("Runtime ou Skill nulos fornecidos para execução.", 0);
+            return make_error_result("Null Runtime or Skill supplied for execution.", 0);
         }
 
         let rt_ref = &*rt;
@@ -176,7 +176,7 @@ pub unsafe extern "C" fn asl_skill_execute(
         }
     }));
 
-    result.unwrap_or_else(|_| make_error_result("Pânico capturado durante execução in-process.", 0))
+    result.unwrap_or_else(|_| make_error_result("Panic caught during in-process execution.", 0))
 }
 
 /// Libera o resultado da execução e a string JSON associada.
@@ -214,12 +214,12 @@ mod tests {
     const SAMPLE_SKILL: &str = r#"---
 asl_version: "3.0"
 name: "ffi-test-skill"
-description: "Skill para validação de FFI C-ABI"
+description: "Skill for C-ABI FFI validation"
 interface:
   entrypoint: "calc"
 ---
-# Seção Semântica
-Executa cálculo determinístico in-process.
+# Semantic Section
+Executes deterministic calculation in-process.
 
 ```asl:deterministic
 def calc(ctx, input):

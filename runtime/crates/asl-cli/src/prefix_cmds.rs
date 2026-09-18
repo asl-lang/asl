@@ -4,44 +4,44 @@ use asl_parser::{analyze_semantic_prefix, optimize_semantic_prefix, CommonMarkYa
 use std::fs;
 use std::path::Path;
 
-/// Manipula o comando `asl analyze-prefix`
+/// Handles the `asl analyze-prefix` command
 pub fn handle_analyze_prefix(skill_file: &Path) -> Result<()> {
     let content = fs::read_to_string(skill_file)
-        .with_context(|| format!("Falha ao ler arquivo: {:?}", skill_file))?;
+        .with_context(|| format!("Failed to read file: {:?}", skill_file))?;
 
     let parser = CommonMarkYamlParser::new();
     let doc = parser
         .parse(&content)
-        .with_context(|| "Erro ao analisar arquivo ASL para análise de prefixo")?;
+        .with_context(|| "Failed to parse ASL file for prefix analysis")?;
 
     let report = analyze_semantic_prefix(&doc.semantic_section);
 
-    println!("📊 Relatório de KV-Cache & Prefixo Estático (Axioma 6)");
-    println!("Arquivo:                 {:?}", skill_file);
-    println!("Nome da Skill:           {}", doc.manifest.name);
-    println!("Caracteres Semânticos:   {}", report.total_semantic_chars);
+    println!("📊 KV-Cache & Static Prefix Report (Axiom 6)");
+    println!("File:                    {:?}", skill_file);
+    println!("Skill Name:              {}", doc.manifest.name);
+    println!("Semantic Chars:          {}", report.total_semantic_chars);
     println!(
-        "Prefixo Estático:        {} chars (~{} tokens)",
+        "Static Prefix:           {} chars (~{} tokens)",
         report.static_prefix_chars, report.static_estimated_tokens
     );
     println!(
-        "Hit-Rate Projetado:      {:.1}%",
+        "Projected Hit Rate:      {:.1}%",
         report.projected_cache_hit_rate_pct
     );
 
     if report.dynamic_variables.is_empty() {
-        println!("Variáveis Dinâmicas:     Nenhuma (100% Invariante)");
+        println!("Dynamic Variables:       None (100% Invariant)");
     } else {
         println!(
-            "Variáveis Dinâmicas:     {}",
+            "Dynamic Variables:       {}",
             report.dynamic_variables.join(", ")
         );
     }
 
     if report.cache_invalidation_hazards.is_empty() {
-        println!("Diagnóstico de Risco:    ✅ KV-Cache Amigável (Zero riscos detectados)");
+        println!("Risk Diagnostic:         ✅ KV-Cache Friendly (Zero hazards detected)");
     } else {
-        println!("Diagnóstico de Risco:    ⚠️ Riscos de Invalidação Prematura Encontrados:");
+        println!("Risk Diagnostic:         ⚠️ Premature Invalidation Hazards Found:");
         for hazard in &report.cache_invalidation_hazards {
             println!("  - {}", hazard);
         }
@@ -50,29 +50,29 @@ pub fn handle_analyze_prefix(skill_file: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Manipula o comando `asl optimize-prefix`
+/// Handles the `asl optimize-prefix` command
 pub fn handle_optimize_prefix(skill_file: &Path, in_place: bool) -> Result<()> {
     let content = fs::read_to_string(skill_file)
-        .with_context(|| format!("Falha ao ler arquivo: {:?}", skill_file))?;
+        .with_context(|| format!("Failed to read file: {:?}", skill_file))?;
 
     let parser = CommonMarkYamlParser::new();
     let doc = parser
         .parse(&content)
-        .with_context(|| "Erro ao analisar arquivo ASL para otimização de prefixo")?;
+        .with_context(|| "Failed to parse ASL file for prefix optimization")?;
 
     let optimized_semantic = optimize_semantic_prefix(&doc.semantic_section);
 
     if in_place {
         let updated_content = replace_semantic_in_skill(&content, &doc.semantic_section, &optimized_semantic);
         fs::write(skill_file, &updated_content)
-            .with_context(|| format!("Falha ao salvar arquivo otimizado: {:?}", skill_file))?;
+            .with_context(|| format!("Failed to save optimized file: {:?}", skill_file))?;
 
-        // Hook de Toque Zero: atualiza a sombra Markdown imediatamente
+        // Zero-Touch Hook: update shadow Markdown immediately
         if let Ok(new_doc) = parser.parse(&updated_content) {
             let _ = asl_parser::project_shadow_markdown(skill_file, &new_doc);
         }
 
-        println!("✅ Prefixo estático otimizado e reescrito com sucesso em {:?}", skill_file);
+        println!("✅ Static prefix successfully optimized and rewritten at {:?}", skill_file);
     } else {
         println!("{}", optimized_semantic);
     }
@@ -85,7 +85,7 @@ fn replace_semantic_in_skill(full_content: &str, old_semantic: &str, new_semanti
         return full_content.to_string();
     }
 
-    // Encontra o término do frontmatter delimitado pelo segundo '---'
+    // Finds the end of the frontmatter delimited by the second '---'
     let mut dashes_count = 0;
     let mut split_idx = None;
 

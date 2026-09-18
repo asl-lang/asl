@@ -86,9 +86,9 @@ fn test_path_traversal_attempts_blocked() {
     );
     match res_rel.unwrap_err() {
         AslError::CapabilityViolation(msg) => {
-            assert!(msg.contains("Tentativa de fuga de diretório confinado"));
+            assert!(msg.contains("Confined directory breakout attempt detected"));
         }
-        other => panic!("Esperado CapabilityViolation, obtido: {:?}", other),
+        other => panic!("Expected CapabilityViolation, got: {:?}", other),
     }
 
     // 2. Tentativa de caminho absoluto externo
@@ -118,9 +118,9 @@ fn test_empty_capabilities_denies_all_file_io() {
     assert!(res.is_err(), "Com raízes vazias, leitura deve ser negada");
     match res.unwrap_err() {
         AslError::CapabilityViolation(msg) => {
-            assert!(msg.contains("nenhuma raiz confinada autorizada"));
+            assert!(msg.contains("no confined root authorized"));
         }
-        other => panic!("Esperado CapabilityViolation, obtido: {:?}", other),
+        other => panic!("Expected CapabilityViolation, got: {:?}", other),
     }
 }
 

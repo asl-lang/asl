@@ -36,7 +36,7 @@ echo "▶️  [4/5] Executando testes unitários e de arquitetura..."
 echo "   ✅ Todos os testes unitários e guardrails foram aprovados."
 
 # 5. Verificação de integridade dos arquivos do ecossistema ASL em examples/
-echo "▶️  [5/5] Auditando integridade e hashes dos arquivos do ecossistema ASL..."
+echo "▶️  [5/6] Auditando integridade e hashes dos arquivos do ecossistema ASL..."
 for ext in skill tool asl; do
     for file in "${ROOT_DIR}/examples"/*.${ext}; do
         if [ -f "${file}" ]; then
@@ -45,5 +45,10 @@ for ext in skill tool asl; do
     done
 done
 echo "   ✅ Todos os arquivos canônicos do ecossistema ASL possuem digests válidos."
+
+# 6. English-Only Compliance Audit
+echo "▶️  [6/6] Verifying strict English-only language policy..."
+"${ROOT_DIR}/scripts/check_english_only.sh"
+echo "   ✅ Strict English-only language compliance verified."
 
 echo "🎉 PARABÉNS: Todos os Guardrails do ASL 3.0 foram rigorosamente atendidos!"

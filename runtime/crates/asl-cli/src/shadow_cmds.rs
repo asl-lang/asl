@@ -16,7 +16,7 @@ pub struct SyncStats {
     pub orphaned_removed: usize,
 }
 
-/// Sincroniza projeções sombra de Markdown para um arquivo .skill ou diretório completo
+/// Synchronizes Markdown shadow projections for a .skill file or full directory
 pub fn handle_sync_shadows(target_path: &Path, parser: &CommonMarkYamlParser) -> Result<SyncStats> {
     let mut stats = SyncStats::default();
 
@@ -25,21 +25,21 @@ pub fn handle_sync_shadows(target_path: &Path, parser: &CommonMarkYamlParser) ->
             && !is_ignored_path(target_path)
         {
             let content = fs::read_to_string(target_path)
-                .with_context(|| format!("Falha ao ler {:?}", target_path))?;
+                .with_context(|| format!("Failed to read {:?}", target_path))?;
             let doc = parser
                 .parse(&content)
-                .with_context(|| format!("Falha ao analisar {:?}", target_path))?;
+                .with_context(|| format!("Failed to parse {:?}", target_path))?;
             match project_shadow_markdown(target_path, &doc)? {
                 ShadowProjectResult::Created(p) => {
-                    println!("⚡ Criada sombra: {:?}", p);
+                    println!("⚡ Shadow created: {:?}", p);
                     stats.created += 1;
                 }
                 ShadowProjectResult::Updated(p) => {
-                    println!("⚡ Atualizada sombra: {:?}", p);
+                    println!("⚡ Shadow updated: {:?}", p);
                     stats.updated += 1;
                 }
                 ShadowProjectResult::CollisionProtected(p) => {
-                    println!("⚠️ Conflito protegido: {:?}", p);
+                    println!("⚠️ Collision protected: {:?}", p);
                     stats.collisions += 1;
                 }
                 ShadowProjectResult::Unchanged(_) => {
@@ -53,16 +53,16 @@ pub fn handle_sync_shadows(target_path: &Path, parser: &CommonMarkYamlParser) ->
         let removed = clean_orphaned_shadows(target_path).unwrap_or_default();
         stats.orphaned_removed = removed.len();
         for r in removed {
-            println!("🧹 Órfão removido: {:?}", r);
+            println!("🧹 Orphan removed: {:?}", r);
         }
     }
 
-    println!("\n📊 Resumo da Sincronização Sombra:");
-    println!("  Criadas:             {}", stats.created);
-    println!("  Atualizadas:         {}", stats.updated);
-    println!("  Inalteradas:         {}", stats.unchanged);
-    println!("  Colisões Protegidas: {}", stats.collisions);
-    println!("  Órfãos Removidos:    {}", stats.orphaned_removed);
+    println!("\n📊 Shadow Synchronization Summary:");
+    println!("  Created:              {}", stats.created);
+    println!("  Updated:              {}", stats.updated);
+    println!("  Unchanged:            {}", stats.unchanged);
+    println!("  Collisions Protected: {}", stats.collisions);
+    println!("  Orphans Removed:      {}", stats.orphaned_removed);
 
     Ok(stats)
 }
@@ -84,15 +84,15 @@ fn sync_dir_recursive(
                     if let Ok(doc) = parser.parse(&content) {
                         match project_shadow_markdown(&path, &doc)? {
                             ShadowProjectResult::Created(p) => {
-                                println!("⚡ Criada sombra: {:?}", p);
+                                println!("⚡ Shadow created: {:?}", p);
                                 stats.created += 1;
                             }
                             ShadowProjectResult::Updated(p) => {
-                                println!("⚡ Atualizada sombra: {:?}", p);
+                                println!("⚡ Shadow updated: {:?}", p);
                                 stats.updated += 1;
                             }
                             ShadowProjectResult::CollisionProtected(p) => {
-                                println!("⚠️ Conflito protegido: {:?}", p);
+                                println!("⚠️ Collision protected: {:?}", p);
                                 stats.collisions += 1;
                             }
                             ShadowProjectResult::Unchanged(_) => {
@@ -108,17 +108,17 @@ fn sync_dir_recursive(
     Ok(())
 }
 
-/// Monitora continuamente diretório e projeta sombras em tempo real (EC-7 / Zero-Touch)
+/// Continuously monitors directory and projects shadows in real-time (EC-7 / Zero-Touch)
 pub fn handle_watch_shadows(
     target_path: &Path,
     parser: &CommonMarkYamlParser,
     interval_ms: u64,
 ) -> Result<()> {
     println!(
-        "👀 ASL Shadow Watcher ativo em {:?} (intervalo: {}ms).",
+        "👀 ASL Shadow Watcher active at {:?} (interval: {}ms).",
         target_path, interval_ms
     );
-    println!("Pressione Ctrl+C para encerrar...\n");
+    println!("Press Ctrl+C to terminate...\n");
 
     let sleep_dur = std::time::Duration::from_millis(interval_ms);
     loop {

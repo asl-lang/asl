@@ -99,12 +99,12 @@ impl CapabilityContext for ConfinedSecurityContext {
         // Se nenhuma raiz foi autorizada, o acesso é sumariamente negado
         if self.allowed_read_roots.is_empty() {
             return Err(AslError::CapabilityViolation(format!(
-                "Acesso de leitura negado: nenhuma raiz confinada autorizada para '{}'",
+                "Read access denied: no confined root authorized for '{}'",
                 path_str
             )));
         }
 
-        // Canonicaliza o caminho alvo ou seu diretório pai
+        // Canonicalize target path or its parent directory
         let canonical_target = if target_path.exists() {
             std::fs::canonicalize(target_path).map_err(|e| AslError::Io(e.to_string()))?
         } else if let Some(parent) = target_path.parent() {
@@ -124,7 +124,7 @@ impl CapabilityContext for ConfinedSecurityContext {
             target_path.to_path_buf()
         };
 
-        // Verifica se o caminho canônico reside estritamente dentro de uma raiz autorizada
+        // Verify that canonical path strictly resides within an authorized root
         let is_allowed = self
             .allowed_read_roots
             .iter()
@@ -132,7 +132,7 @@ impl CapabilityContext for ConfinedSecurityContext {
 
         if !is_allowed {
             return Err(AslError::CapabilityViolation(format!(
-                "Tentativa de fuga de diretório confinado para '{}'",
+                "Confined directory breakout attempt detected for '{}'",
                 path_str
             )));
         }

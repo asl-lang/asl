@@ -35,12 +35,12 @@ impl ParserPort for CommonMarkYamlParser {
         // 1. Extração do Frontmatter YAML delimitado por ---
         let (frontmatter_str, markdown_str) = extract_frontmatter_and_markdown(raw_content)?;
 
-        // 2. Parse do YAML em SkillManifest
+        // 2. Parse YAML into SkillManifest
         let manifest: SkillManifest = serde_yaml::from_str(&frontmatter_str)
             .map_err(|e| AslError::InvalidFrontmatter(e.to_string()))?;
         manifest.validate()?;
 
-        // 3. Cálculo canônico de digest: campos de assinatura são omitidos EXCLUSIVAMENTE do frontmatter
+        // 3. Canonical digest calculation: signature fields are omitted EXCLUSIVELY from the frontmatter
         let mut hasher = Sha256::new();
         let mut in_frontmatter = false;
         let mut frontmatter_ended = false;
@@ -155,7 +155,7 @@ fn extract_frontmatter_and_markdown(content: &str) -> Result<(String, String)> {
 
     if !frontmatter_ended {
         return Err(AslError::InvalidFrontmatter(
-            "Frontmatter YAML não foi fechado com '---'.".to_string(),
+            "YAML frontmatter was not closed with '---'.".to_string(),
         ));
     }
 
@@ -407,7 +407,7 @@ interface:
   entrypoint: "run"
 ---
 # Semantic Section
-Linha normal.
+Normal line.
 "#;
 
         let tampered = r#"---
@@ -417,13 +417,13 @@ interface:
   entrypoint: "run"
 ---
 # Semantic Section
-Linha normal.
-digest: alteracao maliciosa
-signature: assinatura falsa
+Normal line.
+digest: malicious alteration
+signature: fake signature
 "#;
         let parser = CommonMarkYamlParser::new();
         let doc_base = parser.parse(base).unwrap();
         let doc_tampered = parser.parse(tampered).unwrap();
-        assert_ne!(doc_base.digest, doc_tampered.digest, "Linhas no corpo do markdown DEVEM alterar o digest mesmo iniciando por digest: ou signature:");
+        assert_ne!(doc_base.digest, doc_tampered.digest, "Lines in markdown body MUST alter digest even if starting with digest: or signature:");
     }
 }

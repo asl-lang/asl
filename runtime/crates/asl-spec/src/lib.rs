@@ -69,13 +69,13 @@ impl SkillManifest {
     pub fn validate(&self) -> Result<()> {
         if self.name.trim().is_empty() {
             return Err(AslError::InvalidFrontmatter(
-                "O campo 'name' no manifesto não pode ser vazio".to_string(),
+                "The 'name' field in the manifest cannot be empty".to_string(),
             ));
         }
 
         if !self.asl_version.starts_with("3.") && self.asl_version != "3.0" {
             return Err(AslError::InvalidFrontmatter(format!(
-                "Versão ASL '{}' incompatível. Esperado ASL 3.x",
+                "Incompatible ASL version '{}'. Expected ASL 3.x",
                 self.asl_version
             )));
         }
@@ -83,7 +83,7 @@ impl SkillManifest {
         let ep = self.interface.entrypoint.trim();
         if ep.is_empty() {
             return Err(AslError::InvalidFrontmatter(
-                "O campo 'interface.entrypoint' não pode ser vazio".to_string(),
+                "The 'interface.entrypoint' field cannot be empty".to_string(),
             ));
         }
 
@@ -91,7 +91,7 @@ impl SkillManifest {
             || ep.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false)
         {
             return Err(AslError::InvalidFrontmatter(format!(
-                "Entrypoint '{}' inválido: deve ser um identificador válido",
+                "Invalid entrypoint '{}': must be a valid identifier",
                 ep
             )));
         }
@@ -295,12 +295,12 @@ interface:
         assert!(manifest.validate().is_err());
         manifest.name = "valid_name".to_string();
 
-        // Versão incompatível
+        // Incompatible version
         manifest.asl_version = "2.0".to_string();
         assert!(manifest.validate().is_err());
         manifest.asl_version = "3.0".to_string();
 
-        // Entrypoint inválido com hífens ou iniciando com dígito
+        // Invalid entrypoint with hyphens or starting with a digit
         manifest.interface.entrypoint = "run-fn".to_string();
         assert!(manifest.validate().is_err());
         manifest.interface.entrypoint = "1run".to_string();
@@ -313,15 +313,15 @@ interface:
     fn test_asl_extensions_recognition() {
         assert_eq!(ASL_EXTENSIONS.len(), 3);
 
-        // A tríade canônica (.skill, .tool, .asl) deve ser aceita
+        // Canonical triad (.skill, .tool, .asl) must be accepted
         for &ext in ASL_EXTENSIONS {
-            assert!(is_asl_extension(ext), "Extensão {} deve ser válida", ext);
-            assert!(is_asl_extension(&ext.to_uppercase()), "Extensão {} em maiúsculas deve ser válida", ext);
+            assert!(is_asl_extension(ext), "Extension {} should be valid", ext);
+            assert!(is_asl_extension(&ext.to_uppercase()), "Uppercase extension {} should be valid", ext);
             let path = Path::new("test").with_extension(ext);
-            assert!(is_asl_file(&path), "Arquivo com extensão {} deve ser reconhecido", ext);
+            assert!(is_asl_file(&path), "File with extension {} should be recognized", ext);
         }
 
-        // Extensões inválidas / não-ASL devem ser rejeitadas
+        // Invalid non-ASL extensions must be rejected
         assert!(!is_asl_extension("py"));
         assert!(!is_asl_extension("rs"));
         assert!(!is_asl_extension("json"));
@@ -332,7 +332,7 @@ interface:
 
     #[test]
     fn test_shadow_eligibility() {
-        // Apenas .skill é elegível para projeção sombra (.md)
+        // Only .skill is eligible for shadow projection (.md)
         assert!(is_shadow_eligible(Path::new("my.skill")));
         assert!(is_shadow_eligible(Path::new("SKILL.SKILL")));
 

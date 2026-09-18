@@ -25,123 +25,123 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Executa uma função determinística de um arquivo ASL (.skill, .tool, .asl)
+    /// Executes a deterministic function from an ASL file (.skill, .tool, .asl)
     Run {
-        /// Caminho para o arquivo ASL (.skill, .tool, .asl)
+        /// Path to the ASL file (.skill, .tool, .asl)
         skill_file: PathBuf,
 
-        /// Nome da função de entrada a executar (opcional se definida no manifesto)
+        /// Name of the entrypoint function to execute (optional if declared in manifest)
         #[arg(short, long)]
         entrypoint: Option<String>,
 
-        /// Argumentos de entrada em formato JSON
+        /// Input arguments in JSON format
         #[arg(short, long, default_value = "{}")]
         input: String,
 
-        /// Raízes permitidas no host para interseção com capabilities solicitadas (Host Policy)
+        /// Allowed host roots for intersection with requested capabilities (Host Policy)
         #[arg(long)]
         allowed_root: Vec<PathBuf>,
     },
 
-    /// Valida e audita a integridade de um arquivo ASL (.skill, .tool, .asl)
+    /// Validates and audits the integrity of an ASL file (.skill, .tool, .asl)
     Check {
-        /// Caminho para o arquivo ASL (.skill, .tool, .asl)
+        /// Path to the ASL file (.skill, .tool, .asl)
         skill_file: PathBuf,
     },
 
-    /// Inicia um servidor Model Context Protocol (MCP) sobre stdio ou HTTP/SSE
+    /// Starts a Model Context Protocol (MCP) server over stdio or HTTP/SSE
     Serve {
-        /// Caminhos para arquivos ASL ou diretório contendo artefatos ASL
+        /// Paths to ASL files or directory containing ASL artifacts
         #[arg(default_value = ".")]
         path: PathBuf,
 
-        /// Transporte de comunicação (stdio ou http)
+        /// Communication transport (stdio or http)
         #[arg(short, long, default_value = "stdio")]
         transport: String,
 
-        /// Endereço host para bind do servidor HTTP (padrão: 127.0.0.1)
+        /// Host bind address for HTTP server (default: 127.0.0.1)
         #[arg(long, default_value = "127.0.0.1")]
         host: String,
 
-        /// Porta para o servidor HTTP (utilizado apenas quando --transport http)
+        /// Port for HTTP server (only used when --transport http)
         #[arg(short, long, default_value = "8080")]
         port: u16,
     },
 
-    /// Compila o esquema JSON do .skill em gramáticas de amostragem para LLMs
+    /// Compiles .skill JSON schema into LLM constrained sampling grammars
     CompileGrammar {
-        /// Caminho para o arquivo .skill
+        /// Path to the .skill file
         skill_file: PathBuf,
 
-        /// Formato da gramática (gbnf ou regex)
+        /// Grammar format (gbnf or regex)
         #[arg(short, long, default_value = "gbnf")]
         format: String,
     },
 
-    /// Gera um par de chaves criptográficas Ed25519 para assinatura de skills
+    /// Generates an Ed25519 cryptographic keypair for skill signing
     Keygen {
-        /// Prefixo ou caminho base para salvar os arquivos .priv e .pub (opcional)
+        /// Prefix or base path to save .priv and .pub key files (optional)
         #[arg(short, long)]
         out: Option<PathBuf>,
     },
 
-    /// Assina digitalmente um arquivo .skill usando Ed25519
+    /// Digitally signs an ASL file using Ed25519
     Sign {
-        /// Caminho para o arquivo .skill
+        /// Path to the .skill file
         skill_file: PathBuf,
 
-        /// Chave privada Ed25519 (hexadecimal direto ou caminho para arquivo de chave)
+        /// Ed25519 private key (direct hex string or path to key file)
         #[arg(short, long)]
         key: String,
     },
 
-    /// Verifica a assinatura criptográfica Ed25519 de um arquivo .skill
+    /// Verifies the Ed25519 cryptographic signature of an ASL file
     Verify {
-        /// Caminho para o arquivo .skill
+        /// Path to the .skill file
         skill_file: PathBuf,
 
-        /// Chave pública Ed25519 (opcional se contida no manifesto do arquivo)
+        /// Ed25519 public key (optional if declared in manifest)
         #[arg(short, long)]
         pubkey: Option<String>,
     },
 
-    /// Analisa o prefixo estático e projeta a taxa de acerto do KV-Cache (Axioma 6)
+    /// Analyzes static prefix and projects KV-Cache hit rate (Axiom 6)
     AnalyzePrefix {
-        /// Caminho para o arquivo .skill
+        /// Path to the .skill file
         skill_file: PathBuf,
     },
 
-    /// Otimiza o prompt semântico consolidando blocos estáticos no topo do arquivo
+    /// Optimizes semantic prompt by consolidating static invariant blocks at the top
     OptimizePrefix {
-        /// Caminho para o arquivo .skill
+        /// Path to the .skill file
         skill_file: PathBuf,
 
-        /// Sobrescreve o arquivo diretamente com a versão otimizada
+        /// Overwrites the file directly with the optimized version
         #[arg(short, long)]
         in_place: bool,
     },
 
-    /// Sincroniza todas as projeções sombra de Markdown (.md) para arquivos .skill
+    /// Synchronizes all Markdown (.md) shadow projections for .skill files
     SyncShadows {
-        /// Caminho para arquivo ou diretório base (padrão: '.')
+        /// Path to file or base directory (default: '.')
         #[arg(default_value = ".")]
         path: PathBuf,
     },
 
-    /// Monitora o diretório e projeta as sombras em tempo real
+    /// Monitors directory and projects shadows in real-time
     Watch {
-        /// Caminho para o diretório a ser monitorado (padrão: '.')
+        /// Path to directory to monitor (default: '.')
         #[arg(default_value = ".")]
         path: PathBuf,
 
-        /// Intervalo de sondagem em milissegundos (padrão: 500ms)
+        /// Polling interval in milliseconds (default: 500ms)
         #[arg(short, long, default_value = "500")]
         interval: u64,
     },
 
-    /// Inspeciona o código Starlark transpilado em memória a partir de regras declarativas
+    /// Inspects in-memory transpiled Starlark code from declarative rules
     Expand {
-        /// Caminho para o arquivo .skill
+        /// Path to the .skill file
         skill_file: PathBuf,
     },
 }
@@ -160,13 +160,13 @@ fn main() -> Result<()> {
             allowed_root,
         } => {
             let content = fs::read_to_string(&skill_file)
-                .with_context(|| format!("Falha ao ler arquivo: {:?}", skill_file))?;
+                .with_context(|| format!("Failed to read file: {:?}", skill_file))?;
 
             let doc = parser
                 .parse(&content)
-                .with_context(|| "Erro ao analisar o arquivo ASL")?;
+                .with_context(|| "Error parsing ASL file")?;
 
-            // Hook de Toque Zero: projeta ou atualiza sombra Markdown
+            // Zero-Touch Hook: project or update shadow Markdown
             let _ = asl_parser::project_shadow_markdown(&skill_file, &doc);
 
             let ep = entrypoint
@@ -175,7 +175,7 @@ fn main() -> Result<()> {
                 .unwrap_or_else(|| "run".to_string());
 
             let input_val: Value = serde_json::from_str(&input)
-                .with_context(|| format!("Argumento --input não é um JSON válido: {}", input))?;
+                .with_context(|| format!("Argument --input is not valid JSON: {}", input))?;
 
             let mut effective_caps = doc.manifest.capabilities.clone();
             if !allowed_root.is_empty() {
@@ -203,7 +203,7 @@ fn main() -> Result<()> {
                     &security,
                     &doc.manifest.limits,
                 )
-                .with_context(|| "Falha na execução determinística do ASL")?;
+                .with_context(|| "Failed deterministic ASL execution")?;
 
             let output_str = serde_json::to_string_pretty(&result.output)?;
             println!("{}", output_str);
@@ -211,17 +211,17 @@ fn main() -> Result<()> {
 
         Commands::Check { skill_file } => {
             let content = fs::read_to_string(&skill_file)
-                .with_context(|| format!("Falha ao ler arquivo: {:?}", skill_file))?;
+                .with_context(|| format!("Failed to read file: {:?}", skill_file))?;
 
             let doc = parser
                 .parse(&content)
-                .with_context(|| "Validação falhou: erro ao analisar arquivo ASL")?;
+                .with_context(|| "Validation failed: error parsing ASL file")?;
 
-            println!("✅ Arquivo ASL validado com sucesso!");
-            println!("Nome:        {}", doc.manifest.name);
-            println!("Versão ASL:  {}", doc.manifest.asl_version);
-            println!("Digest:      {}", doc.digest);
-            println!("Entrypoint:  {}", doc.manifest.interface.entrypoint);
+            println!("✅ ASL file validated successfully!");
+            println!("Name:         {}", doc.manifest.name);
+            println!("ASL Version:  {}", doc.manifest.asl_version);
+            println!("Digest:       {}", doc.digest);
+            println!("Entrypoint:   {}", doc.manifest.interface.entrypoint);
             println!(
                 "Capabilities: FS Confined Roots={:?}, Domains={:?}",
                 doc.manifest.capabilities.fs.confined_read_roots,
@@ -233,43 +233,43 @@ fn main() -> Result<()> {
                     let valid = asl_security::crypto::verify_signature(pubkey, &doc.digest, sig)
                         .unwrap_or(false);
                     if valid {
-                        println!("Assinatura:  ✅ Válida (Ed25519)");
-                        println!("Signatário:  {}", pubkey);
+                        println!("Signature:    ✅ Valid (Ed25519)");
+                        println!("Signer:       {}", pubkey);
                     } else {
-                        eprintln!("Assinatura:  ❌ INVÁLIDA (Ed25519)");
+                        eprintln!("Signature:    ❌ INVALID (Ed25519)");
                         anyhow::bail!(
-                            "Assinatura digital do arquivo ASL é inválida ou foi corrompida."
+                            "Digital signature of ASL file is invalid or corrupted."
                         );
                     }
                 } else {
-                    println!("Assinatura:  ⚠️ Presente, mas chave pública ausente no manifesto");
+                    println!("Signature:    ⚠️ Present, but public key missing in manifest");
                 }
             } else {
-                println!("Assinatura:  ⚠️ Não assinado");
+                println!("Signature:    ⚠️ Unsigned");
             }
 
-            // Hook de Toque Zero: sincroniza e relata status da projeção sombra
+            // Zero-Touch Hook: synchronize and report shadow projection status
             match asl_parser::project_shadow_markdown(&skill_file, &doc) {
                 Ok(asl_parser::ShadowProjectResult::Created(p)) => {
-                    println!("Projeção Sombra: ⚡ Criada em {:?}", p);
+                    println!("Shadow Projection: ⚡ Created at {:?}", p);
                 }
                 Ok(asl_parser::ShadowProjectResult::Updated(p)) => {
-                    println!("Projeção Sombra: ⚡ Atualizada em {:?}", p);
+                    println!("Shadow Projection: ⚡ Updated at {:?}", p);
                 }
                 Ok(asl_parser::ShadowProjectResult::CollisionProtected(p)) => {
-                    println!("Projeção Sombra: ⚠️ Conflito protegido em {:?}", p);
+                    println!("Shadow Projection: ⚠️ Conflict protected at {:?}", p);
                 }
                 Ok(asl_parser::ShadowProjectResult::Unchanged(_)) => {
-                    println!("Projeção Sombra: ✅ Sincronizada");
+                    println!("Shadow Projection: ✅ Synchronized");
                 }
                 Ok(asl_parser::ShadowProjectResult::Skipped(_)) => {}
                 Err(e) => {
-                    eprintln!("Projeção Sombra: ⚠️ Falha ao projetar: {}", e);
+                    eprintln!("Shadow Projection: ⚠️ Projection failed: {}", e);
                 }
             }
 
             if doc.rules_code.is_some() {
-                println!("Regras Semânticas: ✅ Transpiladas em memória (Strict Starlark L1)");
+                println!("Semantic Rules:    ✅ Transpiled in-memory (Strict Starlark L1)");
             }
         }
 
@@ -305,7 +305,7 @@ fn main() -> Result<()> {
 
             if transport.to_lowercase() == "http" {
                 eprintln!(
-                    "[ASL MCP Server] Iniciado sobre HTTP/SSE em http://{}:{} com {} skill(s) carregada(s)",
+                    "[ASL MCP Server] Started over HTTP/SSE on http://{}:{} with {} skill(s) loaded",
                     host,
                     port,
                     skills.len()
@@ -316,10 +316,10 @@ fn main() -> Result<()> {
                 let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
                 http_server
                     .run(running)
-                    .with_context(|| "Erro no servidor HTTP do MCP")?;
+                    .with_context(|| "Error in MCP HTTP server")?;
             } else {
                 eprintln!(
-                    "[ASL MCP Server] Iniciado sobre stdio com {} skill(s) carregada(s)",
+                    "[ASL MCP Server] Started over stdio with {} skill(s) loaded",
                     skills.len()
                 );
                 let server = McpServer::new(skills, &engine, &security);
@@ -328,13 +328,13 @@ fn main() -> Result<()> {
 
                 server
                     .run_stdio_loop(stdin.lock(), stdout.lock())
-                    .with_context(|| "Erro no loop de mensagens stdio do MCP")?;
+                    .with_context(|| "Error in MCP stdio message loop")?;
             }
         }
 
         Commands::CompileGrammar { skill_file, format } => {
             let content = fs::read_to_string(&skill_file)
-                .with_context(|| format!("Falha ao ler arquivo: {:?}", skill_file))?;
+                .with_context(|| format!("Failed to read file: {:?}", skill_file))?;
 
             let doc = parser.parse(&content)?;
 
@@ -343,7 +343,7 @@ fn main() -> Result<()> {
                 "regex" => {
                     grammar_compiler.compile_to_regex_cfg(&doc.manifest.interface.input_schema)?
                 }
-                other => anyhow::bail!("Formato desconhecido: {}. Use 'gbnf' ou 'regex'", other),
+                other => anyhow::bail!("Unknown format: {}. Use 'gbnf' or 'regex'", other),
             };
 
             println!("{}", grammar);
@@ -382,19 +382,19 @@ fn main() -> Result<()> {
 
         Commands::Expand { skill_file } => {
             let content = fs::read_to_string(&skill_file)
-                .with_context(|| format!("Falha ao ler arquivo: {:?}", skill_file))?;
+                .with_context(|| format!("Failed to read file: {:?}", skill_file))?;
 
             let doc = parser
                 .parse(&content)
-                .with_context(|| "Erro ao analisar o arquivo ASL")?;
+                .with_context(|| "Error parsing ASL file")?;
 
             if let Some(rules) = &doc.rules_code {
-                println!("# --- REGRAS SEMÂNTICAS ORIGINAIS (asl:rules) ---");
+                println!("# --- ORIGINAL SEMANTIC RULES (asl:rules) ---");
                 println!("{}\n", rules.trim());
-                println!("# --- CÓDIGO DETERMINÍSTICO STARLARK L1 GERADO (JIT IN-MEMORY) ---");
+                println!("# --- GENERATED STARLARK L1 DETERMINISTIC CODE (JIT IN-MEMORY) ---");
                 println!("{}", doc.deterministic_code);
             } else {
-                println!("# --- CÓDIGO DETERMINÍSTICO STARLARK (ORIGINAL) ---");
+                println!("# --- DETERMINISTIC STARLARK CODE (ORIGINAL) ---");
                 println!("{}", doc.deterministic_code);
             }
         }

@@ -50,7 +50,7 @@ impl<'a> McpHttpServer<'a> {
                 Ok(Some(rq)) => rq,
                 Ok(None) => continue,
                 Err(e) => {
-                    eprintln!("[ASL MCP HTTP] Erro ao receber requisição: {}", e);
+                    eprintln!("[ASL MCP HTTP] Error receiving request: {}", e);
                     continue;
                 }
             };
@@ -161,8 +161,8 @@ impl<'a> McpHttpServer<'a> {
             } else if method == Method::Post && url.starts_with("/messages") {
                 let mut content = String::new();
                 if let Err(e) = request.as_reader().read_to_string(&mut content) {
-                    eprintln!("[ASL MCP HTTP] Falha ao ler corpo da requisição: {}", e);
-                    let resp = Response::from_string(r#"{"error": "Falha na leitura do corpo"}"#)
+                    eprintln!("[ASL MCP HTTP] Failed to read request body: {}", e);
+                    let resp = Response::from_string(r#"{"error": "Failed to read request body"}"#)
                         .with_status_code(StatusCode(400));
                     let _ = request.respond(resp);
                     continue;

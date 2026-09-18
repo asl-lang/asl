@@ -115,7 +115,7 @@ impl<'a> Lexer<'a> {
                             tokens.push(Token { kind: TokenKind::Dedent, line: self.line, col: self.col });
                         }
                         if spaces != *self.indent_stack.last().unwrap() {
-                            return Err(format!("Linha {}: Indentação inconsistente.", self.line));
+                            return Err(format!("Line {}: Inconsistent indentation.", self.line));
                         }
                     }
                 }
@@ -262,7 +262,7 @@ impl<'a> Lexer<'a> {
             if c == '\\' {
                 self.advance();
                 if self.pos >= self.chars.len() {
-                    return Err("String literal não terminada com escape".to_string());
+                    return Err("Unterminated string literal with escape".to_string());
                 }
                 let esc = self.chars[self.pos];
                 match esc {
@@ -279,7 +279,7 @@ impl<'a> Lexer<'a> {
             }
             self.advance();
         }
-        Err("String literal não terminada".to_string())
+        Err("Unterminated string literal".to_string())
     }
 
     fn read_number(&mut self) -> Result<TokenKind, String> {

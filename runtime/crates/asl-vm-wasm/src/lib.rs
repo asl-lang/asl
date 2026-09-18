@@ -41,17 +41,17 @@ impl EnginePort for WasmEngine {
         let wasm_bytes = parse_wasm_source(code)?;
 
         let module = Module::new(&self.engine, &wasm_bytes[..])
-            .map_err(|e| AslError::WasmError(format!("Erro ao compilar módulo WASM: {}", e)))?;
+            .map_err(|e| AslError::WasmError(format!("Failed to compile WASM module: {}", e)))?;
 
         let mut store = Store::new(&self.engine, ());
         store
             .set_fuel(limits.max_fuel_opcodes)
-            .map_err(|e| AslError::WasmError(format!("Falha ao alocar fuel WASM: {}", e)))?;
+            .map_err(|e| AslError::WasmError(format!("Failed to allocate WASM fuel: {}", e)))?;
 
         let linker = <Linker<()>>::new(&self.engine);
         let instance = linker
             .instantiate_and_start(&mut store, &module)
-            .map_err(|e| AslError::WasmError(format!("Falha ao instanciar módulo WASM: {}", e)))?;
+            .map_err(|e| AslError::WasmError(format!("Failed to instantiate WASM module: {}", e)))?;
 
         let func = instance
             .get_func(&store, entrypoint)
@@ -80,7 +80,7 @@ impl EnginePort for WasmEngine {
         let mut results = vec![Val::I32(0); func_ty.results().len()];
 
         func.call(&mut store, &args, &mut results)
-            .map_err(|e| AslError::WasmError(format!("Erro na execução WASM: {}", e)))?;
+            .map_err(|e| AslError::WasmError(format!("Error during WASM execution: {}", e)))?;
 
         let remaining_fuel = store.get_fuel().unwrap_or(0);
         let fuel_consumed = limits.max_fuel_opcodes.saturating_sub(remaining_fuel);
@@ -110,12 +110,12 @@ fn parse_wasm_source(code: &str) -> Result<Vec<u8>> {
     let trimmed = code.trim();
     if trimmed.starts_with('(') || trimmed.contains("(module") {
         wat::parse_str(trimmed)
-            .map_err(|e| AslError::WasmError(format!("Falha ao parsear WAT: {}", e)))
+            .map_err(|e| AslError::WasmError(format!("Failed to parse WAT: {}", e)))
     } else if let Ok(bytes) = hex::decode(trimmed.strip_prefix("0x").unwrap_or(trimmed)) {
         Ok(bytes)
     } else {
         Err(AslError::WasmError(
-            "Formato WASM não reconhecido: deve ser WAT ou bytecode hexadecimal.".to_string(),
+            "Unrecognized WASM format: must be WAT or hex bytecode.".to_string(),
         ))
     }
 }

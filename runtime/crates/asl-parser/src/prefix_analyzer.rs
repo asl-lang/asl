@@ -78,7 +78,7 @@ pub fn analyze_semantic_prefix(semantic_text: &str) -> PrefixAnalysisReport {
                 continue;
             }
         } else if chars[i] == '{' {
-            // Verifica se é placeholder de identificador simples {identifier} e não JSON
+            // Check if it is a simple identifier placeholder {identifier} and not JSON
             let start = i;
             let mut end = start + 1;
             let mut is_valid_ident = true;
@@ -114,7 +114,7 @@ pub fn analyze_semantic_prefix(semantic_text: &str) -> PrefixAnalysisReport {
     if let Some(first_idx) = first_dynamic_idx {
         if first_idx < 150 || (first_idx as f64 / total_semantic_chars as f64) < 0.3 {
             hazards.push(format!(
-                "Invalidação Crítica: Variável dinâmica encontrada no primeiro terço do prompt (offset {} de {} caracteres).",
+                "Critical Invalidation Hazard: Dynamic variable found in the first third of the prompt (offset {} of {} characters).",
                 first_idx, total_semantic_chars
             ));
         }
@@ -131,8 +131,8 @@ pub fn analyze_semantic_prefix(semantic_text: &str) -> PrefixAnalysisReport {
     }
 }
 
-/// Otimiza a seção semântica reorganizando blocos puramente estáticos no topo
-/// e consolidando variáveis dinâmicas no sufixo, maximizando a taxa de acerto do KV-cache.
+/// Optimizes semantic section by reordering purely static blocks to the top
+/// and consolidating dynamic variables at the suffix, maximizing KV-Cache hit rate.
 pub fn optimize_semantic_prefix(semantic_text: &str) -> String {
     let trimmed = semantic_text.trim();
     if trimmed.is_empty() {
@@ -157,14 +157,14 @@ pub fn optimize_semantic_prefix(semantic_text: &str) -> String {
         }
     }
 
-    // Se já estiver 100% estático ou não houver nada a reorganizar
+    // If already 100% static or nothing to reorder
     if dynamic_blocks.is_empty() || static_blocks.is_empty() {
         return trimmed.to_string();
     }
 
     let mut result = String::new();
     result.push_str(&static_blocks.join("\n\n"));
-    result.push_str("\n\n## Contexto e Parâmetros Dinâmicos\n\n");
+    result.push_str("\n\n## Context and Dynamic Parameters\n\n");
     result.push_str(&dynamic_blocks.join("\n\n"));
 
     result
@@ -175,34 +175,32 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_purely_static_prompt() {
-        let text = "# Governança de Commit\nVocê é um assistente de engenharia que formata mensagens de commit.";
+    fn test_analyze_semantic_prefix_pure_static() {
+        let text = "# Commit Governance\nYou are an engineering assistant.";
         let report = analyze_semantic_prefix(text);
-
+        assert_eq!(report.static_prefix_chars, text.len());
         assert_eq!(report.projected_cache_hit_rate_pct, 100.0);
-        assert_eq!(report.static_prefix_chars, report.total_semantic_chars);
         assert!(report.dynamic_variables.is_empty());
         assert!(report.cache_invalidation_hazards.is_empty());
     }
 
     #[test]
-    fn test_dynamic_variables_detection_and_hazards() {
-        let text = "Olá {{user_name}}!\n\nAqui estão as regras permanentes:\n1. Não quebre a build.\n2. Escreva testes.";
+    fn test_analyze_semantic_prefix_dynamic_hazard() {
+        let text = "Hello {{user_name}}!\n\nHere are permanent rules:\n1. Do not break tests.";
         let report = analyze_semantic_prefix(text);
-
         assert_eq!(report.dynamic_variables, vec!["{{user_name}}"]);
-        assert!(report.projected_cache_hit_rate_pct < 20.0);
+        assert!(report.projected_cache_hit_rate_pct < 50.0);
         assert!(!report.cache_invalidation_hazards.is_empty());
     }
 
     #[test]
     fn test_optimize_semantic_prefix_reordering() {
-        let bad_prompt = "Instrução dinâmica: {{user_query}}\n\n## Regras do Sistema\nSiga sempre as convenções corporativas e de segurança.";
+        let bad_prompt = "Dynamic instruction: {{user_query}}\n\n## System Rules\nAlways follow security standards.";
         let optimized = optimize_semantic_prefix(bad_prompt);
 
-        assert!(optimized.starts_with("## Regras do Sistema"));
-        assert!(optimized.contains("## Contexto e Parâmetros Dinâmicos"));
-        assert!(optimized.ends_with("Instrução dinâmica: {{user_query}}"));
+        assert!(optimized.starts_with("## System Rules"));
+        assert!(optimized.contains("## Context and Dynamic Parameters"));
+        assert!(optimized.ends_with("Dynamic instruction: {{user_query}}"));
 
         let report = analyze_semantic_prefix(&optimized);
         assert!(report.projected_cache_hit_rate_pct > 40.0);

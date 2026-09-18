@@ -56,17 +56,17 @@ pub fn generate_shadow_content(doc: &SkillDocument, skill_file_name: &str) -> St
 
     out.push_str(&format!("# {}\n\n", doc.manifest.name));
     out.push_str(&format!(
-        "> ⚡ **Esta habilidade é governada e executada pelo runtime hermético ASL 3.0.**\n> Arquivo canônico atômico: [`{}`](./{})\n\n",
+        "> ⚡ **This skill is governed and executed by the ASL 3.0 hermetic runtime.**\n> Canonical atomic file: [`{}`](./{})\n\n",
         skill_file_name, skill_file_name
     ));
 
-    out.push_str("### Diretiva para Agentes de IA (Claude Code, Cursor, Codex):\n");
-    out.push_str("Para executar esta skill de forma determinística, segura e com 93% de economia de tokens:\n");
+    out.push_str("### Directive for AI Agents (Claude Code, Cursor, Codex):\n");
+    out.push_str("To execute this skill deterministically, securely, and with up to 93% token savings:\n");
     out.push_str("```bash\n");
     out.push_str(&format!("asl run ./{}\n", skill_file_name));
     out.push_str("```\n\n");
     out.push_str("---\n\n");
-    out.push_str("## Instruções Semânticas Oficiais\n\n");
+    out.push_str("## Official Semantic Instructions\n\n");
     out.push_str(&doc.semantic_section);
     out.push('\n');
 
@@ -120,13 +120,13 @@ pub fn project_shadow_markdown(
 
     let target_md = get_shadow_target_path(skill_path);
 
-    // Avalia arquivo existente (EC-3, EC-4)
+    // Evaluate existing file (EC-3, EC-4)
     if target_md.exists() {
         let existing = fs::read_to_string(&target_md).map_err(|e| AslError::Io(e.to_string()))?;
 
-        // Verifica se é uma projeção sombra legítima do ASL
+        // Check if it is a legitimate ASL shadow projection
         if !existing.contains(SHADOW_WATERMARK) {
-            // Colisão com arquivo legítimo manual: protege e cria .asl.md (EC-4)
+            // Collision with manual file: protect and create .asl.md (EC-4)
             let protected_md = skill_path.with_extension("asl.md");
             let digest_token = format!("DIGEST: {}", doc.digest);
             if protected_md.exists() {
@@ -141,25 +141,25 @@ pub fn project_shadow_markdown(
             return Ok(ShadowProjectResult::CollisionProtected(protected_md));
         }
 
-        // Verifica digest para evitar loops e I/O redundante
+        // Check digest to prevent redundant I/O loops
         let digest_token = format!("DIGEST: {}", doc.digest);
         if existing.contains(&digest_token) {
             return Ok(ShadowProjectResult::Unchanged(target_md));
         }
 
-        // Digest alterado: atualiza atomicamente
+        // Changed digest: update atomically
         let new_content = generate_shadow_content(doc, skill_file_name);
         write_atomic(&target_md, &new_content)?;
         return Ok(ShadowProjectResult::Updated(target_md));
     }
 
-    // Arquivo não existe: cria pela primeira vez (EC-1)
+    // File does not exist: create for the first time (EC-1)
     let content = generate_shadow_content(doc, skill_file_name);
     write_atomic(&target_md, &content)?;
     Ok(ShadowProjectResult::Created(target_md))
 }
 
-/// Remove arquivos .md sombra órfãos cujo .skill original foi deletado (EC-2)
+/// Removes orphaned shadow .md files whose original .skill was deleted (EC-2)
 pub fn clean_orphaned_shadows(dir: &Path) -> Result<Vec<PathBuf>> {
     let mut removed = Vec::new();
 
@@ -212,10 +212,10 @@ fn write_atomic(target: &Path, content: &str) -> Result<()> {
     let tmp_path = target.with_extension(format!("tmp.{}.{}", pid, nanos));
 
     if let Err(e) = fs::write(&tmp_path, content) {
-        // EC-9: Em ambiente somente-leitura (ex: Docker --read-only), loga aviso sem pânico
+        // EC-9: In read-only environment (e.g. Docker --read-only), log warning without panic
         if e.kind() == std::io::ErrorKind::PermissionDenied || e.raw_os_error() == Some(30) {
             eprintln!(
-                "⚠️ [ASL Shadow] Somente-leitura ao escrever {:?}: {}",
+                "⚠️ [ASL Shadow] Read-only filesystem when writing {:?}: {}",
                 tmp_path, e
             );
             return Ok(());
@@ -329,33 +329,33 @@ mod tests {
         let manual_md = temp_dir.join("existing.md");
         fs::write(
             &manual_md,
-            "# Minha documentação manual importante! Não apagar.",
+            "# Important manual documentation! Do not delete.",
         )
         .unwrap();
 
         let doc = sample_doc("existing", "asl:sha256:dummy");
         let res = project_shadow_markdown(&skill_path, &doc).unwrap();
 
-        // Não deve sobrescrever existing.md, mas criar existing.asl.md
+        // Must not overwrite existing.md, but create existing.asl.md
         assert!(matches!(res, ShadowProjectResult::CollisionProtected(_)));
         assert_eq!(
             fs::read_to_string(&manual_md).unwrap(),
-            "# Minha documentação manual importante! Não apagar."
+            "# Important manual documentation! Do not delete."
         );
         let protected_path = temp_dir.join("existing.asl.md");
         assert!(protected_path.exists());
 
-        // Limpeza não deve remover existing.asl.md enquanto existing.skill existir
+        // Cleanup should not remove existing.asl.md while existing.skill exists
         let cleaned_zero = clean_orphaned_shadows(&temp_dir).unwrap();
         assert_eq!(cleaned_zero.len(), 0);
         assert!(protected_path.exists());
 
-        // Após deletar existing.skill, existing.asl.md deve ser limpo como órfão
+        // After deleting existing.skill, existing.asl.md should be cleaned as an orphan
         fs::remove_file(&skill_path).unwrap();
         let cleaned_one = clean_orphaned_shadows(&temp_dir).unwrap();
         assert_eq!(cleaned_one.len(), 1);
         assert!(!protected_path.exists());
-        // existing.md manual original continua preservado
+        // Original manual existing.md remains preserved
         assert!(manual_md.exists());
 
         let _ = fs::remove_dir_all(&temp_dir);
@@ -381,11 +381,11 @@ mod tests {
             let res = project_shadow_markdown(&path, &doc).unwrap();
             assert!(
                 matches!(res, ShadowProjectResult::Skipped(_)),
-                "Extensão .{} deve ser ignorada na projeção sombra",
+                "Extension .{} should be ignored in shadow projection",
                 ext
             );
             let md = temp_dir.join("artifact.md");
-            assert!(!md.exists(), "Não deve gerar .md para .{}", ext);
+            assert!(!md.exists(), "Should not generate .md for .{}", ext);
         }
 
         let _ = fs::remove_dir_all(&temp_dir);

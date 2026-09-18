@@ -1,50 +1,87 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# INSTALADOR OFICIAL DO AGENT SKILL LANGUAGE (ASL 3.0)
-# Desenvolvido por Jean Catarina (Cadente)
+# OFFICIAL AGENT SKILL LANGUAGE (ASL 3.0) INSTALLER
 # ==============================================================================
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RUNTIME_DIR="${SCRIPT_DIR}/runtime"
+# 1. Automatically detect Cargo / Rust in standard locations (e.g. after fresh rustup install)
+if [ -f "$HOME/.cargo/env" ]; then
+    # shellcheck source=/dev/null
+    source "$HOME/.cargo/env"
+fi
+
+if [ -d "$HOME/.cargo/bin" ]; then
+    export PATH="$HOME/.cargo/bin:$PATH"
+fi
+export PATH="$HOME/.cargo/bin:/usr/local/cargo/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+# Determine script directory safely even when piped from curl/stdin
+SCRIPT_DIR=""
+if [ -n "${BASH_SOURCE[0]:-}" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)"
+fi
 
 echo "========================================================"
-echo "⚡ Instalando Agent Skill Language (ASL 3.0)..."
+echo "⚡ Installing Agent Skill Language (ASL 3.0)..."
 echo "========================================================"
 
-# 1. Verificar se Cargo / Rust está instalado
+# 2. Verify Rust & Cargo presence
 if ! command -v cargo &> /dev/null; then
-    echo "❌ Erro: Rust e Cargo não foram encontrados no sistema."
-    echo "👉 Instale Rust via https://rustup.rs e execute este script novamente."
+    echo "❌ Error: Rust and Cargo were not found on this system."
+    echo ""
+    echo "👉 Rust is required to compile ASL. To install Rust and Cargo now, run:"
+    echo "    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+    echo ""
+    echo "   Or visit https://rustup.rs for platform-specific packages."
+    echo ""
+    echo "Tip: If you already ran rustup, reload your environment first:"
+    echo "    source \"\$HOME/.cargo/env\""
+    echo ""
+    echo "Then re-run this installer:"
+    echo "    curl -fsSL https://raw.githubusercontent.com/asl-lang/asl/main/install.sh | bash"
     exit 1
 fi
 
-echo "📦 Compilando e instalando CLI 'asl' globalmente..."
-cargo install --path "${RUNTIME_DIR}/crates/asl-cli" --force
-
-echo "📚 Compilando bibliotecas de FFI C-ABI (libasl)..."
-cargo build --release --manifest-path "${RUNTIME_DIR}/crates/asl-ffi/Cargo.toml"
+# 3. Build & Install ASL CLI globally
+if [ -n "${SCRIPT_DIR}" ] && [ -d "${SCRIPT_DIR}/runtime/crates/asl-cli" ]; then
+    echo "📦 Building and installing CLI 'asl' from local repository..."
+    cargo install --path "${SCRIPT_DIR}/runtime/crates/asl-cli" --force
+else
+    echo "📦 Fetching latest ASL source repository..."
+    TMP_DIR="$(mktemp -d 2>/dev/null || mktemp -d -t 'asl-install')"
+    trap 'rm -rf "${TMP_DIR}"' EXIT INT TERM
+    
+    if command -v git &> /dev/null; then
+        git clone --depth 1 https://github.com/asl-lang/asl.git "${TMP_DIR}"
+        echo "📦 Compiling and installing CLI 'asl' globally..."
+        cargo install --path "${TMP_DIR}/runtime/crates/asl-cli" --force
+    else
+        echo "❌ Error: 'git' is required to clone and build ASL from source."
+        echo "Please install git on your system and re-run this installer."
+        exit 1
+    fi
+fi
 
 echo ""
 echo "========================================================"
-echo "🎉 ASL 3.0 instalado com sucesso!"
+echo "🎉 ASL 3.0 installed successfully!"
 echo "========================================================"
 
-# Verificar PATH
+# Verify PATH
 CARGO_BIN="$HOME/.cargo/bin"
 if [[ ":$PATH:" != *":$CARGO_BIN:"* ]]; then
-    echo "⚠️  Nota: Certifique-se de que $CARGO_BIN está no seu PATH:"
+    echo "⚠️  Note: Make sure $CARGO_BIN is in your PATH:"
     echo "    export PATH=\"\$HOME/.cargo/bin:\$PATH\""
     echo ""
 fi
 
-echo "Para verificar a instalação:"
+echo "To verify the installation:"
 echo "    asl --version"
 echo ""
-echo "Para executar uma skill:"
-echo "    asl run examples/git-conventional-commit.skill -i '{\"intent\": \"novo recurso\", \"diff_stat\": \"1 file\"}'"
+echo "To run an ASL skill:"
+echo "    asl run examples/english-only-guard.skill -i '{\"content\": \"audit text\", \"context_type\": \"documentation\"}'"
 echo ""
-echo "Para iniciar o servidor MCP (stdio ou HTTP/SSE):"
+echo "To start the MCP server (stdio or HTTP/SSE):"
 echo "    asl serve --transport http --port 8080"
 echo ""
-echo "Documentação e exemplos disponíveis no diretório 'examples/' e 'docs/'."
+echo "Documentation and specifications: https://asl-lang.github.io/"

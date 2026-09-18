@@ -22,11 +22,11 @@ fn asl_natives(builder: &mut GlobalsBuilder) {
         let extra = eval
             .extra
             .and_then(|e| e.downcast_ref::<StarlarkContextExtra>())
-            .ok_or_else(|| anyhow::anyhow!("Contexto ASL não configurado"))?;
+            .ok_or_else(|| anyhow::anyhow!("ASL context not configured"))?;
         match extra.context.read_file(path) {
             Ok(Some(content)) => Ok(NoneOr::Other(content)),
             Ok(None) => Ok(NoneOr::None),
-            Err(e) => Err(anyhow::anyhow!("Erro de permissão ocap: {}", e)),
+            Err(e) => Err(anyhow::anyhow!("Ocap permission error: {}", e)),
         }
     }
 
@@ -34,7 +34,7 @@ fn asl_natives(builder: &mut GlobalsBuilder) {
         let extra = eval
             .extra
             .and_then(|e| e.downcast_ref::<StarlarkContextExtra>())
-            .ok_or_else(|| anyhow::anyhow!("Contexto ASL não configurado"))?;
+            .ok_or_else(|| anyhow::anyhow!("ASL context not configured"))?;
         Ok(extra.context.sha256(data))
     }
 
@@ -42,7 +42,7 @@ fn asl_natives(builder: &mut GlobalsBuilder) {
         let extra = eval
             .extra
             .and_then(|e| e.downcast_ref::<StarlarkContextExtra>())
-            .ok_or_else(|| anyhow::anyhow!("Contexto ASL não configurado"))?;
+            .ok_or_else(|| anyhow::anyhow!("ASL context not configured"))?;
         Ok(extra.context.fuel_consumed())
     }
 
@@ -50,7 +50,7 @@ fn asl_natives(builder: &mut GlobalsBuilder) {
         let extra = eval
             .extra
             .and_then(|e| e.downcast_ref::<StarlarkContextExtra>())
-            .ok_or_else(|| anyhow::anyhow!("Contexto ASL não configurado"))?;
+            .ok_or_else(|| anyhow::anyhow!("ASL context not configured"))?;
         Ok(extra
             .limits
             .max_fuel_opcodes
@@ -59,7 +59,7 @@ fn asl_natives(builder: &mut GlobalsBuilder) {
 
     fn _asl_matches_regex(haystack: &str, pattern: &str) -> anyhow::Result<bool> {
         let re = regex::Regex::new(pattern)
-            .map_err(|e| anyhow::anyhow!("Expressão regular inválida '{}': {}", pattern, e))?;
+            .map_err(|e| anyhow::anyhow!("Invalid regular expression '{}': {}", pattern, e))?;
         Ok(re.is_match(haystack))
     }
 }
@@ -127,7 +127,7 @@ asl_output_json = json.encode(asl_result)
         );
 
         let ast = AstModule::parse("asl_skill.star", invocation_script, &dialect)
-            .map_err(|e| AslError::StarlarkError(format!("Erro de sintaxe no Starlark: {}", e)))?;
+            .map_err(|e| AslError::StarlarkError(format!("Starlark syntax error: {}", e)))?;
 
         let context_extra = StarlarkContextExtra { context, limits };
 
@@ -135,7 +135,7 @@ asl_output_json = json.encode(asl_result)
             let mut eval = Evaluator::new(&module);
             eval.extra = Some(&context_extra);
             eval.eval_module(ast, &globals).map_err(|e| {
-                AslError::StarlarkError(format!("Erro na execução Starlark: {}", e))
+                AslError::StarlarkError(format!("Starlark execution error: {}", e))
             })?;
 
             let output_val = module
@@ -143,7 +143,7 @@ asl_output_json = json.encode(asl_result)
                 .ok_or_else(|| AslError::EntrypointNotFound(entrypoint.to_string()))?;
 
             let output_str = output_val.unpack_str().ok_or_else(|| {
-                AslError::StarlarkError("Saída de asl_output_json não é string".to_string())
+                AslError::StarlarkError("asl_output_json output is not a string".to_string())
             })?;
 
             let parsed_output: Value = serde_json::from_str(output_str).map_err(AslError::Json)?;

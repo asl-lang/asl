@@ -30,7 +30,7 @@ impl Parser {
                 }
                 TokenKind::Otherwise => {
                     if otherwise.is_some() {
-                        return Err(format!("Linha {}: Múltiplas cláusulas 'otherwise' encontradas.", self.peek().line));
+                        return Err(format!("Line {}: Multiple 'otherwise' clauses found.", self.peek().line));
                     }
                     otherwise = Some(self.parse_otherwise_section()?);
                 }
@@ -39,7 +39,7 @@ impl Parser {
                 }
                 _ => {
                     let tok = self.peek();
-                    return Err(format!("Linha {}:{}: Token inesperado '{:?}'. Esperado 'guard:', 'match' ou 'otherwise:'.", tok.line, tok.col, tok.kind));
+                    return Err(format!("Line {}:{}: Unexpected token '{:?}'. Expected 'guard:', 'match' or 'otherwise:'.", tok.line, tok.col, tok.kind));
                 }
             }
             self.skip_newlines();
@@ -92,7 +92,7 @@ impl Parser {
                 if self.match_token(TokenKind::Empty) {
                     return Ok(GuardCondition::IsNotEmpty);
                 }
-                return Err(format!("Linha {}: Esperado 'empty' após 'is not'.", self.peek().line));
+                return Err(format!("Line {}: Expected 'empty' after 'is not'.", self.peek().line));
             } else if self.match_token(TokenKind::Empty) {
                 return Ok(GuardCondition::IsEmpty);
             }
@@ -101,7 +101,7 @@ impl Parser {
             let lit = self.parse_value_literal_str()?;
             return Ok(GuardCondition::CompareOp("==".to_string(), lit));
         }
-        Err(format!("Linha {}: Condição de guarda inválida. Use 'is not empty' ou 'is empty'.", self.peek().line))
+        Err(format!("Line {}: Invalid guard condition. Use 'is not empty' or 'is empty'.", self.peek().line))
     }
 
     fn parse_match_section(&mut self) -> Result<MatchSection, String> {
@@ -129,19 +129,19 @@ impl Parser {
                 when_clauses.push(self.parse_when_clause()?);
             } else if self.check(TokenKind::Otherwise) {
                 if otherwise.is_some() {
-                    return Err(format!("Linha {}: Múltiplas cláusulas 'otherwise' no bloco match.", self.peek().line));
+                    return Err(format!("Line {}: Multiple 'otherwise' clauses in match block.", self.peek().line));
                 }
                 otherwise = Some(self.parse_otherwise_section()?);
             } else if self.check(TokenKind::Match) || self.check(TokenKind::Guard) {
                 break;
             } else {
                 let tok = self.peek();
-                return Err(format!("Linha {}: Esperado 'when' ou 'otherwise' no bloco match, encontrado '{:?}'.", tok.line, tok.kind));
+                return Err(format!("Line {}: Expected 'when' or 'otherwise' in match block, found '{:?}'.", tok.line, tok.kind));
             }
         }
 
         if when_clauses.is_empty() {
-            return Err(format!("Linha {}: Bloco match deve conter ao menos uma cláusula 'when'.", line));
+            return Err(format!("Line {}: Match block must contain at least one 'when' clause.", line));
         }
 
         Ok(MatchSection { target, when_clauses, otherwise, line })
@@ -155,7 +155,7 @@ impl Parser {
         let alias = if self.match_token(TokenKind::As) {
             match self.advance().kind {
                 TokenKind::Ident(s) => Some(s),
-                _ => return Err(format!("Linha {}: Esperado identificador após 'as'.", line)),
+                _ => return Err(format!("Line {}: Expected identifier after 'as'.", line)),
             }
         } else {
             None
@@ -200,7 +200,7 @@ impl Parser {
             let val = self.parse_expression()?;
             return Ok(PatternCondition::Equals(val));
         }
-        Err(format!("Linha {}: Condição de padrão inválida. Esperado starts_with, ends_with, contains ou matches.", line))
+        Err(format!("Line {}: Invalid pattern condition. Expected starts_with, ends_with, contains or matches.", line))
     }
 
     fn parse_string_or_any_list(&mut self) -> Result<Vec<String>, String> {
@@ -272,7 +272,7 @@ impl Parser {
             self.consume(TokenKind::RParen)?;
             Ok(Action::Reject { message: msg, line })
         } else {
-            Err(format!("Linha {}: Ação inválida. Esperado 'accept(...)' ou 'reject(...)'.", line))
+            Err(format!("Line {}: Invalid action. Expected 'accept(...)' or 'reject(...)'.", line))
         }
     }
 
@@ -320,7 +320,7 @@ impl Parser {
                     Ok(ValueExpr::Identifier(s))
                 }
             }
-            other => Err(format!("Linha {}: Expressão inválida '{:?}'.", tok.line, other)),
+            other => Err(format!("Line {}: Invalid expression '{:?}'.", tok.line, other)),
         }
     }
 
@@ -328,13 +328,13 @@ impl Parser {
         let mut segments = Vec::new();
         let root = match self.advance().kind {
             TokenKind::Ident(s) => s,
-            other => return Err(format!("Linha {}: Esperado identificador raiz no caminho, encontrado '{:?}'.", self.peek().line, other)),
+            other => return Err(format!("Line {}: Expected root identifier in path, found '{:?}'.", self.peek().line, other)),
         };
 
         while self.match_token(TokenKind::Dot) {
             match self.advance().kind {
                 TokenKind::Ident(s) => segments.push(s),
-                other => return Err(format!("Linha {}: Esperado identificador após '.', encontrado '{:?}'.", self.peek().line, other)),
+                other => return Err(format!("Line {}: Expected identifier after '.', found '{:?}'.", self.peek().line, other)),
             }
         }
 
@@ -345,7 +345,7 @@ impl Parser {
         let tok = self.advance();
         match tok.kind {
             TokenKind::Str(s) => Ok(s),
-            _ => Err(format!("Linha {}: Esperado literal de string.", tok.line)),
+            _ => Err(format!("Line {}: Expected string literal.", tok.line)),
         }
     }
 

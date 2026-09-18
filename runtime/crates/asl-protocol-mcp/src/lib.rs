@@ -46,7 +46,7 @@ impl<'a> McpServer<'a> {
         let req: JsonRpcRequest = match serde_json::from_str(msg_str) {
             Ok(r) => r,
             Err(e) => {
-                eprintln!("[ASL MCP] Erro de parsing JSON-RPC: {}", e);
+                eprintln!("[ASL MCP] JSON-RPC parsing error: {}", e);
                 return Some(JsonRpcResponse {
                     jsonrpc: "2.0".to_string(),
                     id: None,
@@ -141,7 +141,7 @@ impl<'a> McpServer<'a> {
                                 result: None,
                                 error: Some(serde_json::json!({
                                     "code": -32000,
-                                    "message": format!("Erro na execução ASL: {}", e)
+                                    "message": format!("ASL execution error: {}", e)
                                 })),
                             }),
                         }
@@ -152,13 +152,13 @@ impl<'a> McpServer<'a> {
                         result: None,
                         error: Some(serde_json::json!({
                             "code": -32601,
-                            "message": format!("Ferramenta '{}' não encontrada", tool_name)
+                            "message": format!("Tool '{}' not found", tool_name)
                         })),
                     }),
                 }
             }
             _ => {
-                // Notificações JSON-RPC 2.0 (sem id) nunca recebem resposta de erro
+                // JSON-RPC 2.0 notifications (without id) never receive an error response
                 if req.id.is_none() {
                     None
                 } else {
@@ -322,11 +322,11 @@ mod tests {
         let unknown = server.handle_message(r#"{"jsonrpc":"2.0","id":9,"method":"foo"}"#).unwrap();
         assert_eq!(unknown.error.unwrap()["code"], -32601);
 
-        // Notificação sem id não deve gerar resposta
+        // Notification without id should not generate a response
         let notif = server.handle_message(r#"{"jsonrpc":"2.0","method":"unknown/notification"}"#);
         assert!(notif.is_none());
 
-        // Ping deve retornar sucesso com objeto vazio
+        // Ping must return success with empty object
         let ping_resp = server.handle_message(r#"{"jsonrpc":"2.0","id":10,"method":"ping"}"#).unwrap();
         assert!(ping_resp.error.is_none());
         assert_eq!(ping_resp.result.unwrap(), serde_json::json!({}));

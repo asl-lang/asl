@@ -1,4 +1,4 @@
-//! Módulo de regras semânticas declarativas do ASL (asl:rules).
+//! Declarative semantic rules module for ASL (asl:rules).
 
 pub mod ast;
 pub mod lexer;
@@ -10,7 +10,7 @@ pub use lexer::Lexer;
 pub use parser::Parser;
 pub use transpiler::RulesTranspiler;
 
-/// Realiza o parsing de uma string de regras no bloco RulesBlock da AST
+/// Parses a rules string into a RulesBlock in the AST
 pub fn parse_rules(source: &str) -> Result<RulesBlock, String> {
     let lexer = Lexer::new(source);
     let tokens = lexer.tokenize()?;
@@ -26,18 +26,18 @@ mod tests {
     fn test_parse_rules_basic() {
         let input = r#"
 guard:
-  input.intent is not empty else reject("A intenção do commit não pode estar vazia.")
+  input.intent is not empty else reject("Commit intent cannot be empty.")
 
 match input.intent:
   when starts_with any(["feat", "fix", "docs"]) as prefix:
     accept(is_valid=true, commit_type=prefix, message=input.intent)
-  when contains any(["bug", "corrigir"]):
+  when contains any(["bug", "patch"]):
     accept(is_valid=true, commit_type="fix", message="fix: " + input.intent)
   otherwise:
     accept(is_valid=true, commit_type="feat", message="feat: " + input.intent)
 "#;
 
-        let ast = parse_rules(input).expect("Deveria parsear regras com sucesso");
+        let ast = parse_rules(input).expect("Should parse rules successfully");
         assert_eq!(ast.guards.len(), 1);
         assert_eq!(ast.guards[0].target.to_dotted(), "input.intent");
         assert_eq!(ast.guards[0].condition, GuardCondition::IsNotEmpty);
@@ -50,9 +50,9 @@ match input.intent:
     fn test_parse_guard_is_empty() {
         let input = r#"
 guard:
-  input.flag is empty else reject("Flag deve estar vazia.")
+  input.flag is empty else reject("Flag must be empty.")
 "#;
-        let ast = parse_rules(input).expect("Deveria parsear");
+        let ast = parse_rules(input).expect("Should parse");
         assert_eq!(ast.guards[0].condition, GuardCondition::IsEmpty);
     }
 
@@ -63,12 +63,12 @@ guard:
 
         let input = r#"
 guard:
-  input.intent is not empty else reject("A intenção do commit não pode estar vazia.")
+  input.intent is not empty else reject("Commit intent cannot be empty.")
 
 match input.intent:
   when starts_with any(["feat", "fix", "docs"]) as prefix:
     accept(is_valid=true, commit_type=prefix, message=input.intent)
-  when contains any(["bug", "corrigir"]):
+  when contains any(["bug", "patch"]):
     accept(is_valid=true, commit_type="fix", message="fix: " + input.intent)
   otherwise:
     accept(is_valid=true, commit_type="feat", message="feat: " + input.intent)
@@ -82,7 +82,7 @@ interface:
 "#).unwrap();
 
         let transpiler = RulesTranspiler::new();
-        let res = transpiler.transpile(input, &manifest).expect("Transpilação deve suceder com AOT");
+        let res = transpiler.transpile(input, &manifest).expect("Transpilation should succeed with AOT");
         assert!(res.starlark_code.contains("def validate_and_format(ctx, input):"));
         assert!(res.starlark_code.contains("_asl_get(input, [\"intent\"], \"\")"));
         assert!(res.starlark_code.contains("_asl_starts_with_any"));
