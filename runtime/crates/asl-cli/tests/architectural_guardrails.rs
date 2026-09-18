@@ -310,7 +310,7 @@ limits:
 # Instruções Semânticas
 Execute a auditoria determinística com capabilities.
 
-```asl:deterministic
+```asl
 def audit(ctx, input):
     cargo_content = ctx.fs.read("Cargo.toml")
     crypto_hash = ctx.crypto.sha256("agent-skill-language")

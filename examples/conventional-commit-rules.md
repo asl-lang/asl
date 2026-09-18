@@ -1,26 +1,26 @@
 <!-- ⚡ ASL AUTO-GENERATED SHADOW PROJECTION | DO NOT EDIT MANUALLY -->
-<!-- CANONICAL SOURCE: ./conventional-commit-rules.skill | DIGEST: asl:sha256:324e57339cabf11527f76012bb784aede0db31a6a0686948ff30bf1ea8c0ddd6 -->
+<!-- CANONICAL SOURCE: ./conventional-commit-rules.skill | DIGEST: asl:sha256:f2533810e2592edf7080ca7f19727045db4d69d8238234ffb2160120952f9ccc -->
 ---
 asl_version: "3.0"
 name: "conventional-commit-rules"
 description: "Valida e formata mensagens Conventional Commits via regras declarativas semânticas."
 asl_canonical_source: "./conventional-commit-rules.skill"
-asl_digest: "asl:sha256:324e57339cabf11527f76012bb784aede0db31a6a0686948ff30bf1ea8c0ddd6"
+asl_digest: "asl:sha256:f2533810e2592edf7080ca7f19727045db4d69d8238234ffb2160120952f9ccc"
 ---
 # conventional-commit-rules
 
-> ⚡ **Esta habilidade é governada e executada pelo runtime hermético ASL 3.0.**
-> Arquivo canônico atômico: [`conventional-commit-rules.skill`](./conventional-commit-rules.skill)
+> ⚡ **This skill is governed and executed by the ASL 3.0 hermetic runtime.**
+> Canonical atomic file: [`conventional-commit-rules.skill`](./conventional-commit-rules.skill)
 
-### Diretiva para Agentes de IA (Claude Code, Cursor, Codex):
-Para executar esta skill de forma determinística, segura e com 93% de economia de tokens:
+### Directive for AI Agents (Claude Code, Cursor, Codex):
+To execute this skill deterministically, securely, and with up to 93% token savings:
 ```bash
 asl run ./conventional-commit-rules.skill
 ```
 
 ---
 
-## Instruções Semânticas Oficiais
+## Official Semantic Instructions
 
 # SEÇÃO SEMÂNTICA AI-FIRST (Knuth, Shazeer & Amodei)
 # Nota: Prefixo estático invariante para 100% de reuso de KV-Cache.

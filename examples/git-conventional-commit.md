@@ -1,26 +1,26 @@
 <!-- ⚡ ASL AUTO-GENERATED SHADOW PROJECTION | DO NOT EDIT MANUALLY -->
-<!-- CANONICAL SOURCE: ./git-conventional-commit.skill | DIGEST: asl:sha256:19f41c0e7ca32215176eac4acae944be4f7da01fae1dbe4e60e33402efde52cb -->
+<!-- CANONICAL SOURCE: ./git-conventional-commit.skill | DIGEST: asl:sha256:0f6cc448f64d12dcf969520f067a146238850aba81feae1f418c0558ec5e1a15 -->
 ---
 asl_version: "3.0"
 name: "git-conventional-commit"
 description: "Valida e formata mensagens no padrão Conventional Commits deterministamente."
 asl_canonical_source: "./git-conventional-commit.skill"
-asl_digest: "asl:sha256:19f41c0e7ca32215176eac4acae944be4f7da01fae1dbe4e60e33402efde52cb"
+asl_digest: "asl:sha256:0f6cc448f64d12dcf969520f067a146238850aba81feae1f418c0558ec5e1a15"
 ---
 # git-conventional-commit
 
-> ⚡ **Esta habilidade é governada e executada pelo runtime hermético ASL 3.0.**
-> Arquivo canônico atômico: [`git-conventional-commit.skill`](./git-conventional-commit.skill)
+> ⚡ **This skill is governed and executed by the ASL 3.0 hermetic runtime.**
+> Canonical atomic file: [`git-conventional-commit.skill`](./git-conventional-commit.skill)
 
-### Diretiva para Agentes de IA (Claude Code, Cursor, Codex):
-Para executar esta skill de forma determinística, segura e com 93% de economia de tokens:
+### Directive for AI Agents (Claude Code, Cursor, Codex):
+To execute this skill deterministically, securely, and with up to 93% token savings:
 ```bash
 asl run ./git-conventional-commit.skill
 ```
 
 ---
 
-## Instruções Semânticas Oficiais
+## Official Semantic Instructions
 
 # SEÇÃO SEMÂNTICA AI-FIRST (Knuth, Shazeer & Amodei)
 # Nota: Esta seção possui prefixo estático imutável garantindo 100% de reuso de KV-Cache.

@@ -100,7 +100,7 @@ impl ParserPort for CommonMarkYamlParser {
             let transpiled = transpiler.transpile(&rules_src, &manifest)?;
             let code = if !parsed_blocks.deterministic_code.trim().is_empty() {
                 format!(
-                    "{}\n\n# --- CÓDIGO DETERMINÍSTICO MANUAL EMBUTIDO ---\n{}",
+                    "{}\n\n# --- ASL PROCEDURAL EMBEDDED CODE ---\n{}",
                     transpiled.starlark_code, parsed_blocks.deterministic_code
                 )
             } else {
@@ -256,7 +256,8 @@ fn parse_markdown_blocks(markdown_raw: &str) -> Result<ParsedBlocks> {
 
     let mut deterministic_blocks = Vec::new();
     let mut rules_blocks = Vec::new();
-    let mut current_block_kind: Option<String> = None;
+    let mut in_asl_block = false;
+    let mut current_block_buf = String::new();
     let mut semantic_section = String::new();
     let mut last_event_end = 0;
 
@@ -264,26 +265,31 @@ fn parse_markdown_blocks(markdown_raw: &str) -> Result<ParsedBlocks> {
         match event {
             Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(tag))) => {
                 let tag_str = tag.as_ref().trim().to_lowercase();
-                if is_rules_code_tag(&tag_str) || is_deterministic_code_tag(&tag_str) {
-                    current_block_kind = Some(tag_str);
+                if is_asl_code_tag(&tag_str) {
+                    in_asl_block = true;
+                    current_block_buf.clear();
                     if range.start > last_event_end {
                         semantic_section.push_str(&markdown_raw[last_event_end..range.start]);
                     }
                 }
             }
             Event::Text(text) => {
-                if let Some(ref tag) = current_block_kind {
-                    if is_rules_code_tag(tag) {
-                        rules_blocks.push(text.to_string());
-                    } else if is_deterministic_code_tag(tag) {
-                        deterministic_blocks.push(text.to_string());
-                    }
+                if in_asl_block {
+                    current_block_buf.push_str(&text);
                 }
             }
             Event::End(TagEnd::CodeBlock) => {
-                if current_block_kind.is_some() {
-                    current_block_kind = None;
+                if in_asl_block {
+                    in_asl_block = false;
                     last_event_end = range.end;
+                    let trimmed = current_block_buf.trim();
+                    if !trimmed.is_empty() {
+                        if is_declarative_rules(trimmed) {
+                            rules_blocks.push(trimmed.to_string());
+                        } else {
+                            deterministic_blocks.push(trimmed.to_string());
+                        }
+                    }
                 }
             }
             _ => {}
@@ -308,16 +314,24 @@ fn parse_markdown_blocks(markdown_raw: &str) -> Result<ParsedBlocks> {
     })
 }
 
-fn is_rules_code_tag(tag: &str) -> bool {
-    tag == "asl:rules" || tag == "rules"
+fn is_asl_code_tag(tag: &str) -> bool {
+    tag == "asl"
 }
 
-fn is_deterministic_code_tag(tag: &str) -> bool {
-    tag == "asl"
-        || tag == "asl:deterministic"
-        || tag == "starlark"
-        || tag == "python-deterministic"
-        || (tag.starts_with("asl:") && tag != "asl:rules")
+fn is_declarative_rules(code: &str) -> bool {
+    for line in code.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let lower = line.to_lowercase();
+        return lower.starts_with("guard:")
+            || lower.starts_with("match ")
+            || lower.starts_with("otherwise:")
+            || lower.starts_with("rule ")
+            || lower.starts_with("when ");
+    }
+    false
 }
 
 #[cfg(test)]

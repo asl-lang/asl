@@ -1,26 +1,26 @@
 <!-- ⚡ ASL AUTO-GENERATED SHADOW PROJECTION | DO NOT EDIT MANUALLY -->
-<!-- CANONICAL SOURCE: ./english-only-guard.skill | DIGEST: asl:sha256:df1fb4427b5f305fa39ebf2483f72ed44d69ceb7d3d06d0a25ed5de720909682 -->
+<!-- CANONICAL SOURCE: ./english-only-guard.skill | DIGEST: asl:sha256:d61837cbdf9d9e6a42fbc1fb46e31b46ef6bcce24abf43b8365bfa60d9e595da -->
 ---
 asl_version: "3.0"
 name: "english-only-guard"
 description: "Enforces strict English-only language policy on agent prompts, PR diffs, and codebase documentation."
 asl_canonical_source: "./english-only-guard.skill"
-asl_digest: "asl:sha256:df1fb4427b5f305fa39ebf2483f72ed44d69ceb7d3d06d0a25ed5de720909682"
+asl_digest: "asl:sha256:d61837cbdf9d9e6a42fbc1fb46e31b46ef6bcce24abf43b8365bfa60d9e595da"
 ---
 # english-only-guard
 
-> ⚡ **Esta habilidade é governada e executada pelo runtime hermético ASL 3.0.**
-> Arquivo canônico atômico: [`english-only-guard.skill`](./english-only-guard.skill)
+> ⚡ **This skill is governed and executed by the ASL 3.0 hermetic runtime.**
+> Canonical atomic file: [`english-only-guard.skill`](./english-only-guard.skill)
 
-### Diretiva para Agentes de IA (Claude Code, Cursor, Codex):
-Para executar esta skill de forma determinística, segura e com 93% de economia de tokens:
+### Directive for AI Agents (Claude Code, Cursor, Codex):
+To execute this skill deterministically, securely, and with up to 93% token savings:
 ```bash
 asl run ./english-only-guard.skill
 ```
 
 ---
 
-## Instruções Semânticas Oficiais
+## Official Semantic Instructions
 
 # AI-FIRST SEMANTIC SECTION (Immutable Static Prefix for 100% KV-Cache Reuse)
 

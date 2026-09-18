@@ -20,7 +20,7 @@ const SEARCH_INDEX: SearchItem[] = [
     category: "Language",
     href: "/docs/syntax",
     icon: BookOpen,
-    description: "Complete formal grammar, frontmatter manifest, Starlark L1, and asl:rules DSL.",
+    description: "Complete formal grammar, frontmatter manifest, and pure ASL syntax (```asl).",
   },
   {
     id: "tokenomics",
@@ -40,11 +40,11 @@ const SEARCH_INDEX: SearchItem[] = [
   },
   {
     id: "rules",
-    title: "Declarative Semantic Rules (asl:rules)",
+    title: "Declarative Semantic Rules in ASL",
     category: "Language",
     href: "/docs/rules",
     icon: BookOpen,
-    description: "Transpilation of high-level validation rules to Strict Starlark L1.",
+    description: "Compilation of high-level validation rules to pure ASL VM deterministic code.",
   },
   {
     id: "axioms",

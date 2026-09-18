@@ -17,7 +17,7 @@ export const PipelineModelSection: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
         <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 space-y-1.5">
           <span className="font-semibold text-emerald-400 font-mono">1. Code Assembly</span>
-          <p className="text-zinc-400">All fenced blocks (<code className="text-zinc-300 font-mono">```asl:rules</code> and <code className="text-zinc-300 font-mono">```asl:deterministic</code>) are merged in source order into a single unified ASL execution module (compatible with the Starlark L1 runtime standard).</p>
+          <p className="text-zinc-400">All fenced blocks (strictly using <code className="text-zinc-300 font-mono">```asl</code>) are parsed in source order into a single unified ASL execution module, compiled AOT to hermetic Starlark in-memory.</p>
         </div>
         <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 space-y-1.5">
           <span className="font-semibold text-blue-400 font-mono">2. Semantic Preservation</span>

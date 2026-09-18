@@ -4,6 +4,7 @@ import { DocsNavFooter } from "@/components/docs/ui/DocsNavFooter";
 import { FileAnatomySection } from "@/components/docs/sections/syntax/FileAnatomySection";
 import { DualConsumerModelSection } from "@/components/docs/sections/syntax/DualConsumerModelSection";
 import { ManifestSpecTable } from "@/components/docs/sections/syntax/ManifestSpecTable";
+import { RosettaStoneSection } from "@/components/docs/sections/syntax/RosettaStoneSection";
 import { LanguageRefDirectory } from "@/components/docs/sections/syntax/LanguageRefDirectory";
 
 export default function SyntaxReferencePage() {
@@ -17,6 +18,7 @@ export default function SyntaxReferencePage() {
 
       <FileAnatomySection />
       <DualConsumerModelSection />
+      <RosettaStoneSection />
       <ManifestSpecTable />
       <LanguageRefDirectory />
 

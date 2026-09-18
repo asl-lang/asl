@@ -39,7 +39,7 @@ Do NOT run DDL migrations directly without passing this automated gate.
 
 ---
 
-\`\`\`asl:deterministic
+\`\`\`asl
 # --- SUB-ROUTINE 1: AST / DDL Static Risk Analyzer ---
 DANGEROUS_PATTERNS = [
     ("ALTER TABLE", "ADD COLUMN", "NOT NULL DEFAULT", "Adding NOT NULL without concurrent backfill locks the table."),
@@ -72,7 +72,7 @@ def analyze_sql_risk(sql_text, environment):
 The agent checks whether targeted tables are high-throughput hot tables.
 Hot tables (\`orders\`, \`payments\`, \`users\`) cannot sustain exclusive table locks.
 
-\`\`\`asl:deterministic
+\`\`\`asl
 # --- SUB-ROUTINE 2: Blast Radius Calculation ---
 HOT_TABLES = ["users", "accounts", "orders", "payments", "ledger"]
 
@@ -97,7 +97,7 @@ def calculate_blast_radius(sql_text):
 
 # STAGE 3: Final Gate Evaluation & Cryptographic Attestation
 
-\`\`\`asl:deterministic
+\`\`\`asl
 # --- SUB-ROUTINE 3: Main Orchestration Entrypoint ---
 def evaluate_migration_pipeline(ctx, input):
     # 1. Fuel quota pre-flight inspection

@@ -78,7 +78,7 @@ export const ReActComparisonSection: React.FC = () => {
         <div>
           <div className="text-emerald-400 font-semibold">// Step 3: Compact Rust Return Payload (~25 tokens)</div>
           <div className="text-zinc-400 mt-1">
-            Zero noise, typed JSON dictionary returned directly by <code className="text-zinc-200">asl-vm-starlark</code>.
+            Zero noise, typed JSON dictionary returned directly by the ASL runtime.
           </div>
         </div>
       </div>

@@ -82,9 +82,9 @@ export const BlueprintsSection: React.FC = () => {
           category="AppSec • LLM Defense • Guardrails"
           badge="SOC2 / ISO 27001"
           badgeColor="rose"
-          description="Placed in front of internal AI services. Uses asl:rules to intercept prompt injection attempts, detect jailbreak signatures ('DAN mode', 'ignore previous instructions'), enforce tenant boundary isolation, and scrub sensitive PII (credit cards, API keys) before data reaches external LLM APIs."
+          description="Placed in front of internal AI services. Uses pure ASL pattern rules (```asl) to intercept prompt injection attempts, detect jailbreak signatures ('DAN mode', 'ignore previous instructions'), enforce tenant boundary isolation, and scrub sensitive PII (credit cards, API keys) before data reaches external LLM APIs."
           footerTag="# Performance advantage:"
-          footerContent="Compiled in-memory to hermetic ASL execution bytecode (compatible with Starlark L1), processing requests in < 200 microseconds with zero garbage collection pause."
+          footerContent="Compiled in-memory to hermetic Starlark in RAM, processing requests in < 200 microseconds with zero garbage collection pause."
         />
 
         <BlueprintCard

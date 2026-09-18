@@ -3,12 +3,12 @@ import { DocsSection } from "@/components/docs/ui/DocsSection";
 
 export const JsonSchemaMatrix: React.FC = () => {
   const mapping = [
-    { schema: '"string"', asl: "string", engine: "ASL VM (Starlark L1 compatible)", notes: "Strict UTF-8 encoded string." },
-    { schema: '"integer"', asl: "int", engine: "ASL VM (Starlark L1 compatible)", notes: "Zero-loss unbounded integer." },
-    { schema: '"boolean"', asl: "bool", engine: "ASL VM (Starlark L1 compatible)", notes: "Strict boolean (true / false)." },
-    { schema: '"array"', asl: "list", engine: "ASL VM (Starlark L1 compatible)", notes: "Zero-indexed JSON array." },
-    { schema: '"object"', asl: "dict", engine: "ASL VM (Starlark L1 compatible)", notes: "String-keyed JSON object map." },
-    { schema: '"null"', asl: "NoneType (None)", engine: "ASL VM (Starlark L1 compatible)", notes: "JSON literal null." },
+    { schema: '"string"', asl: "string", engine: "ASL VM", notes: "Strict UTF-8 encoded string." },
+    { schema: '"integer"', asl: "int", engine: "ASL VM", notes: "Zero-loss unbounded integer." },
+    { schema: '"boolean"', asl: "bool", engine: "ASL VM", notes: "Strict boolean (true / false)." },
+    { schema: '"array"', asl: "list", engine: "ASL VM", notes: "Zero-indexed JSON array." },
+    { schema: '"object"', asl: "dict", engine: "ASL VM", notes: "String-keyed JSON object map." },
+    { schema: '"null"', asl: "NoneType (None)", engine: "ASL VM", notes: "JSON literal null." },
   ];
 
   return (

@@ -1,4 +1,5 @@
 use anyhow::{bail, Result};
+use crate::docs_rosetta::*;
 
 /// Handles `asl docs` / `asl learn` / `asl syntax`
 pub fn handle_docs(topic: &str, ai: bool, json: bool) -> Result<()> {
@@ -19,6 +20,10 @@ pub fn handle_docs(topic: &str, ai: bool, json: bool) -> Result<()> {
         "practices" | "best-practices" | "manual" => println!("{}", get_practices_docs()),
         "mcp" => println!("{}", get_mcp_docs()),
         "examples" => println!("{}", get_examples_docs()),
+        "migration" | "rosetta" => println!("{}", get_migration_docs()),
+        "bash" | "sh" | "shell" => println!("{}", get_bash_migration_docs()),
+        "python" | "py" => println!("{}", get_python_migration_docs()),
+        "starlark" => println!("{}", get_starlark_migration_docs()),
         "overview" | "all" | "" => println!("{}", get_overview_docs()),
         other => {
             eprintln!("⚠️  Unknown topic '{}'. Showing language overview:\n", other);
@@ -43,8 +48,9 @@ pub fn handle_template(target_type: &str) -> Result<()> {
 
 fn get_ai_primer() -> &'static str {
     r#"# ASL 3.0 Primer for AI Agents
-Execute: `asl run <file>` or `./<file>` | Hermetic Starlark/WASM sandbox | Zero overhead
+Execute: `asl run <file>` or `./<file>` | ASL VM Hermetic Sandbox | Zero overhead
 File Triad: .skill (modular, auto-shadows to .md), .tool (MCP tool), .asl (native root)
+Universal Code Tag: All code blocks use strictly ```asl
 
 Structure of .skill / .tool:
 ```yaml
@@ -64,19 +70,14 @@ limits:
 # Semantic Instructions (for LLMs)
 Instructions and prompting guidelines go here.
 
-```asl:rules
+```asl
 match input.action:
   when "query":
-    guard len(input.term) > 0
     return {"status": "ok", "term": input.term}
-  when _:
+  otherwise:
     return {"error": "unknown action"}
 ```
-```asl:deterministic
-def run(ctx, input):
-    return {"result": "processed"}
-```
-```"#
+"#
 }
 
 fn get_overview_docs() -> &'static str {
@@ -84,8 +85,10 @@ fn get_overview_docs() -> &'static str {
 ⚡ Agent Skill Language (ASL 3.0) - Language Reference & Cheat Sheet
 ========================================================================
 
-ASL is an open, hermetic specification and runtime for agentic AI skills,
-deterministic tools, and declarative rule enforcement.
+ASL is an open specification where programming feels just like writing
+Markdown. Your document IS your program — combining plain prose for AI
+agents and humans with concise ```asl code blocks. Under the hood, ASL
+transpiles AOT into hermetic, fuel-metered Starlark in RAM.
 
 🚀 QUICK START:
   asl template skill > my-skill.skill    # Generate canonical skill template
@@ -94,8 +97,11 @@ deterministic tools, and declarative rule enforcement.
   asl run my-skill.skill                # Run via hermetic runtime
 
 📚 TOPICS (run 'asl docs <topic>' or 'asl learn <topic>'):
-  asl docs syntax      - YAML frontmatter, schema, code block tags
+  asl docs syntax      - YAML frontmatter, schema, universal ```asl tag
   asl docs rules       - Declarative semantic rules DSL (match/when/guard)
+  asl docs migration   - ASL Rosetta Stone (Migrate from Bash/Python/Starlark)
+  asl docs bash        - How to replace Bash scripts with pure ASL
+  asl docs python      - How to replace Python automations with pure ASL
   asl docs triad       - The canonical file triad (.skill, .tool, .asl)
   asl docs practices   - Best practices & on-demand workflow (no daemon)
   asl docs mcp         - Exposing skills as Model Context Protocol tools
@@ -127,14 +133,13 @@ fn get_syntax_docs() -> &'static str {
      max_heap_kib: integer       (Default: 8,192 KiB)
      wall_clock_timeout_ms: int  (Default: 1,000 ms)
 
-3. Code Block Tags:
-   ```asl:rules                  Declarative semantic rules transpiled to Starlark
-   ```asl:deterministic          Deterministic Starlark code
-   ```asl                        Alias for deterministic Starlark code"#
+3. Universal Code Block Tag:
+   ```asl                        The single unified tag for all ASL code.
+                                 Accepts declarative rules or functions."#
 }
 
 fn get_rules_docs() -> &'static str {
-    r#"### Declarative Semantic Rules DSL (asl:rules)
+    r#"### Declarative Semantic Rules DSL in ASL
 
 Declarative rules allow writing readable, deterministic guards and actions:
 
@@ -148,21 +153,18 @@ Supported Patterns:
   • String literals:  when "deploy":
   • Integers / Bool:  when 200: / when True:
   • Wildcard:         when _:
-  • List patterns:    when [first, second]:
-  • Exact matches:    when {"status": "error"}:
+  • Substring:        when contains "needle":
+  • Prefix / Suffix:  when starts_with "prefix": / ends_with ".json":
 
-Guards:
-  guard len(input.name) > 3 and input.env != "prod"
-
-Complete Example:
-```asl:rules
+Example:
+```asl
 match input.command:
   when "format":
     guard input.text != ""
     return {"formatted": input.text.strip()}
   when "validate":
     return {"valid": True}
-  when _:
+  otherwise:
     return {"error": "unsupported command"}
 ```"#
 }
@@ -273,12 +275,11 @@ description: "Guards against malicious shell injection"
 # Guard Instructions
 Validates prompt parameters.
 
-```asl:rules
+```asl
 match input.text:
-  when _:
-    guard ";" in input.text or "&&" in input.text
+  when contains ";":
     return {"allowed": False, "reason": "Shell delimiter detected"}
-  when _:
+  otherwise:
     return {"allowed": True}
 ```
 ```"#
@@ -296,7 +297,7 @@ interface:
 # Instructions
 Describe semantic behavior for AI agents here.
 
-```asl:deterministic
+```asl
 def run(ctx, input):
     return {"status": "ok", "echo": input}
 ```
@@ -321,7 +322,7 @@ interface:
 # Tool Documentation
 Explain tool usage here.
 
-```asl:deterministic
+```asl
 def run(ctx, input):
     return {"processed": input.get("query", "")}
 ```
@@ -338,11 +339,11 @@ description: "Skill governed by declarative semantic rules"
 # Rules Instructions
 Applies deterministic policy matchers.
 
-```asl:rules
+```asl
 match input.action:
   when "ping":
     return {"status": "pong"}
-  when _:
+  otherwise:
     return {"error": "unknown action"}
 ```
 "#
@@ -369,10 +370,14 @@ fn get_json_docs(topic: &str) -> Result<String> {
     let val = serde_json::json!({
         "asl_version": "3.0",
         "topic": topic,
-        "runtime": "hermetic_starlark_wasm",
+        "runtime": "asl_vm_hermetic",
         "shebang": "#!/usr/bin/env -S asl run",
+        "code_tag": "asl",
         "triad": [".skill", ".tool", ".asl"],
-        "available_topics": ["overview", "syntax", "rules", "triad", "mcp", "examples", "ai"]
+        "available_topics": [
+            "overview", "syntax", "rules", "migration", "bash",
+            "python", "starlark", "triad", "mcp", "examples", "ai"
+        ]
     });
     serde_json::to_string_pretty(&val).map_err(Into::into)
 }
@@ -383,7 +388,11 @@ mod tests {
 
     #[test]
     fn test_handle_docs_all_topics() {
-        for topic in ["overview", "syntax", "rules", "triad", "practices", "best-practices", "mcp", "examples", "all", "unknown"] {
+        for topic in [
+            "overview", "syntax", "rules", "triad", "practices",
+            "best-practices", "mcp", "examples", "migration", "rosetta",
+            "bash", "python", "starlark", "all", "unknown"
+        ] {
             assert!(handle_docs(topic, false, false).is_ok());
         }
         assert!(handle_docs("all", true, false).is_ok());

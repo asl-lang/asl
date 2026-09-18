@@ -71,7 +71,7 @@ match input.destination_iban:
         High-value cross-border settlements require strict compliance checking: currency whitelists, sanction lists (OFAC), velocity thresholds, and automatic Suspicious Activity Report (SAR) tagging.
       </p>
 
-      <AslCodeBlock lang="asl:rules" code={amlRules} />
+      <AslCodeBlock lang="asl" code={amlRules} />
     </DocsSection>
   );
 };

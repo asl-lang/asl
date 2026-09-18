@@ -58,7 +58,7 @@ match input.query_payload:
         Protects LLM tool endpoints against prompt injection attacks, unauthorized role escalation, and tenant boundary hopping before payload reaches internal databases:
       </p>
 
-      <AslCodeBlock lang="asl:rules" code={firewallRules} />
+      <AslCodeBlock lang="asl" code={firewallRules} />
     </DocsSection>
   );
 };

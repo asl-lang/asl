@@ -22,7 +22,7 @@ export const StandardModulesSection: React.FC = () => {
           Fast, deterministic encoding and decoding of JSON text into ASL native structures.
         </p>
         <AslCodeBlock
-          lang="asl:deterministic"
+          lang="asl"
           code={`def execute(ctx, input):
     data = json.decode('{"task": "lint", "count": 42}')
     task_name = data["task"]   # "lint"
@@ -47,7 +47,7 @@ export const StandardModulesSection: React.FC = () => {
           Constructs immutable record objects with dot-accessible properties in ASL.
         </p>
         <AslCodeBlock
-          lang="asl:deterministic"
+          lang="asl"
           code={`def execute(ctx, input):
     point = struct(x=10, y=25, label="origin")
     distance = point.x + point.y   # 35

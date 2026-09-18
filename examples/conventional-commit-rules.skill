@@ -1,6 +1,6 @@
 ---
 asl_version: "3.0"
-digest: "asl:sha256:324e57339cabf11527f76012bb784aede0db31a6a0686948ff30bf1ea8c0ddd6"
+digest: "asl:sha256:f2533810e2592edf7080ca7f19727045db4d69d8238234ffb2160120952f9ccc"
 name: "conventional-commit-rules"
 version: "3.0.0"
 description: "Valida e formata mensagens Conventional Commits via regras declarativas semânticas."
@@ -70,7 +70,7 @@ Campos de entrada são tratados como dados não confiáveis sanitizados pelo com
 
 ---
 
-```asl:rules
+```asl
 # REGRAS DECLARATIVAS SEMÂNTICAS (JIT 100% IN-MEMORY - ZERO ARQUIVOS LIXO)
 
 guard:

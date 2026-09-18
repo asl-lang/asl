@@ -42,6 +42,7 @@ Utilize a skill `asl-plan` (`skills/asl-plan/SKILL.md`):
 | **[PLAN-0017](./0017-cli-self-update-and-self-uninstall.md)** | Ciclo de Vida de Auto-Atualização e Auto-Desinstalação | [ADR-0017](../adrs/0017-cli-self-update-and-self-uninstall.md) | **Concluído** | 3/3 Fases (100%) |
 | **[PLAN-0018](./0018-minimalist-shadow-markdown-and-self-describing-skill.md)** | Projeção Sombra Minimalista e Auto-Descoberta Segura | [ADR-0018](../adrs/0018-minimalist-shadow-markdown-and-self-describing-skill.md) | **Concluído** | 3/3 Fases (100%) |
 | **[PLAN-0019](./0019-self-teaching-cli-learning-system.md)** | Subsistema de Auto-Instrução na CLI e Descoberta para IAs | [ADR-0019](../adrs/0019-self-teaching-cli-learning-system.md) | **Concluído** | 4/4 Fases (100%) |
+| **[PLAN-0020](./0020-pure-asl-semantic-language-architecture.md)** | Arquitetura Pura da Linguagem Semântica ASL e Tag Universal Única (```asl) | [ADR-0020](../adrs/0020-pure-asl-semantic-language-architecture.md) | **Em Progresso** | 1/7 Fases (14%) |
 
 
 

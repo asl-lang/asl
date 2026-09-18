@@ -46,7 +46,7 @@ export const DOCS_NAV: NavSection[] = [
       { title: "Variables, Loops & Functions", href: "/docs/control-flow", icon: Workflow, badge: "Manual" },
       { title: "Standard Library & Builtins", href: "/docs/stdlib", icon: Terminal, badge: "API" },
       { title: "Capability Context (ctx)", href: "/docs/context", icon: Shield, badge: "OCap" },
-      { title: "Declarative Rules (asl:rules)", href: "/docs/rules", icon: Sparkles, badge: "DSL" },
+      { title: "Semantic Rules in ASL", href: "/docs/rules", icon: Sparkles, badge: "DSL" },
       { title: "Complex Multi-Stage Pipelines", href: "/docs/complex-workflows", icon: Layers, badge: "Guide" },
     ],
   },

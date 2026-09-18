@@ -40,7 +40,7 @@ limits:
 # Semantic Prompt Instructions
 Evaluate git staged status and generate compliant conventional commit.
 
-\`\`\`asl:rules
+\`\`\`asl
 rule "infer_type_from_intent":
   when:
     input.intent matches "(?i)^(corrigir|fix|bug|patch)"
@@ -82,7 +82,7 @@ limits:
 # Instructions
 Validate prompt safety boundaries before invoking external subagents.
 
-\`\`\`asl:rules
+\`\`\`asl
 rule "block_eval_injection":
   when:
     input.prompt_text matches "(?i)(ignore previous instructions|system:)"
@@ -119,7 +119,7 @@ limits:
 # Semantic Prompt
 Extract high-saliency declarative tokens preserving causal intent.
 
-\`\`\`asl:deterministic
+\`\`\`asl
 def format_prompt(ctx, input):
     raw_content = input.get("content", "")
     max_sentences = input.get("max_sentences", 3)

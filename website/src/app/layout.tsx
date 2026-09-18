@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     "Deterministic Execution",
     "Rust",
     "Tokenomics",
-    "Starlark",
+    "ASL VM",
     "Model Context Protocol",
   ],
   authors: [{ name: "Jean Catarina" }],

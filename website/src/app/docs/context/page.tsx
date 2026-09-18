@@ -24,7 +24,7 @@ export default function CapabilityContextPage() {
 
       <DocsNavFooter
         prev={{ title: "Standard Library & Builtins", href: "/docs/stdlib" }}
-        next={{ title: "Declarative Rules (asl:rules)", href: "/docs/rules" }}
+        next={{ title: "Semantic Rules in ASL", href: "/docs/rules" }}
       />
     </div>
   );

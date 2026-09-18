@@ -1,6 +1,6 @@
 ---
 asl_version: "3.0"
-digest: "asl:sha256:2952ac58bd60db0b38a48dc82323b3db6e0df89805355e6ab02398436f409b18"
+digest: "asl:sha256:4d02039fb65b38386e6ebadadd7dae64ba6ee601bcd47f3df3ceb554a96940dd"
 name: "security-validator"
 version: "1.0.0"
 description: "Ferramenta de validação de segurança para mitigação de prompt injection em LLMs."
@@ -58,7 +58,7 @@ Auditar payloads de entrada e detectar ataques de prompt injection, jailbreak ou
 
 ---
 
-```asl:rules
+```asl
 guard:
   input.payload is not empty else reject("Payload de entrada não pode ser vazio.")
   input.source is not empty else reject("Origem dos dados é obrigatória.")

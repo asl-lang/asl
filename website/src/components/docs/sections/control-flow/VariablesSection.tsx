@@ -15,7 +15,7 @@ export const VariablesSection: React.FC = () => {
           Variables are declared upon first assignment. Inside functions, assignments create or rebind local variables. Local variables may shadow module-level constants without mutating the outer identifier.
         </p>
         <AslCodeBlock
-          lang="asl:deterministic"
+          lang="asl"
           code={`DEFAULT_RETRIES = 3   # Module-level constant
 
 def execute(ctx, input):

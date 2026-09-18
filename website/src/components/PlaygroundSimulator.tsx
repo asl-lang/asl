@@ -28,7 +28,7 @@ limits:
 # Semantic Prompt
 Evaluate commit intent and infer standardized type.
 
-\`\`\`asl:rules
+\`\`\`asl
 rule "detect_fix":
   when:
     input.intent matches "(?i)^(corrigir|fix|bug)"
@@ -72,7 +72,7 @@ limits:
 # Prompt
 Detect prompt injection attempts in incoming requests.
 
-\`\`\`asl:rules
+\`\`\`asl
 rule "flag_injection":
   when:
     input.text matches "(?i)(ignore previous|system prompt|bypass)"
@@ -108,7 +108,7 @@ export const PlaygroundSimulator: React.FC = () => {
     try {
       const parsedInput = JSON.parse(inputJson || "{}");
       let output: Record<string, any> = {};
-      let transpiled = `# Transpiled Strict Starlark L1 Engine (Simulated)\n`;
+      let transpiled = `# Compiled ASL VM Deterministic Engine (Simulated)\n`;
 
       if (selectedPresetKey === "commit-rules") {
         const intent = String(parsedInput.intent || "");
@@ -265,7 +265,7 @@ export const PlaygroundSimulator: React.FC = () => {
                 }`}
               >
                 <Code2 className="h-3.5 w-3.5 text-zinc-300" />
-                Transpiled Starlark
+                ASL VM Code
               </button>
               <button
                 onClick={() => setActiveView("tokenomics")}
@@ -326,7 +326,7 @@ export const PlaygroundSimulator: React.FC = () => {
 
             {activeView === "transpiled" && (
               <div>
-                <div className="text-[11px] text-zinc-500 mb-2">// Compiled Ahead-of-Time (AOT) to Strict Starlark L1:</div>
+                <div className="text-[11px] text-zinc-500 mb-2">// Compiled Ahead-of-Time (AOT) to ASL VM:</div>
                 <pre className="text-zinc-200 leading-relaxed">
                   {simulationResult.transpiled}
                 </pre>

@@ -23,7 +23,7 @@ export const PrimitiveTypes: React.FC = () => {
           Represents exact, unbounded mathematical integers without 32 or 64-bit overflow hazards. Supports decimal, hexadecimal (<code className="text-zinc-200 font-mono">0xFF</code>), binary (<code className="text-zinc-200 font-mono">0b1010</code>), and octal (<code className="text-zinc-200 font-mono">0o755</code>) literals.
         </p>
         <AslCodeBlock
-          lang="asl:deterministic"
+          lang="asl"
           code={`def execute(ctx, input):
     count = 42
     hex_mask = 0xFF00
@@ -52,7 +52,7 @@ export const PrimitiveTypes: React.FC = () => {
           Contains exactly two values: <code className="text-zinc-200 font-mono">True</code> and <code className="text-zinc-200 font-mono">False</code>. Falsy values are <code className="text-zinc-200 font-mono">0</code>, <code className="text-zinc-200 font-mono">&quot;&quot;</code>, <code className="text-zinc-200 font-mono">[]</code>, <code className="text-zinc-200 font-mono">&#123;&#125;</code>, and <code className="text-zinc-200 font-mono">None</code>.
         </p>
         <AslCodeBlock
-          lang="asl:deterministic"
+          lang="asl"
           code={`def execute(ctx, input):
     is_ready = input.get("ready", True)
     has_errors = False
@@ -77,7 +77,7 @@ export const PrimitiveTypes: React.FC = () => {
           Immutable sequences of valid UTF-8 characters. Indexed by character position (0-indexed). Supports slicing <code className="text-zinc-200 font-mono">[start:end:step]</code> and template formatting.
         </p>
         <AslCodeBlock
-          lang="asl:deterministic"
+          lang="asl"
           code={`def execute(ctx, input):
     name = input.get("agent_name", "asl-executor")
     prefix = name[:3]            # "asl"

@@ -21,7 +21,7 @@ export const BoundedLoopsSection: React.FC = () => {
           All iteration in ASL must be bounded over a finite iterable sequence (<code className="text-zinc-200 font-mono">list</code>, <code className="text-zinc-200 font-mono">dict</code>, <code className="text-zinc-200 font-mono">tuple</code>, <code className="text-zinc-200 font-mono">string</code>, or <code className="text-zinc-200 font-mono">range()</code>). The <code className="text-zinc-200 font-mono">break</code> and <code className="text-zinc-200 font-mono">continue</code> statements are fully supported.
         </p>
         <AslCodeBlock
-          lang="asl:deterministic"
+          lang="asl"
           code={`def process_records(records):
     sanitized = []
     for r in records:
@@ -68,7 +68,7 @@ export const BoundedLoopsSection: React.FC = () => {
           <Flame className="h-5 w-5 text-amber-400 shrink-0" />
           <div>
             <strong className="text-white">Axiom 5 Bounded Termination: </strong>
-            Every execution has an explicit monotonic fuel limit <code className="text-zinc-200 font-mono">limits.max_fuel_opcodes</code>. Compatible with the hermetic Starlark L1 runtime standard, execution is proven to terminate in finite steps <span className="font-mono text-zinc-200">O(F)</span>.
+            Every execution has an explicit monotonic fuel limit <code className="text-zinc-200 font-mono">limits.max_fuel_opcodes</code>. Transpiled AOT into hermetic Starlark in RAM, execution is proven to terminate in finite steps <span className="font-mono text-zinc-200">O(F)</span>.
           </div>
         </div>
       </div>

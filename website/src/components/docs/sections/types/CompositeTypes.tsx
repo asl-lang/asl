@@ -23,7 +23,7 @@ export const CompositeTypes: React.FC = () => {
           Heterogeneous ordered sequences. Items can be mutated, appended, extended, and sliced inside function bodies.
         </p>
         <AslCodeBlock
-          lang="asl:deterministic"
+          lang="asl"
           code={`def execute(ctx, input):
     items = ["git", "docker", "rust"]
     items.append("asl")
@@ -50,7 +50,7 @@ export const CompositeTypes: React.FC = () => {
           Key-value associative maps. Keys must be hashable immutable types (<code className="text-zinc-200 font-mono">string</code>, <code className="text-zinc-200 font-mono">int</code>, <code className="text-zinc-200 font-mono">bool</code>, <code className="text-zinc-200 font-mono">tuple</code>).
         </p>
         <AslCodeBlock
-          lang="asl:deterministic"
+          lang="asl"
           code={`def execute(ctx, input):
     config = {
         "version": 3,
@@ -80,7 +80,7 @@ export const CompositeTypes: React.FC = () => {
           Fixed-size immutable collections. Tuples can be used as dictionary keys because of their strict immutability.
         </p>
         <AslCodeBlock
-          lang="asl:deterministic"
+          lang="asl"
           code={`def execute(ctx, input):
     point = (10, 20)
     x, y = point               # Destructuring / Unpacking
@@ -105,7 +105,7 @@ export const CompositeTypes: React.FC = () => {
           Created via the ASL builtin <code className="text-zinc-200 font-mono">struct(key=val)</code> constructor. Provides dot-accessible attributes and strict immutability.
         </p>
         <AslCodeBlock
-          lang="asl:deterministic"
+          lang="asl"
           code={`def execute(ctx, input):
     user = struct(id=42, name="alice", role="admin")
     return {"user_name": user.name, "role": user.role}`}

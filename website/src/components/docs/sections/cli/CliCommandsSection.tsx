@@ -14,7 +14,7 @@ export const CliCommandsSection: React.FC = () => {
     },
     {
       cmd: "asl expand <file>",
-      desc: "Displays the in-memory compiled deterministic ASL code (compatible with Starlark L1) generated from asl:rules blocks for developer inspection.",
+      desc: "Displays the in-memory compiled hermetic Starlark code generated from ASL blocks for developer inspection.",
       example: `asl expand examples/git-conventional-commit.skill`,
     },
     {

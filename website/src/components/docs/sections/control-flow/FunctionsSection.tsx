@@ -14,7 +14,7 @@ export const FunctionsSection: React.FC = () => {
           Functions are declared with <code className="text-zinc-200 font-mono">def</code>. Parameters support positional arguments, default values, and keyword arguments.
         </p>
         <AslCodeBlock
-          lang="asl:deterministic"
+          lang="asl"
           code={`# Pure helper procedure in ASL
 def sanitize_token(token, uppercase=False):
     cleaned = token.strip().replace(" ", "_")
@@ -46,7 +46,7 @@ def split_name(full_name):
         </ul>
 
         <AslCodeBlock
-          lang="asl:deterministic"
+          lang="asl"
           code={`def execute(ctx, input):
     # 1. Access validated input fields
     filename = input.get("filename")

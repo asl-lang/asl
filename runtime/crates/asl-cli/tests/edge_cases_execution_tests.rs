@@ -35,7 +35,7 @@ fn test_missing_entrypoint_in_code_fails_safely_across_triad() {
         let raw = make_asl_source(
             &format!("ep-missing-{}", ext),
             "expected_func",
-            "```asl:deterministic\ndef other_func(ctx, input):\n    return {\"status\": \"ok\"}\n```",
+            "```asl\ndef other_func(ctx, input):\n    return {\"status\": \"ok\"}\n```",
         );
         let doc = parser.parse(&raw).expect("Parsing deve suceder");
         let res = engine.execute(
@@ -83,7 +83,7 @@ fn test_runtime_division_by_zero_and_exceptions_across_triad() {
         let raw = make_asl_source(
             &format!("div-zero-{}", ext),
             "divide",
-            "```asl:deterministic\ndef divide(ctx, input):\n    x = 100 // 0\n    return {\"res\": x}\n```",
+            "```asl\ndef divide(ctx, input):\n    x = 100 // 0\n    return {\"res\": x}\n```",
         );
         let doc = parser.parse(&raw).expect("Parsing deve suceder");
         let res = engine.execute(
@@ -118,7 +118,7 @@ interface:
   entrypoint: "evaluate"
 ---
 # Regras Inválidas
-```asl:rules
+```asl
 RULE 123_invalid_name:
   WHEN ???:
     RETURN reject("Sintaxe corrompida")
@@ -143,7 +143,7 @@ interface:
   entrypoint: "check_intent"
 ---
 # Match Incompleto
-```asl:rules
+```asl
 match input.action:
   when starts_with "save":
     accept(saved=true)
@@ -183,7 +183,7 @@ interface:
   entrypoint: "classify"
 ---
 # Classificador de Acesso
-```asl:rules
+```asl
 guard:
   input.role is not empty else reject("Role obrigatório")
 
@@ -261,7 +261,7 @@ interface:
 ---
 # Documento Híbrido com Regras e Código Manual
 
-```asl:rules
+```asl
 guard:
   input.tag is not empty else reject("Tag obrigatória")
 
@@ -272,7 +272,7 @@ match input.tag:
     accept(processed="standard", is_custom=false)
 ```
 
-```asl:deterministic
+```asl
 def audit_helper(tag):
     return "audited:" + tag
 ```
@@ -315,7 +315,7 @@ interface:
 ---
 # Validador de Números por Regex
 
-```asl:rules
+```asl
 match input.code:
   when matches("^[0-9]{4}$"):
     accept(is_numeric=true, code=input.code)
@@ -374,7 +374,7 @@ interface:
 ---
 # Múltiplos Matches Sequenciais
 
-```asl:rules
+```asl
 match input.category:
   when starts_with "admin":
     accept(role="administrator")

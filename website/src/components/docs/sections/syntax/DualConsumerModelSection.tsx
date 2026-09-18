@@ -25,7 +25,7 @@ export const DualConsumerModelSection: React.FC = () => {
             <span>Consumer B: The Sandboxed ASL Host VM</span>
           </div>
           <p className="text-zinc-300 leading-relaxed">
-            When the agent calls the skill, the host ASL engine validates arguments, creates an isolated memory sandbox, injects capability context handles (<code className="text-zinc-200 font-mono">ctx</code>), and executes Region 3 with guaranteed mathematical termination in finite fuel steps (100% compatible with the Starlark L1 runtime standard).
+            When the agent calls the skill, the host ASL engine validates arguments, creates an isolated memory sandbox, injects capability context handles (<code className="text-zinc-200 font-mono">ctx</code>), and executes Region 3 with guaranteed mathematical termination in finite fuel steps, compiling ASL AOT directly into hermetic Starlark in RAM.
           </p>
         </div>
       </div>

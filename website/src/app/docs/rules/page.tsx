@@ -13,10 +13,10 @@ export default function RulesDocsPage() {
         category="Language Reference • Section 5"
         title={
           <span>
-            Declarative Rules (<code className="text-blue-400 font-mono">asl:rules</code>)
+            Declarative Rules in ASL (<code className="text-blue-400 font-mono">```asl</code>)
           </span>
         }
-        description="Grammar specification and enterprise architectures for declarative policy engines, financial AML risk scoring, and zero-trust security firewalls in native ASL syntax (compatible with the Starlark L1 runtime)."
+        description="Grammar specification and enterprise architectures for declarative policy engines, financial AML risk scoring, and zero-trust security firewalls in pure ASL syntax (ASL VM)."
       />
 
       <RulesGrammarSection />

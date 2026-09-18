@@ -13,7 +13,7 @@ export const RulesGrammarSection: React.FC = () => {
           <span className="text-emerald-400 font-bold">1. Guard Clauses (Preconditions)</span>
           <p className="text-zinc-400 font-sans">Evaluated sequentially before matching begins. Rejects invalid requests immediately.</p>
           <AslCodeBlock
-            lang="asl:rules"
+            lang="asl"
             code={`guard:
   input.payload is not empty else reject("Empty payload")
   input.amount > 0 else reject("Invalid amount")
@@ -25,7 +25,7 @@ export const RulesGrammarSection: React.FC = () => {
           <span className="text-blue-400 font-bold">2. Pattern Match Matrix</span>
           <p className="text-zinc-400 font-sans">Multi-pattern disjunction with captured alias bindings for prefixes and substrings.</p>
           <AslCodeBlock
-            lang="asl:rules"
+            lang="asl"
             code={`match input.target:
   when starts_with any(["prod-", "us-east-"]) as region:
     accept(status="routed", region=region)

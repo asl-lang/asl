@@ -1,4 +1,4 @@
-//! Declarative semantic rules module for ASL (asl:rules).
+//! Declarative semantic rules module for ASL.
 
 pub mod ast;
 pub mod lexer;

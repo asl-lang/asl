@@ -62,7 +62,7 @@ interface:
   entrypoint: "run"
 ---
 # Seção Semântica
-```asl:deterministic
+```asl
 def run(ctx, input):
     return {"ok": True}
 ```
@@ -86,7 +86,7 @@ fn test_missing_mandatory_manifest_fields() {
     let parser = CommonMarkYamlParser::new();
 
     // Nome vazio
-    let doc_no_name = build_document("3.0", "", "run", "```asl:deterministic\ndef run(c, i): pass\n```");
+    let doc_no_name = build_document("3.0", "", "run", "```asl\ndef run(c, i): pass\n```");
     assert!(matches!(parser.parse(&doc_no_name).unwrap_err(), AslError::InvalidFrontmatter(_)));
 
     // Versão ASL incompatível (ex: 2.0 ou 1.0)
@@ -118,7 +118,7 @@ interface:
 # Seção Semântica com Emojis 💎
 Critério de ativação: quando usuário solicitar análise de texto em português ou japonês (日本語).
 
-```asl:deterministic
+```asl
 def executar_verificacao(ctx, input):
     return {"mensagem": "Olá mundo! 🚀", "status": "sucesso"}
 ```
@@ -150,8 +150,8 @@ E aqui um script Bash:
 echo "Eu sou bash"
 ```
 
-Apenas o bloco asl:deterministic deve ser considerado:
-```asl:deterministic
+Apenas o bloco asl deve ser considerado:
+```asl
 def run(ctx, input):
     return {"real": True}
 ```

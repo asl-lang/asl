@@ -2,13 +2,13 @@ import React from "react";
 
 interface AslCodeBlockProps {
   code: string;
-  lang?: "asl" | "asl:rules" | "asl:deterministic" | "bash" | "yaml";
+  lang?: "asl" | "bash" | "yaml";
   filename?: string;
 }
 
 export const AslCodeBlock: React.FC<AslCodeBlockProps> = ({
   code,
-  lang = "asl:deterministic",
+  lang = "asl",
   filename,
 }) => {
   return (

@@ -22,13 +22,13 @@ export const TriadTableSection: React.FC = () => {
               <td className="p-3 font-bold text-blue-400">.skill</td>
               <td className="p-3">Autonomous agent capability with semantic instructions & rules</td>
               <td className="p-3 text-emerald-400 font-semibold">✅ Enabled (.skill.md)</td>
-              <td className="p-3 text-zinc-400">asl-vm-starlark</td>
+              <td className="p-3 text-zinc-400">ASL VM (Starlark AOT)</td>
             </tr>
             <tr>
               <td className="p-3 font-bold text-emerald-400">.tool</td>
               <td className="p-3">Direct deterministic tool call (MCP stdio & SSE compatible)</td>
               <td className="p-3 text-zinc-500">❌ Clean (Atomic File)</td>
-              <td className="p-3 text-zinc-400">asl-vm-starlark / C-ABI</td>
+              <td className="p-3 text-zinc-400">ASL VM (Starlark AOT) / C-ABI</td>
             </tr>
             <tr>
               <td className="p-3 font-bold text-purple-400">.asl</td>

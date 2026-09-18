@@ -15,7 +15,7 @@ pub enum AslError {
     #[error("Frontmatter invalid: {0}")]
     InvalidFrontmatter(String),
 
-    #[error("Missing deterministic code block (```asl or ```asl:deterministic)")]
+    #[error("Missing ASL code block (```asl)")]
     MissingDeterministicBlock,
 
     #[error("Starlark execution error: {0}")]
@@ -322,7 +322,7 @@ interface:
         assert_eq!(err.to_string(), "Entrypoint 'missing_fn' not found in skill code");
 
         let err2 = AslError::MissingDeterministicBlock;
-        assert!(err2.to_string().contains("Missing deterministic code block"));
+        assert!(err2.to_string().contains("Missing ASL code block"));
     }
 
     #[test]

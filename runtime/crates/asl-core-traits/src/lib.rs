@@ -37,9 +37,9 @@ pub trait GrammarCompilerPort: Send + Sync {
     fn compile_to_regex_cfg(&self, json_schema: &Value) -> Result<String>;
 }
 
-/// Porta do Transpilador Semântico de Regras (asl:rules)
+/// Semantic Rules Transpiler Port
 pub trait RulesTranspilerPort: Send + Sync {
-    /// Transpila regras declarativas para código Starlark L1 verificável
+    /// Transpiles declarative rules to verified ASL VM deterministic code
     fn transpile(
         &self,
         rules_source: &str,
@@ -47,14 +47,14 @@ pub trait RulesTranspilerPort: Send + Sync {
     ) -> Result<TranspilationResult>;
 }
 
-/// Resultado atômico da transpilação de regras
+/// Atomic result of rules transpilation
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TranspilationResult {
-    /// Código Starlark L1 hermético compilado
+    /// Hermetic ASL VM deterministic code compiled from declarative rules
     pub starlark_code: String,
-    /// Mapeamento de linhas para depuração e rastreabilidade
+    /// Line mapping for debugging and source maps
     pub source_map: Vec<SourceMapEntry>,
-    /// Invariantes semânticos extraídos para o otimizador de KV-Cache
+    /// Semantic invariants extracted for KV-Cache prefix optimization
     pub static_invariants: Vec<String>,
 }
 

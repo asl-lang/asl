@@ -14,7 +14,7 @@ export const ConditionalsSection: React.FC = () => {
           Standard indented syntax (4 spaces). Conditions evaluate with short-circuit boolean logic (<code className="text-zinc-200 font-mono">and</code>, <code className="text-zinc-200 font-mono">or</code>, <code className="text-zinc-200 font-mono">not</code>).
         </p>
         <AslCodeBlock
-          lang="asl:deterministic"
+          lang="asl"
           code={`def categorize_risk(score, mode):
     if score >= 90:
         grade = "CRITICAL"

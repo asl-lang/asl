@@ -12,7 +12,7 @@ interface:
 # Semantic Instructions
 Execute deterministic function.
 
-```asl:deterministic
+```asl
 def run(ctx, input):
     return {"status": "ok"}
 ```
@@ -128,7 +128,7 @@ interface:
 # Semantic Instructions
 Declarative rules execution.
 
-```asl:rules
+```asl
 guard:
   input.text is not empty else reject("Empty text")
 
@@ -290,4 +290,78 @@ def run(ctx, input):
     assert!(doc.semantic_section.contains("# Instructions"));
     assert!(doc.deterministic_code.contains("def run(ctx, input):"));
     assert!(doc.digest.starts_with("asl:sha256:"));
+}
+
+#[test]
+fn test_foreign_tags_are_ignored_and_not_executed() {
+    let raw = r#"---
+asl_version: "3.0"
+name: "foreign-tag-skill"
+interface:
+  entrypoint: "run"
+---
+# Semantic Section
+
+```starlark
+def run(ctx, input):
+  return {"foreign": "starlark"}
+```
+
+```python
+def run(ctx, input):
+  return {"foreign": "python"}
+```
+
+```asl:rules
+match input.x:
+  when 1:
+    return 1
+```
+
+```asl:deterministic
+def run(ctx, input):
+  return {"foreign": "deterministic"}
+```
+"#;
+    let parser = CommonMarkYamlParser::new();
+    let doc = parser.parse(raw).expect("Skill with foreign tags must parse");
+    // Since only ```asl is recognized, none of the above are parsed as code blocks.
+    // The parser falls back to the default passthrough entrypoint.
+    assert_eq!(doc.manifest.name, "foreign-tag-skill");
+    assert!(doc.rules_code.is_none());
+    assert_eq!(doc.deterministic_code, "def run(ctx, input):\n    return input");
+    // Foreign blocks remain in the semantic documentation section
+    assert!(doc.semantic_section.contains("```starlark"));
+    assert!(doc.semantic_section.contains("```python"));
+}
+
+#[test]
+fn test_declarative_and_procedural_dual_asl_blocks() {
+    let raw = r#"---
+asl_version: "3.0"
+name: "dual-asl-skill"
+interface:
+  entrypoint: "run"
+---
+# Instructions
+
+```asl
+def helper(x):
+    return x * 10
+```
+
+```asl
+match input.val:
+  when starts_with "hello":
+    accept(greeting=True)
+  otherwise:
+    reject("unknown")
+```
+"#;
+    let parser = CommonMarkYamlParser::new();
+    let doc = parser.parse(raw).expect("Dual asl blocks must parse");
+    assert_eq!(doc.manifest.name, "dual-asl-skill");
+    assert!(doc.rules_code.is_some());
+    assert!(doc.deterministic_code.contains("def run(ctx, input):"));
+    assert!(doc.deterministic_code.contains("def helper(x):"));
 }

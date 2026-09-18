@@ -28,7 +28,7 @@ Reads and cryptographically audits target files under sandboxed roots.
 
 ---
 
-\`\`\`asl:deterministic
+\`\`\`asl
 def execute(ctx, input):
     filepath = input.get("filepath")
     

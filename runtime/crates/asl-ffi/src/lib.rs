@@ -221,7 +221,7 @@ interface:
 # Semantic Section
 Executes deterministic calculation in-process.
 
-```asl:deterministic
+```asl
 def calc(ctx, input):
     a = input.get("a", 0)
     b = input.get("b", 0)

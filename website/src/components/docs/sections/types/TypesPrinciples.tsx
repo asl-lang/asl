@@ -5,7 +5,7 @@ export const TypesPrinciples: React.FC = () => {
   return (
     <DocsSection title="1. Architectural Principles">
       <p className="text-sm text-zinc-300 leading-relaxed">
-        ASL operates on a <strong>strongly-typed, hermetically-scoped semantic runtime model</strong>. The type system is designed to eliminate undefined behavior, null-pointer dereferences, and floating-point non-determinism across disparate CPU architectures, while maintaining full binary compatibility with the Starlark L1 execution standard.
+        ASL operates on a <strong>strongly-typed, hermetically-scoped semantic runtime model</strong>. The type system is designed to eliminate undefined behavior, null-pointer dereferences, and floating-point non-determinism across disparate CPU architectures, authored in pure ASL and evaluated deterministically by the ASL VM (transpiled AOT to hermetic Starlark in-memory).
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">

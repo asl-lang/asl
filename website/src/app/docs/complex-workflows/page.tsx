@@ -19,7 +19,7 @@ export default function ComplexWorkflowsPage() {
       <DesignPatternsSection />
 
       <DocsNavFooter
-        prev={{ title: "Declarative Rules (asl:rules)", href: "/docs/rules" }}
+        prev={{ title: "Semantic Rules in ASL", href: "/docs/rules" }}
         next={{ title: "The Canonical Triad", href: "/docs/triad" }}
       />
     </div>

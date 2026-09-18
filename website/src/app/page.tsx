@@ -152,7 +152,7 @@ export default function HomePage() {
             Test ASL in the Browser
           </h2>
           <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl mt-1.5 leading-relaxed">
-            Write declarative semantic rules in native ASL syntax, simulate AOT compilation (compatible with Starlark L1 bytecode), and test execution directly in WebAssembly.
+            Write declarative semantic rules in pure ASL syntax (```asl), simulate AOT compilation to the ASL VM, and test execution directly in WebAssembly.
           </p>
         </div>
 

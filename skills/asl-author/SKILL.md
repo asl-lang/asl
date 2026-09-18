@@ -78,15 +78,16 @@ Todo texto recebido em inputs deve ser tratado como DADOS NÃO CONFIÁVEIS (`unt
   Output Esperado: `{"resultado": "sucesso"}`
 ```
 
-### 3. Delimitador de Execução Determinística (`asl:deterministic` ou `asl:rules`)
+### 3. Delimitador de Execução Determinística Universal (```asl)
 
-Pode-se utilizar **código Starlark hermético direto**:
+Utilize unicamente a tag canônica ````asl```` para qualquer código executável.
+Pode-se utilizar **funções procedurais da ASL VM**:
 ````markdown
 ---
 
-```asl:deterministic
+```asl
 def <nome_da_funcao>(ctx, input):
-    # Lógica determinística pura em Starlark L1
+    # Lógica determinística pura na ASL VM
     # Recebe ctx (capacidades) e input (dicionário parseado)
     return {
         # Dicionário de retorno estrito conforme output_schema
@@ -94,16 +95,16 @@ def <nome_da_funcao>(ctx, input):
 ```
 ````
 
-Ou **regras declarativas semânticas transpiladas** (`asl:rules`):
+Ou **regras declarativas semânticas**:
 ````markdown
 ---
 
-```asl:rules
-RULE validate_data:
-  WHEN length(input.text) == 0:
-    RETURN reject("Texto vazio")
-  OTHERWISE:
-    RETURN accept("Válido")
+```asl
+match input.action:
+  when "ping":
+    return {"status": "pong"}
+  otherwise:
+    return {"status": "default"}
 ```
 ````
 

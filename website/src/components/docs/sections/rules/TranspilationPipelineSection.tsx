@@ -8,7 +8,7 @@ export const TranspilationPipelineSection: React.FC = () => {
       subtitle="How the ASL compiler turns declarative rules into deterministic execution bytecode."
     >
       <p className="text-sm text-zinc-300 leading-relaxed">
-        The <code className="text-zinc-200 font-mono">asl-parser</code> crate compiles rules blocks ahead-of-time directly into deterministic execution bytecode (fully compatible with the Starlark L1 runtime standard):
+        The <code className="text-zinc-200 font-mono">asl-parser</code> crate compiles semantic ASL blocks ahead-of-time directly into hermetic Starlark in RAM, executing with zero ambient authority and bounded fuel:
       </p>
 
       <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 space-y-2 text-xs text-zinc-400 font-mono">

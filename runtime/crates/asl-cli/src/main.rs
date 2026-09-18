@@ -11,6 +11,7 @@ use std::path::PathBuf;
 mod crypto_cmds;
 mod daemon_cmds;
 mod docs_cmds;
+mod docs_rosetta;
 mod lifecycle_cmds;
 mod prefix_cmds;
 mod server_cmds;

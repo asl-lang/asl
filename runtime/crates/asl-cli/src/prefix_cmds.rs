@@ -138,12 +138,12 @@ pub fn handle_check(skill_file: &Path, parser: &CommonMarkYamlParser) -> Result<
     }
 
     if doc.rules_code.is_some() {
-        println!("Semantic Rules:    ✅ Transpiled in-memory (Strict Starlark L1)");
+        println!("Semantic Rules:    ✅ Transpiled in-memory (ASL VM)");
     }
     Ok(())
 }
 
-/// Expands declarative rules or deterministic code into full Starlark representation
+/// Expands declarative rules or procedural ASL code into full ASL VM representation
 pub fn handle_expand(skill_file: &Path, parser: &CommonMarkYamlParser) -> Result<()> {
     let content = fs::read_to_string(skill_file)
         .with_context(|| format!("Failed to read file: {:?}", skill_file))?;
@@ -153,12 +153,12 @@ pub fn handle_expand(skill_file: &Path, parser: &CommonMarkYamlParser) -> Result
         .with_context(|| "Error parsing ASL file")?;
 
     if let Some(rules) = &doc.rules_code {
-        println!("# --- ORIGINAL SEMANTIC RULES (asl:rules) ---");
+        println!("# --- ORIGINAL DECLARATIVE ASL RULES (```asl) ---");
         println!("{}\n", rules.trim());
-        println!("# --- GENERATED STARLARK L1 DETERMINISTIC CODE (JIT IN-MEMORY) ---");
+        println!("# --- UNDER THE HOOD: COMPILED TO HERMETIC STARLARK (IN-MEMORY AOT) ---");
         println!("{}", doc.deterministic_code);
     } else {
-        println!("# --- DETERMINISTIC STARLARK CODE (ORIGINAL) ---");
+        println!("# --- UNDER THE HOOD: ASL COMPILED TO HERMETIC STARLARK ---");
         println!("{}", doc.deterministic_code);
     }
     Ok(())

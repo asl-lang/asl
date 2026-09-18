@@ -21,7 +21,7 @@ export default function TriadDocsPage() {
 
         <DocsNavFooter
           prev={{ title: "93.2% Token Reduction", href: "/docs/tokenomics" }}
-          next={{ title: "Declarative Rules (asl:rules)", href: "/docs/rules" }}
+          next={{ title: "Semantic Rules in ASL", href: "/docs/rules" }}
         />
       </div>
     </div>

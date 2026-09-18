@@ -13,7 +13,7 @@ export default function PlaygroundPage() {
           ASL Interactive Playground & Simulator
         </h1>
         <p className="text-sm text-zinc-400 mt-2 leading-relaxed max-w-2xl">
-          Edit ASL documents in real-time. Experience declarative <code className="text-zinc-200">asl:rules</code> in-memory transpilation, deterministic execution, and tokenomics analysis directly in your browser.
+          Edit ASL documents in real-time. Experience semantic <code className="text-zinc-200">```asl</code> in-memory transpilation, deterministic execution, and tokenomics analysis directly in your browser.
         </p>
       </div>
 
@@ -27,7 +27,7 @@ export default function PlaygroundPage() {
             In-Memory Transpiler
           </div>
           <p className="text-xs text-zinc-400 leading-relaxed">
-            High-level <code className="text-zinc-300 font-mono">asl:rules</code> conditions are compiled Ahead-of-Time to pure, sandboxed ASL deterministic functions (compatible with Starlark L1) without needing an external compiler.
+            High-level declarative rules in pure <code className="text-zinc-300 font-mono">```asl</code> are compiled Ahead-of-Time to hermetic ASL VM deterministic functions without needing an external compiler.
           </p>
         </div>
 

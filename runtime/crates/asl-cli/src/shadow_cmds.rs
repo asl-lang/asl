@@ -34,7 +34,7 @@ fn scaffold_empty_asl_file(path: &Path) -> Option<String> {
             stem, stem, stem
         )),
         "tool" => Some(format!(
-            "#!/usr/bin/env -S asl run\n---\nasl_version: \"3.0\"\nname: \"{}\"\ndescription: \"Draft tool '{}' under construction\"\ninterface:\n  protocol: \"mcp-tool-v1\"\n  entrypoint: \"run\"\n---\n\n# {}\n\nTool instructions here.\n\n```asl:deterministic\ndef run(ctx, input):\n    return {{\"status\": \"ok\"}}\n```\n",
+            "#!/usr/bin/env -S asl run\n---\nasl_version: \"3.0\"\nname: \"{}\"\ndescription: \"Draft tool '{}' under construction\"\ninterface:\n  protocol: \"mcp-tool-v1\"\n  entrypoint: \"run\"\n---\n\n# {}\n\nTool instructions here.\n\n```asl\ndef run(ctx, input):\n    return {{\"status\": \"ok\"}}\n```\n",
             stem, stem, stem
         )),
         "asl" => Some(format!(

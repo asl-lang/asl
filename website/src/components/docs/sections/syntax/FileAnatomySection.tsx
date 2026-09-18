@@ -33,8 +33,8 @@ Invoke this skill when the user asks to summarize staged changes or prepare a co
 
 ---
 
-\`\`\`asl:deterministic
-# REGION 3: ASL Deterministic Block (asl:deterministic or asl:rules)
+\`\`\`asl
+# REGION 3: Pure ASL Code Block (Transpiled AOT to In-Memory Starlark)
 def execute(ctx, input):
     intent = input.get("intent", "").strip()
     if not intent:
@@ -63,8 +63,8 @@ def execute(ctx, input):
           <p className="text-zinc-400">Pure CommonMark consumed by the LLM reasoning loop. Kept byte-for-byte immutable across agent turns for 100% KV-cache invariance.</p>
         </div>
         <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3.5 space-y-1">
-          <span className="font-semibold text-white font-mono">3. Deterministic Block</span>
-          <p className="text-zinc-400">Native ASL procedural code (<code className="text-zinc-300 font-mono">asl:deterministic</code>) or declarative rules (<code className="text-zinc-300 font-mono">asl:rules</code>) executed in the ASL sandboxed VM (compatible with Starlark L1).</p>
+          <span className="font-semibold text-white font-mono">3. Deterministic Block (```asl)</span>
+          <p className="text-zinc-400">Single unified tag (<code className="text-zinc-300 font-mono">```asl</code>) for pattern matching and procedural functions, transpiled AOT to hermetic Starlark in RAM with zero token overhead.</p>
         </div>
       </div>
     </DocsSection>
