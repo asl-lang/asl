@@ -156,6 +156,8 @@ pub struct SkillCapabilities {
     #[serde(default)]
     pub net: NetCapabilities,
     #[serde(default)]
+    pub env: EnvCapabilities,
+    #[serde(default)]
     pub wasi_components: Vec<String>,
 }
 
@@ -171,6 +173,12 @@ pub struct FsCapabilities {
 pub struct NetCapabilities {
     #[serde(default)]
     pub allow_domains: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct EnvCapabilities {
+    #[serde(default)]
+    pub allow_keys: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -72,6 +72,7 @@ fn test_path_traversal_attempts_blocked() {
             allow_write: vec![],
         },
         net: Default::default(),
+        env: Default::default(),
         wasi_components: vec![],
     };
 

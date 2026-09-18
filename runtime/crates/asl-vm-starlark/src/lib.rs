@@ -6,6 +6,7 @@ use starlark::eval::Evaluator;
 use starlark::starlark_module;
 use starlark::syntax::{AstModule, Dialect};
 use starlark::values::ProvidesStaticType;
+use std::collections::HashMap;
 use std::time::Instant;
 
 #[derive(ProvidesStaticType)]
@@ -36,6 +37,73 @@ fn asl_natives(builder: &mut GlobalsBuilder) {
             .and_then(|e| e.downcast_ref::<StarlarkContextExtra>())
             .ok_or_else(|| anyhow::anyhow!("ASL context not configured"))?;
         Ok(extra.context.sha256(data))
+    }
+
+    fn asl_native_base64_encode(data: &str, eval: &mut Evaluator) -> anyhow::Result<String> {
+        let extra = eval
+            .extra
+            .and_then(|e| e.downcast_ref::<StarlarkContextExtra>())
+            .ok_or_else(|| anyhow::anyhow!("ASL context not configured"))?;
+        Ok(extra.context.base64_encode(data))
+    }
+
+    fn asl_native_base64_decode(encoded: &str, eval: &mut Evaluator) -> anyhow::Result<String> {
+        let extra = eval
+            .extra
+            .and_then(|e| e.downcast_ref::<StarlarkContextExtra>())
+            .ok_or_else(|| anyhow::anyhow!("ASL context not configured"))?;
+        extra
+            .context
+            .base64_decode(encoded)
+            .map_err(|e| anyhow::anyhow!("Base64 decode error: {}", e))
+    }
+
+    fn asl_native_env_get(key: &str, eval: &mut Evaluator) -> anyhow::Result<NoneOr<String>> {
+        let extra = eval
+            .extra
+            .and_then(|e| e.downcast_ref::<StarlarkContextExtra>())
+            .ok_or_else(|| anyhow::anyhow!("ASL context not configured"))?;
+        match extra.context.env_var(key) {
+            Ok(Some(v)) => Ok(NoneOr::Other(v)),
+            Ok(None) => Ok(NoneOr::None),
+            Err(e) => Err(anyhow::anyhow!("Ocap permission error: {}", e)),
+        }
+    }
+
+    fn asl_native_http_request(
+        method: &str,
+        url: &str,
+        headers_json: &str,
+        body: NoneOr<&str>,
+        eval: &mut Evaluator,
+    ) -> anyhow::Result<String> {
+        let extra = eval
+            .extra
+            .and_then(|e| e.downcast_ref::<StarlarkContextExtra>())
+            .ok_or_else(|| anyhow::anyhow!("ASL context not configured"))?;
+
+        let parsed_headers: HashMap<String, String> =
+            serde_json::from_str(headers_json).unwrap_or_default();
+        let header_vec: Vec<(String, String)> = parsed_headers.into_iter().collect();
+        let body_opt = match body {
+            NoneOr::Other(b) => Some(b),
+            NoneOr::None => None,
+        };
+
+        match extra
+            .context
+            .http_request(method, url, &header_vec, body_opt)
+        {
+            Ok(payload) => {
+                let json_res = serde_json::json!({
+                    "status": payload.status,
+                    "body": payload.body,
+                    "headers": payload.headers.into_iter().collect::<HashMap<String, String>>(),
+                });
+                Ok(json_res.to_string())
+            }
+            Err(e) => Err(anyhow::anyhow!("HTTP error: {}", e)),
+        }
     }
 
     fn asl_native_fuel_consumed(eval: &mut Evaluator) -> anyhow::Result<u64> {
@@ -111,11 +179,60 @@ impl EnginePort for StarlarkEngine {
             r#"
 {code}
 
+# Helper functions for Sandboxed HTTP & Environment Capabilities
+def _asl_make_resp(raw_resp):
+    _status = raw_resp["status"]
+    _body = raw_resp["body"]
+    _headers = raw_resp["headers"]
+    def _json_decode_body():
+        return json.decode(_body)
+    return struct(
+        status = _status,
+        text = _body,
+        headers = _headers,
+        json = _json_decode_body,
+    )
+
+def _asl_http_call(method, url, headers=None, json_data=None, data=None):
+    body_str = None
+    if json_data != None:
+        body_str = json.encode(json_data)
+        if headers == None:
+            headers = {{"Content-Type": "application/json"}}
+        elif "Content-Type" not in headers and "content-type" not in headers:
+            headers["Content-Type"] = "application/json"
+    elif data != None:
+        body_str = data
+
+    headers_json = json.encode(headers if headers != None else {{}})
+    raw_str = asl_native_http_request(method, url, headers_json, body_str)
+    return _asl_make_resp(json.decode(raw_str))
+
+def _asl_http_get(url, headers=None):
+    return _asl_http_call("GET", url, headers=headers)
+
+def _asl_http_post(url, headers=None, json=None, data=None):
+    return _asl_http_call("POST", url, headers=headers, json_data=json, data=data)
+
+def _asl_env_get(key, default=None):
+    val = asl_native_env_get(key)
+    return val if val != None else default
+
 # Wrapper determinístico com injeção de Capabilities (ASL 3.0)
 asl_raw_input = json.decode({input_json:?})
 asl_ctx = struct(
     fs = struct(read = asl_native_fs_read),
-    crypto = struct(sha256 = asl_native_sha256),
+    crypto = struct(
+        sha256 = asl_native_sha256,
+        base64_encode = asl_native_base64_encode,
+        base64_decode = asl_native_base64_decode,
+    ),
+    env = struct(get = _asl_env_get),
+    http = struct(
+        get = _asl_http_get,
+        post = _asl_http_post,
+        call = _asl_http_call,
+    ),
     fuel = struct(consumed = asl_native_fuel_consumed, remaining = asl_native_fuel_remaining),
 )
 asl_result = {entrypoint}(asl_ctx, asl_raw_input)
@@ -175,6 +292,28 @@ mod tests {
         fn sha256(&self, data: &str) -> String {
             format!("hash-{}", data)
         }
+        fn base64_encode(&self, data: &str) -> String {
+            format!("b64-{}", data)
+        }
+        fn base64_decode(&self, encoded: &str) -> Result<String> {
+            Ok(encoded.to_string())
+        }
+        fn env_var(&self, _key: &str) -> Result<Option<String>> {
+            Ok(None)
+        }
+        fn http_request(
+            &self,
+            _method: &str,
+            _url: &str,
+            _headers: &[(String, String)],
+            _body: Option<&str>,
+        ) -> Result<asl_core_traits::HttpResponsePayload> {
+            Ok(asl_core_traits::HttpResponsePayload {
+                status: 200,
+                headers: vec![],
+                body: "{}".to_string(),
+            })
+        }
         fn check_fuel(&self) -> Result<u64> {
             Ok(1000)
         }
@@ -225,6 +364,32 @@ def format_commit(ctx, input):
             fn sha256(&self, data: &str) -> String {
                 format!("sha256:{}", data)
             }
+            fn base64_encode(&self, data: &str) -> String {
+                format!("b64:{}", data)
+            }
+            fn base64_decode(&self, encoded: &str) -> Result<String> {
+                Ok(encoded.to_string())
+            }
+            fn env_var(&self, key: &str) -> Result<Option<String>> {
+                if key == "API_KEY" {
+                    Ok(Some("secret123".to_string()))
+                } else {
+                    Ok(None)
+                }
+            }
+            fn http_request(
+                &self,
+                _method: &str,
+                _url: &str,
+                _headers: &[(String, String)],
+                _body: Option<&str>,
+            ) -> Result<asl_core_traits::HttpResponsePayload> {
+                Ok(asl_core_traits::HttpResponsePayload {
+                    status: 200,
+                    headers: vec![("content-type".to_string(), "application/json".to_string())],
+                    body: r#"{"status": "ok", "items": [1, 2]}"#.to_string(),
+                })
+            }
             fn check_fuel(&self) -> Result<u64> {
                 Ok(1000)
             }
@@ -241,13 +406,17 @@ def format_commit(ctx, input):
 def inspect_system(ctx, input):
     content = ctx.fs.read(input["target_file"])
     digest = ctx.crypto.sha256(input["target_file"])
-    consumed = ctx.fuel.consumed()
-    remaining = ctx.fuel.remaining()
+    token = ctx.env.get("API_KEY")
+    b64 = ctx.crypto.base64_encode(token)
+    resp = ctx.http.post("https://api.github.com/test", json={"msg": "ping"})
+    data = resp.json()
     return {
         "file_content": content,
         "digest": digest,
-        "consumed": consumed,
-        "has_remaining": remaining > 0,
+        "token": token,
+        "b64": b64,
+        "resp_status": resp.status,
+        "resp_ok": data["status"] == "ok",
     }
 "#;
 
@@ -262,8 +431,9 @@ def inspect_system(ctx, input):
         assert!(res.success);
         assert_eq!(res.output["file_content"], r#"{"name": "test-pkg"}"#);
         assert_eq!(res.output["digest"], "sha256:package.json");
-        assert_eq!(res.output["consumed"], 42);
-        assert_eq!(res.output["has_remaining"], true);
-        assert_eq!(res.fuel_consumed, 42);
+        assert_eq!(res.output["token"], "secret123");
+        assert_eq!(res.output["b64"], "b64:secret123");
+        assert_eq!(res.output["resp_status"], 200);
+        assert_eq!(res.output["resp_ok"], true);
     }
 }

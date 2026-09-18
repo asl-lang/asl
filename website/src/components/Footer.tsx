@@ -42,7 +42,7 @@ export const Footer: React.FC = () => {
         </div>
 
         <div className="mt-8 pt-6 border-t border-zinc-900 flex flex-col sm:flex-row items-center justify-between text-[11px] text-zinc-500">
-          <p>© {new Date().getFullYear()} ASL Project & Jean Catarina. Open-source under MIT / Apache 2.0.</p>
+          <p>© {new Date().getFullYear()} ASL Project. Open-source under MIT / Apache 2.0.</p>
           <p className="mt-2 sm:mt-0 font-mono">Zero Ambient Authority • 100% KV-Cache Invariant</p>
         </div>
       </div>

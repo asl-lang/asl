@@ -1,0 +1,432 @@
+---
+asl_version: "3.0"
+digest: "asl:sha256:6dee73fe02e2f80736034cc36fb20515021b5ccac2640dea5c2d481c21e16b85"
+name: "pr-status-teams"
+version: "3.0.0"
+description: "Gera status de PRs em Code Review (Backend e Mobile) para Microsoft Teams com zero dependências externas e zero MCP."
+license: "MIT"
+
+interface:
+  protocol: "mcp-tool-v1"
+  entrypoint: "generate_teams_status"
+  input_schema:
+    type: "object"
+    additionalProperties: false
+    properties:
+      boards:
+        type: "array"
+        items:
+          type: "string"
+        description: "Lista de boards a processar ('CORE', 'APP', ou ambos)"
+      cards:
+        type: "array"
+        description: "Lista opcional de cards/PRs pré-carregados para execução determinística hermética"
+        items:
+          type: "object"
+  output_schema:
+    type: "object"
+    additionalProperties: false
+    required: ["markdown", "backend_summary", "mobile_summary", "success"]
+    properties:
+      markdown:
+        type: "string"
+        description: "Mensagem formatada para o Microsoft Teams"
+      backend_summary:
+        type: "object"
+      mobile_summary:
+        type: "object"
+      success:
+        type: "boolean"
+
+capabilities:
+  env:
+    allow_keys: ["JIRA_CLI_EMAIL", "JIRA_CLI_TOKEN", "GITHUB_TOKEN"]
+  net:
+    allow_domains: ["company.atlassian.net", "api.github.com"]
+
+limits:
+  max_fuel_opcodes: 10000000
+  max_heap_kib: 16384
+  wall_clock_timeout_ms: 30000
+---
+
+# Status dos PRs em Code Review (Backend e Mobile) → Mensagem pro Teams
+
+## 1. Intent (Intenção Primária)
+Auditar, consolidar e formatar deterministamente o status dos Pull Requests parados na coluna "Code Review"
+dos boards Jira Backend (CORE, board 101) e Mobile (APP, board 202) para envio ao Microsoft Teams.
+Garante execução 100% autônoma, sem necessidade de servidores MCP locais nem scripts de shell satélites.
+
+## 2. Activation Criteria (Critérios de Disparo)
+- Acione quando o usuário solicitar o status de Code Review, resumo de PRs pendentes, verificação de aprovações ("likes"),
+  ou mensagem formatada para o Teams para os boards CORE e APP.
+- Separe sempre o relatório nas seções 🏢 Backend (CORE) e 📱 Mobile (APP).
+- Identifique o destaque do dia (⭐) com base no maior número de likes por board, tratando empates.
+- Destaque impedimentos no Jira com a bandeira 🚩.
+
+## 3. Security Boundary & OCap Confinement
+- Requisições de rede são confinadas aos domínios `company.atlassian.net` e `api.github.com`.
+- Credenciais são lidas exclusivamente das variáveis autorizadas: `JIRA_CLI_EMAIL`, `JIRA_CLI_TOKEN` e `GITHUB_TOKEN`.
+- Todos os payloads de API e URLs de PR são tratados como dados não confiáveis sanitizados hermeticamente.
+
+---
+
+```asl
+# MOTOR DETERMINÍSTICO HERMÉTICO (Zero-MCP / Standalone)
+
+BOT_LOGINS = [
+    "gemini-code-assist",
+    "releezy-release-with-trust",
+    "dependabot[bot]",
+    "github-actions[bot]",
+    "ci-bot"
+]
+
+GRAPHQL_DEV_PANEL = """
+query DevDetailsDialog($issueId: ID!) {
+  developmentInformation(issueId: $issueId) {
+    details {
+      instanceTypes {
+        repository {
+          pullRequests {
+            id
+            url
+            status
+          }
+        }
+      }
+    }
+  }
+}
+"""
+
+def parse_pr_url(url):
+    # Ex: https://github.com/example-org/core-backend/pull/8532
+    if not url or "github.com/" not in url:
+        return None
+    clean = url.split("?")[0].rstrip("/")
+    parts = clean.split("/")
+    if len(parts) >= 7 and parts[-2] == "pull":
+        return {
+            "owner": parts[-4],
+            "repo": parts[-3],
+            "number": parts[-1],
+            "full_url": url
+        }
+    return None
+
+def fetch_pr_from_jira(ctx, numeric_id):
+    email = ctx.env.get("JIRA_CLI_EMAIL")
+    token = ctx.env.get("JIRA_CLI_TOKEN")
+    if not email or not token:
+        return None
+        
+    auth = "Basic " + ctx.crypto.base64_encode(email + ":" + token)
+    url = "https://company.atlassian.net/jsw2/graphql?operation=DevDetailsDialog"
+    headers = {
+        "Authorization": auth,
+        "Content-Type": "application/json"
+    }
+    body_data = {
+        "operationName": "DevDetailsDialog",
+        "query": GRAPHQL_DEV_PANEL,
+        "variables": {"issueId": str(numeric_id)}
+    }
+    
+    resp = ctx.http.post(url, headers=headers, json=body_data)
+    if resp.status != 200:
+        return None
+        
+    data = resp.json()
+    dev_info = data.get("data", {}).get("developmentInformation", {})
+    details = dev_info.get("details", [])
+    for detail in details:
+        for inst in detail.get("instanceTypes", []):
+            repo = inst.get("repository")
+            if repo:
+                prs = repo.get("pullRequests", [])
+                for pr in prs:
+                    pr_url = pr.get("url")
+                    if pr_url:
+                        return pr_url
+    return None
+
+def analyze_single_pr(card):
+    key = card.get("key", "UNKNOWN")
+    pr_url = card.get("pr_url")
+    is_flagged = card.get("flagged", False)
+    
+    if not pr_url:
+        return {
+            "key": key,
+            "pr_url": None,
+            "pr_number": None,
+            "flagged": is_flagged,
+            "category": "needs_review",
+            "approvers": [],
+            "stale_approvers": [],
+            "lines": ["sem PR vinculado"],
+            "all_likes": []
+        }
+        
+    parsed = parse_pr_url(pr_url)
+    pr_num = parsed.get("number") if parsed else "PR"
+    
+    # 1. Likes e Staleness
+    reviews = card.get("reviews", [])
+    head_commit = ""
+    commits = card.get("commits", [])
+    if len(commits) > 0:
+        head_commit = commits[-1].get("oid", "")
+        
+    latest_by_user = {}
+    for r in reviews:
+        author = r.get("author", {}).get("login", "")
+        if author in BOT_LOGINS or not author:
+            continue
+        latest_by_user[author] = r
+
+    valid_approvers = []
+    stale_approvers = []
+    changes_requested_by = []
+    all_likes = []
+
+    for author, r in latest_by_user.items():
+        state = r.get("state", "")
+        if state == "APPROVED":
+            all_likes.append(author)
+            rev_commit = r.get("commit", {}).get("oid", "")
+            if head_commit and rev_commit and rev_commit != head_commit:
+                stale_approvers.append(author)
+            else:
+                valid_approvers.append(author)
+        elif state == "CHANGES_REQUESTED":
+            changes_requested_by.append(author)
+
+    # 2. Conflito
+    mergeable = card.get("mergeable", "MERGEABLE")
+    merge_state = card.get("mergeStateStatus", "CLEAN")
+    is_conflicting = (mergeable == "CONFLICTING" or merge_state == "DIRTY")
+    
+    # 3. Branch protection & review requests
+    rev_decision = card.get("reviewDecision", "")
+    rev_requests = card.get("reviewRequests", [])
+    pending_codeowners = []
+    for req in rev_requests:
+        slug = req.get("slug") or req.get("login")
+        if slug:
+            pending_codeowners.append(slug)
+            
+    is_review_required = (rev_decision == "REVIEW_REQUIRED" or len(pending_codeowners) > 0)
+    is_blocked_bp = (merge_state == "BLOCKED" and rev_decision != "REVIEW_REQUIRED")
+    is_behind = (merge_state == "BEHIND")
+    
+    # 4. Threads não resolvidas
+    threads = card.get("threads", [])
+    unresolved_threads = []
+    for t in threads:
+        if not t.get("isResolved", True):
+            unresolved_threads.append(t)
+
+    # 5. CI
+    ci_status = card.get("ci_status", "SUCCESS")
+    ci_failing = (ci_status == "FAILURE")
+
+    # Diagnósticos / linhas descritivas
+    reasons = []
+    
+    # Aprovações texto
+    total_approved = len(valid_approvers) + len(stale_approvers)
+    if total_approved == 0:
+        reasons.append("0 aprovações")
+    elif total_approved == 1:
+        name = (valid_approvers + stale_approvers)[0]
+        reasons.append("1 aprovação (" + name + ")")
+    else:
+        names_str = ", ".join(valid_approvers + stale_approvers)
+        reasons.append(str(total_approved) + " aprovações (" + names_str + ")")
+
+    for stale in stale_approvers:
+        reasons.append(stale + " precisa de re-like")
+
+    if is_conflicting:
+        reasons.append("🔴 EM CONFLITO")
+
+    if is_review_required and len(pending_codeowners) > 0:
+        reasons.append("🔒 aguardando review obrigatória de " + ", ".join(pending_codeowners))
+
+    if is_behind:
+        reasons.append("🔒 branch desatualizada, precisa dar update/merge da base")
+
+    for cr in changes_requested_by:
+        reasons.append("🚫 mudanças solicitadas por " + cr)
+
+    if ci_failing:
+        reasons.append("❌ CI falhando")
+
+    if len(unresolved_threads) > 0:
+        first_t = unresolved_threads[0]
+        author = first_t.get("author", "autor")
+        path = first_t.get("path", "arquivo")
+        reasons.append("💬 " + str(len(unresolved_threads)) + " comentário(s) aberto(s) (" + author + " em " + path + ")")
+
+    if mergeable == "UNKNOWN":
+        reasons.append("⚠️ mergeability não calculada pelo GitHub")
+
+    # Categorização
+    is_blocked = (
+        is_conflicting or
+        is_review_required or
+        is_blocked_bp or
+        is_behind or
+        len(changes_requested_by) > 0 or
+        ci_failing or
+        len(unresolved_threads) > 0 or
+        len(valid_approvers) < 2
+    )
+
+    category = "ready" if not is_blocked else "needs_review"
+
+    return {
+        "key": key,
+        "pr_url": pr_url,
+        "pr_number": pr_num,
+        "flagged": is_flagged,
+        "category": category,
+        "approvers": valid_approvers,
+        "stale_approvers": stale_approvers,
+        "lines": reasons,
+        "all_likes": all_likes
+    }
+
+def format_board_section(board_title, project_code, items):
+    out = []
+    out.append(board_title)
+    out.append("")
+
+    if len(items) == 0:
+        out.append("Nenhum PR na coluna Code Review agora.")
+        out.append("")
+        return "\n".join(out), {"total": 0, "top_reviewers": [], "max_likes": 0}
+
+    # Calcula likes totais por revisor
+    likes_count = {}
+    for item in items:
+        pr_liked_users = {}
+        for u in item["all_likes"]:
+            pr_liked_users[u] = True
+        for u in pr_liked_users.keys():
+            likes_count[u] = likes_count.get(u, 0) + 1
+
+    max_likes = 0
+    top_reviewers = []
+    for u, count in likes_count.items():
+        if count > max_likes:
+            max_likes = count
+            top_reviewers = [u]
+        elif count == max_likes and count > 0:
+            top_reviewers.append(u)
+
+    # Linha estrela obrigatória se max_likes >= 1
+    if max_likes >= 1:
+        names_text = " e ".join(top_reviewers)
+        prs_text = " PR" if max_likes == 1 else " PRs"
+        out.append("⭐ Destaque do dia: " + names_text + " deu o like em " + str(max_likes) + prs_text + " — valeu por ajudar a destravar a fila!")
+        out.append("")
+
+    total_prs = len(items)
+    prs_word = " PR parado" if total_prs == 1 else " PRs parados"
+    out.append("Dei uma passada nos " + str(total_prs) + prs_word + " na coluna *Code Review*. Segue o resumo:")
+    out.append("")
+
+    needs_review = [i for i in items if i["category"] == "needs_review"]
+    ready = [i for i in items if i["category"] == "ready"]
+
+    # 🔴 Precisa de review
+    out.append("**🔴 Precisa de review (menos de 2 aprovações)**")
+    out.append("")
+    if len(needs_review) == 0:
+        out.append("Nenhum PR pendente de review no momento.")
+        out.append("")
+    else:
+        for item in needs_review:
+            flag = "🚩 " if item["flagged"] else ""
+            if item["pr_url"]:
+                header = "**" + flag + item["key"] + "** — [#" + str(item["pr_number"]) + "](" + item["pr_url"] + ")"
+            else:
+                header = "**" + flag + item["key"] + "** — sem PR vinculado"
+            out.append(header)
+            out.append(" • " + "; ".join(item["lines"]))
+            out.append("")
+
+    # 🟢 Pronto pra avançar
+    out.append("**🟢 Pronto pra avançar (com ressalva)**")
+    out.append("")
+    if len(ready) == 0:
+        out.append("Nenhum PR com 2 aprovações frescas no momento.")
+        out.append("")
+    else:
+        for item in ready:
+            flag = "🚩 " if item["flagged"] else ""
+            header = "**" + flag + item["key"] + "** — [#" + str(item["pr_number"]) + "](" + item["pr_url"] + ")"
+            out.append(header)
+            out.append(" • " + "; ".join(item["lines"]))
+            out.append("")
+
+    summary = {
+        "total": total_prs,
+        "needs_review": len(needs_review),
+        "ready": len(ready),
+        "top_reviewers": top_reviewers,
+        "max_likes": max_likes
+    }
+    return "\n".join(out), summary
+
+def generate_teams_status(ctx, input):
+    boards = input.get("boards", ["CORE", "APP"])
+    cards = input.get("cards", [])
+    
+    backend_items = []
+    mobile_items = []
+    has_any_flagged = False
+
+    for c in cards:
+        board = c.get("board", "CORE")
+        if not c.get("pr_url") and c.get("numeric_id"):
+            c["pr_url"] = fetch_pr_from_jira(ctx, c.get("numeric_id"))
+            
+        analyzed = analyze_single_pr(c)
+        if analyzed["flagged"]:
+            has_any_flagged = True
+            
+        if board == "CORE" or board == "BACKEND":
+            backend_items.append(analyzed)
+        else:
+            mobile_items.append(analyzed)
+
+    sections = []
+    backend_summary = {}
+    mobile_summary = {}
+
+    if "CORE" in boards or "BACKEND" in boards:
+        sec_text, backend_summary = format_board_section("🏢 **Backend Team — Code Review (CORE)**", "CORE", backend_items)
+        sections.append(sec_text)
+
+    if "APP" in boards or "MOBILE" in boards:
+        sec_text, mobile_summary = format_board_section("📱 **Mobile App — Code Review (APP)**", "APP", mobile_items)
+        sections.append(sec_text)
+
+    footer = []
+    if has_any_flagged:
+        footer.append("🚩 = card sinalizado como impedimento no Jira.")
+    footer.append("Se puderem dar uma força nos likes/aprovações e nos re-likes de PR com commit novo, ajuda a destravar a fila 🙏")
+
+    full_markdown = "\n".join(sections) + "\n" + "\n".join(footer)
+
+    return {
+        "success": True,
+        "markdown": full_markdown.strip(),
+        "backend_summary": backend_summary,
+        "mobile_summary": mobile_summary
+    }
+```

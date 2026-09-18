@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     "ASL VM",
     "Model Context Protocol",
   ],
-  authors: [{ name: "Jean Catarina" }],
+  authors: [{ name: "ASL Project Contributors" }],
 };
 
 export default function RootLayout({

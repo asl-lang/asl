@@ -39,3 +39,4 @@ Utilize a skill `asl-adr` (`skills/asl-adr/SKILL.md`):
 | **[ADR-0018](./0018-minimalist-shadow-markdown-and-self-describing-skill.md)** | Projeção Sombra Minimalista e Auto-Descoberta Segura de Execução no `.skill` | **Aceito** | 2026-09-18 | `asl-parser`, `asl-spec`, `asl-cli` |
 | **[ADR-0019](./0019-self-teaching-cli-learning-system.md)** | Subsistema de Auto-Instrução na CLI e Descoberta para IAs (`asl docs` / `asl learn`) | **Aceito** | 2026-09-18 | `asl-cli` |
 | **[ADR-0020](./0020-pure-asl-semantic-language-architecture.md)** | Arquitetura Pura da Linguagem Semântica ASL e Tag Universal Única (```asl) | **Aceito** | 2026-09-18 | `asl-parser`, `asl-spec`, `asl-cli`, `website/` |
+| **[ADR-0021](./0021-sandboxed-autonomous-io-capabilities.md)** | Capacidades OCap Autônomas (`ctx.env`, `ctx.http` e Base64) para Skills Zero-MCP | **Proposto** | 2026-09-18 | `asl-spec`, `asl-core-traits`, `asl-security`, `asl-vm-starlark`, `asl-cli` |

@@ -116,9 +116,35 @@ pub fn verify_signature(
     Ok(verifying_key.verify(digest_str.as_bytes(), &sig).is_ok())
 }
 
+/// Encodes text into standard base64 representation
+pub fn base64_encode(data: &str) -> String {
+    use base64::Engine;
+    base64::prelude::BASE64_STANDARD.encode(data.as_bytes())
+}
+
+/// Decodes standard base64 representation into UTF-8 text
+pub fn base64_decode(encoded: &str) -> Result<String> {
+    use base64::Engine;
+    let clean = encoded.trim();
+    let bytes = base64::prelude::BASE64_STANDARD
+        .decode(clean)
+        .map_err(|e| AslError::CapabilityViolation(format!("Invalid base64 encoding: {}", e)))?;
+    String::from_utf8(bytes)
+        .map_err(|e| AslError::CapabilityViolation(format!("Decoded base64 is not valid UTF-8: {}", e)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_base64_encode_decode() {
+        let raw = "user@example.com:secret_token_123";
+        let encoded = base64_encode(raw);
+        assert_eq!(encoded, "dXNlckBleGFtcGxlLmNvbTpzZWNyZXRfdG9rZW5fMTIz");
+        let decoded = base64_decode(&encoded).expect("Decode should succeed");
+        assert_eq!(decoded, raw);
+    }
 
     #[test]
     fn test_keygen_sign_verify_cycle() {

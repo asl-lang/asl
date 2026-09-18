@@ -18,10 +18,28 @@ pub trait EnginePort: Send + Sync {
     ) -> Result<ExecutionResult>;
 }
 
+/// Structured HTTP response returned from sandboxed network capabilities
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct HttpResponsePayload {
+    pub status: u16,
+    pub headers: Vec<(String, String)>,
+    pub body: String,
+}
+
 /// Porta de abstração de capacidades ocap injetadas
 pub trait CapabilityContext: Send + Sync {
     fn read_file(&self, path: &str) -> Result<Option<String>>;
     fn sha256(&self, data: &str) -> String;
+    fn base64_encode(&self, data: &str) -> String;
+    fn base64_decode(&self, encoded: &str) -> Result<String>;
+    fn env_var(&self, key: &str) -> Result<Option<String>>;
+    fn http_request(
+        &self,
+        method: &str,
+        url: &str,
+        headers: &[(String, String)],
+        body: Option<&str>,
+    ) -> Result<HttpResponsePayload>;
     fn check_fuel(&self) -> Result<u64>;
     fn fuel_consumed(&self) -> u64;
 }

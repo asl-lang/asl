@@ -235,6 +235,28 @@ mod tests {
         fn sha256(&self, data: &str) -> String {
             format!("hash-{}", data)
         }
+        fn base64_encode(&self, data: &str) -> String {
+            data.to_string()
+        }
+        fn base64_decode(&self, encoded: &str) -> Result<String> {
+            Ok(encoded.to_string())
+        }
+        fn env_var(&self, _key: &str) -> Result<Option<String>> {
+            Ok(None)
+        }
+        fn http_request(
+            &self,
+            _method: &str,
+            _url: &str,
+            _headers: &[(String, String)],
+            _body: Option<&str>,
+        ) -> Result<asl_core_traits::HttpResponsePayload> {
+            Ok(asl_core_traits::HttpResponsePayload {
+                status: 200,
+                headers: vec![],
+                body: "{}".to_string(),
+            })
+        }
         fn check_fuel(&self) -> Result<u64> {
             Ok(1000)
         }

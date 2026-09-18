@@ -1,14 +1,17 @@
-use asl_core_traits::CapabilityContext;
+use asl_core_traits::{CapabilityContext, HttpResponsePayload};
 use asl_spec::{AslError, Result, SkillCapabilities};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 pub mod crypto;
+pub mod net;
 
 /// Contexto de segurança puramente em memória (Mock) para testes herméticos rápidos
 pub struct MockSecurityContext {
     virtual_fs: HashMap<String, String>,
+    mock_env: HashMap<String, String>,
+    mock_http: HashMap<String, HttpResponsePayload>,
     fuel_budget: u64,
     fuel_consumed: AtomicU64,
 }
@@ -17,6 +20,8 @@ impl MockSecurityContext {
     pub fn new(initial_fuel: u64) -> Self {
         Self {
             virtual_fs: HashMap::new(),
+            mock_env: HashMap::new(),
+            mock_http: HashMap::new(),
             fuel_budget: initial_fuel,
             fuel_consumed: AtomicU64::new(0),
         }
@@ -24,6 +29,16 @@ impl MockSecurityContext {
 
     pub fn with_file(mut self, path: impl Into<String>, content: impl Into<String>) -> Self {
         self.virtual_fs.insert(path.into(), content.into());
+        self
+    }
+
+    pub fn with_env(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.mock_env.insert(key.into(), value.into());
+        self
+    }
+
+    pub fn with_http(mut self, url: impl Into<String>, resp: HttpResponsePayload) -> Self {
+        self.mock_http.insert(url.into(), resp);
         self
     }
 
@@ -46,6 +61,40 @@ impl CapabilityContext for MockSecurityContext {
         hex::encode(hasher.finalize())
     }
 
+    fn base64_encode(&self, data: &str) -> String {
+        self.consume_fuel(1);
+        crypto::base64_encode(data)
+    }
+
+    fn base64_decode(&self, encoded: &str) -> Result<String> {
+        self.consume_fuel(1);
+        crypto::base64_decode(encoded)
+    }
+
+    fn env_var(&self, key: &str) -> Result<Option<String>> {
+        self.consume_fuel(1);
+        Ok(self.mock_env.get(key).cloned())
+    }
+
+    fn http_request(
+        &self,
+        _method: &str,
+        url: &str,
+        _headers: &[(String, String)],
+        body: Option<&str>,
+    ) -> Result<HttpResponsePayload> {
+        self.consume_fuel(10);
+        if let Some(resp) = self.mock_http.get(url) {
+            Ok(resp.clone())
+        } else {
+            Ok(HttpResponsePayload {
+                status: 200,
+                headers: vec![("content-type".to_string(), "application/json".to_string())],
+                body: body.unwrap_or("{}").to_string(),
+            })
+        }
+    }
+
     fn check_fuel(&self) -> Result<u64> {
         Ok(self.fuel_budget.saturating_sub(self.fuel_consumed.load(Ordering::Relaxed)))
     }
@@ -58,6 +107,9 @@ impl CapabilityContext for MockSecurityContext {
 /// Contexto de segurança para execução real com confinamento de diretórios raiz
 pub struct ConfinedSecurityContext {
     allowed_read_roots: Vec<PathBuf>,
+    allowed_domains: Vec<String>,
+    allowed_env_keys: Vec<String>,
+    wall_clock_timeout_ms: u64,
     fuel_budget: u64,
     fuel_consumed: AtomicU64,
 }
@@ -81,9 +133,17 @@ impl ConfinedSecurityContext {
 
         Self {
             allowed_read_roots: roots,
+            allowed_domains: caps.net.allow_domains.clone(),
+            allowed_env_keys: caps.env.allow_keys.clone(),
+            wall_clock_timeout_ms: 15_000,
             fuel_budget: initial_fuel,
             fuel_consumed: AtomicU64::new(0),
         }
+    }
+
+    pub fn with_timeout_ms(mut self, timeout_ms: u64) -> Self {
+        self.wall_clock_timeout_ms = timeout_ms;
+        self
     }
 
     pub fn consume_fuel(&self, amount: u64) {
@@ -156,6 +216,48 @@ impl CapabilityContext for ConfinedSecurityContext {
         hex::encode(hasher.finalize())
     }
 
+    fn base64_encode(&self, data: &str) -> String {
+        self.consume_fuel(1);
+        crypto::base64_encode(data)
+    }
+
+    fn base64_decode(&self, encoded: &str) -> Result<String> {
+        self.consume_fuel(1);
+        crypto::base64_decode(encoded)
+    }
+
+    fn env_var(&self, key: &str) -> Result<Option<String>> {
+        self.consume_fuel(1);
+        if !self.allowed_env_keys.iter().any(|k| k == key) {
+            return Err(AslError::CapabilityViolation(format!(
+                "Environment variable '{}' is not authorized in capabilities.env.allow_keys ({:?})",
+                key, self.allowed_env_keys
+            )));
+        }
+        Ok(std::env::var(key).ok())
+    }
+
+    fn http_request(
+        &self,
+        method: &str,
+        url: &str,
+        headers: &[(String, String)],
+        body: Option<&str>,
+    ) -> Result<HttpResponsePayload> {
+        let body_len = body.map(|b| b.len()).unwrap_or(0);
+        let fuel_cost = 100 + (body_len as u64 / 16);
+        self.consume_fuel(fuel_cost);
+
+        net::execute_http_request(
+            method,
+            url,
+            headers,
+            body,
+            &self.allowed_domains,
+            self.wall_clock_timeout_ms,
+        )
+    }
+
     fn check_fuel(&self) -> Result<u64> {
         Ok(self.fuel_budget.saturating_sub(self.fuel_consumed.load(Ordering::Relaxed)))
     }
@@ -217,5 +319,31 @@ mod tests {
         assert_eq!(confined_ctx.sha256("asl"), "a12e45b23513ff84c05054772fedffc35f0b8a1bc87fb819906b3318b86dfd7a");
         assert_eq!(confined_ctx.fuel_consumed(), 1);
         assert_eq!(confined_ctx.check_fuel().unwrap(), 7776);
+    }
+
+    #[test]
+    fn test_env_var_ocap_allowlist() {
+        let mut caps = SkillCapabilities::default();
+        caps.env.allow_keys.push("ALLOWED_KEY_XYZ".to_string());
+        let ctx = ConfinedSecurityContext::from_capabilities(&caps, 1000);
+
+        // Unauthorized access must fail with CapabilityViolation
+        let res_unauth = ctx.env_var("SECRET_PASSWD");
+        assert!(matches!(res_unauth, Err(AslError::CapabilityViolation(_))));
+
+        // Authorized access succeeds (returns Ok(None) if not in actual process env)
+        let res_auth = ctx.env_var("ALLOWED_KEY_XYZ");
+        assert!(res_auth.is_ok());
+    }
+
+    #[test]
+    fn test_http_request_domain_violation() {
+        let mut caps = SkillCapabilities::default();
+        caps.net.allow_domains.push("api.github.com".to_string());
+        let ctx = ConfinedSecurityContext::from_capabilities(&caps, 1000);
+
+        // Unauthorized domain must fail with CapabilityViolation
+        let res = ctx.http_request("GET", "https://evil.com/leak", &[], None);
+        assert!(matches!(res, Err(AslError::CapabilityViolation(_))));
     }
 }
