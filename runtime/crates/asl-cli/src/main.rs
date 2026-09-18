@@ -10,6 +10,7 @@ use std::path::PathBuf;
 
 mod crypto_cmds;
 mod daemon_cmds;
+mod docs_cmds;
 mod lifecycle_cmds;
 mod prefix_cmds;
 mod server_cmds;
@@ -179,6 +180,29 @@ enum Commands {
         #[arg(short, long)]
         purge: bool,
     },
+
+    /// Shows language reference, syntax cheat sheets, rules, and AI primers
+    #[command(alias = "learn", alias = "syntax", alias = "guide", alias = "cheat")]
+    Docs {
+        /// Documentation topic (overview, syntax, rules, triad, mcp, examples)
+        #[arg(default_value = "overview")]
+        topic: String,
+
+        /// Format output as an ultra-compact primer for AI prompt ingestion
+        #[arg(long)]
+        ai: bool,
+
+        /// Output structured documentation in JSON format
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Emits canonical, ready-to-use templates for skills, tools, and rules
+    Template {
+        /// Target template type (skill, tool, rules, asl)
+        #[arg(default_value = "skill")]
+        target_type: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -245,67 +269,7 @@ fn main() -> Result<()> {
         }
 
         Commands::Check { skill_file } => {
-            let content = fs::read_to_string(&skill_file)
-                .with_context(|| format!("Failed to read file: {:?}", skill_file))?;
-
-            let doc = parser
-                .parse(&content)
-                .with_context(|| "Validation failed: error parsing ASL file")?;
-
-            println!("✅ ASL file validated successfully!");
-            println!("Name:         {}", doc.manifest.name);
-            println!("ASL Version:  {}", doc.manifest.asl_version);
-            println!("Digest:       {}", doc.digest);
-            println!("Entrypoint:   {}", doc.manifest.interface.entrypoint);
-            println!(
-                "Capabilities: FS Confined Roots={:?}, Domains={:?}",
-                doc.manifest.capabilities.fs.confined_read_roots,
-                doc.manifest.capabilities.net.allow_domains
-            );
-
-            if let Some(ref sig) = doc.manifest.signature {
-                if let Some(ref pubkey) = doc.manifest.signer_pubkey {
-                    let valid = asl_security::crypto::verify_signature(pubkey, &doc.digest, sig)
-                        .unwrap_or(false);
-                    if valid {
-                        println!("Signature:    ✅ Valid (Ed25519)");
-                        println!("Signer:       {}", pubkey);
-                    } else {
-                        eprintln!("Signature:    ❌ INVALID (Ed25519)");
-                        anyhow::bail!(
-                            "Digital signature of ASL file is invalid or corrupted."
-                        );
-                    }
-                } else {
-                    println!("Signature:    ⚠️ Present, but public key missing in manifest");
-                }
-            } else {
-                println!("Signature:    ⚠️ Unsigned");
-            }
-
-            // Zero-Touch Hook: synchronize and report shadow projection status
-            match asl_parser::project_shadow_markdown(&skill_file, &doc) {
-                Ok(asl_parser::ShadowProjectResult::Created(p)) => {
-                    println!("Shadow Projection: ⚡ Created at {:?}", p);
-                }
-                Ok(asl_parser::ShadowProjectResult::Updated(p)) => {
-                    println!("Shadow Projection: ⚡ Updated at {:?}", p);
-                }
-                Ok(asl_parser::ShadowProjectResult::CollisionProtected(p)) => {
-                    println!("Shadow Projection: ⚠️ Conflict protected at {:?}", p);
-                }
-                Ok(asl_parser::ShadowProjectResult::Unchanged(_)) => {
-                    println!("Shadow Projection: ✅ Synchronized");
-                }
-                Ok(asl_parser::ShadowProjectResult::Skipped(_)) => {}
-                Err(e) => {
-                    eprintln!("Shadow Projection: ⚠️ Projection failed: {}", e);
-                }
-            }
-
-            if doc.rules_code.is_some() {
-                println!("Semantic Rules:    ✅ Transpiled in-memory (Strict Starlark L1)");
-            }
+            prefix_cmds::handle_check(&skill_file, &parser)?;
         }
 
         Commands::Serve {
@@ -401,22 +365,15 @@ fn main() -> Result<()> {
         }
 
         Commands::Expand { skill_file } => {
-            let content = fs::read_to_string(&skill_file)
-                .with_context(|| format!("Failed to read file: {:?}", skill_file))?;
+            prefix_cmds::handle_expand(&skill_file, &parser)?;
+        }
 
-            let doc = parser
-                .parse(&content)
-                .with_context(|| "Error parsing ASL file")?;
+        Commands::Docs { topic, ai, json } => {
+            docs_cmds::handle_docs(&topic, ai, json)?;
+        }
 
-            if let Some(rules) = &doc.rules_code {
-                println!("# --- ORIGINAL SEMANTIC RULES (asl:rules) ---");
-                println!("{}\n", rules.trim());
-                println!("# --- GENERATED STARLARK L1 DETERMINISTIC CODE (JIT IN-MEMORY) ---");
-                println!("{}", doc.deterministic_code);
-            } else {
-                println!("# --- DETERMINISTIC STARLARK CODE (ORIGINAL) ---");
-                println!("{}", doc.deterministic_code);
-            }
+        Commands::Template { target_type } => {
+            docs_cmds::handle_template(&target_type)?;
         }
     }
 

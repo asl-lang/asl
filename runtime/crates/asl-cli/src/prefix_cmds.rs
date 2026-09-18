@@ -80,6 +80,90 @@ pub fn handle_optimize_prefix(skill_file: &Path, in_place: bool) -> Result<()> {
     Ok(())
 }
 
+/// Validates an ASL file and reports manifest, signature, rules and shadow status
+pub fn handle_check(skill_file: &Path, parser: &CommonMarkYamlParser) -> Result<()> {
+    let content = fs::read_to_string(skill_file)
+        .with_context(|| format!("Failed to read file: {:?}", skill_file))?;
+
+    let doc = parser
+        .parse(&content)
+        .with_context(|| "Validation failed: error parsing ASL file")?;
+
+    println!("✅ ASL file validated successfully!");
+    println!("Name:         {}", doc.manifest.name);
+    println!("ASL Version:  {}", doc.manifest.asl_version);
+    println!("Digest:       {}", doc.digest);
+    println!("Entrypoint:   {}", doc.manifest.interface.entrypoint);
+    println!(
+        "Capabilities: FS Confined Roots={:?}, Domains={:?}",
+        doc.manifest.capabilities.fs.confined_read_roots,
+        doc.manifest.capabilities.net.allow_domains
+    );
+
+    if let Some(ref sig) = doc.manifest.signature {
+        if let Some(ref pubkey) = doc.manifest.signer_pubkey {
+            let valid = asl_security::crypto::verify_signature(pubkey, &doc.digest, sig)
+                .unwrap_or(false);
+            if valid {
+                println!("Signature:    ✅ Valid (Ed25519)");
+                println!("Signer:       {}", pubkey);
+            } else {
+                eprintln!("Signature:    ❌ INVALID (Ed25519)");
+                anyhow::bail!("Digital signature of ASL file is invalid or corrupted.");
+            }
+        } else {
+            println!("Signature:    ⚠️ Present, but public key missing in manifest");
+        }
+    } else {
+        println!("Signature:    ⚠️ Unsigned");
+    }
+
+    match asl_parser::project_shadow_markdown(skill_file, &doc) {
+        Ok(asl_parser::ShadowProjectResult::Created(p)) => {
+            println!("Shadow Projection: ⚡ Created at {:?}", p);
+        }
+        Ok(asl_parser::ShadowProjectResult::Updated(p)) => {
+            println!("Shadow Projection: ⚡ Updated at {:?}", p);
+        }
+        Ok(asl_parser::ShadowProjectResult::CollisionProtected(p)) => {
+            println!("Shadow Projection: ⚠️ Conflict protected at {:?}", p);
+        }
+        Ok(asl_parser::ShadowProjectResult::Unchanged(_)) => {
+            println!("Shadow Projection: ✅ Synchronized");
+        }
+        Ok(asl_parser::ShadowProjectResult::Skipped(_)) => {}
+        Err(e) => {
+            eprintln!("Shadow Projection: ⚠️ Projection failed: {}", e);
+        }
+    }
+
+    if doc.rules_code.is_some() {
+        println!("Semantic Rules:    ✅ Transpiled in-memory (Strict Starlark L1)");
+    }
+    Ok(())
+}
+
+/// Expands declarative rules or deterministic code into full Starlark representation
+pub fn handle_expand(skill_file: &Path, parser: &CommonMarkYamlParser) -> Result<()> {
+    let content = fs::read_to_string(skill_file)
+        .with_context(|| format!("Failed to read file: {:?}", skill_file))?;
+
+    let doc = parser
+        .parse(&content)
+        .with_context(|| "Error parsing ASL file")?;
+
+    if let Some(rules) = &doc.rules_code {
+        println!("# --- ORIGINAL SEMANTIC RULES (asl:rules) ---");
+        println!("{}\n", rules.trim());
+        println!("# --- GENERATED STARLARK L1 DETERMINISTIC CODE (JIT IN-MEMORY) ---");
+        println!("{}", doc.deterministic_code);
+    } else {
+        println!("# --- DETERMINISTIC STARLARK CODE (ORIGINAL) ---");
+        println!("{}", doc.deterministic_code);
+    }
+    Ok(())
+}
+
 fn replace_semantic_in_skill(full_content: &str, old_semantic: &str, new_semantic: &str) -> String {
     if old_semantic.is_empty() {
         return full_content.to_string();
