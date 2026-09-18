@@ -339,17 +339,15 @@ fn main() -> Result<()> {
 
         Commands::Daemon { action } => match action {
             daemon_cmds::DaemonAction::Start { watch_dir, detach } => {
-                let dir = watch_dir.unwrap_or_else(daemon_cmds::resolve_default_watch_dir);
                 if detach {
                     let exe = std::env::current_exe()?;
-                    daemon_cmds::spawn_detached_daemon(&exe, &dir)?;
+                    daemon_cmds::spawn_detached_daemon(&exe, watch_dir.as_deref())?;
                 } else {
-                    daemon_cmds::handle_daemon_start(&dir)?;
+                    daemon_cmds::handle_daemon_start(watch_dir.as_deref())?;
                 }
             }
             daemon_cmds::DaemonAction::Install { watch_dir } => {
-                let dir = watch_dir.unwrap_or_else(daemon_cmds::resolve_default_watch_dir);
-                daemon_cmds::handle_daemon_install(&dir)?;
+                daemon_cmds::handle_daemon_install(watch_dir.as_deref())?;
             }
             daemon_cmds::DaemonAction::Stop => {
                 daemon_cmds::handle_daemon_stop()?;

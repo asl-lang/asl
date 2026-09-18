@@ -173,20 +173,11 @@ pub fn project_shadow_markdown(
 
 /// Checks if directory should be skipped during recursive traversal
 pub fn is_skippable_dir(name: &str) -> bool {
+    if matches!(name, ".claude" | ".cursor" | ".gemini" | ".asl" | ".agents" | ".skills") {
+        return false;
+    }
     name.starts_with('.')
-        || name == "node_modules"
-        || name == "target"
-        || name == "dist"
-        || name == "build"
-        || name == "out"
-        || name == "vendor"
-        || name == "venv"
-        || name == "env"
-        || name == "site-packages"
-        || name == "coverage"
-        || name == "__pycache__"
-        || name == "Library"
-        || name == "Applications"
+        || matches!(name, "node_modules" | "target" | "dist" | "build" | "out" | "vendor" | "venv" | "env" | "site-packages" | "coverage" | "__pycache__" | "Library" | "Applications")
 }
 
 /// Checks if a file is an ASL shadow markdown projection by reading only first 128 bytes

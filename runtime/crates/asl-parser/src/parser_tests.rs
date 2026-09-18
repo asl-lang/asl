@@ -240,4 +240,30 @@ fn test_utf8_bom_and_crlf_cross_platform_handling() {
     assert_eq!(doc_empty.manifest.name, "draft-skill");
 }
 
+#[test]
+fn test_unclosed_frontmatter_transitioning_to_markdown() {
+    let content = r#"---
+asl_version: "3.0"
+name: "unclosed-fm-skill"
+description: "Skill with unclosed frontmatter"
+interface:
+  entrypoint: "run"
+
+# Skill Instructions
+This skill tests unclosed frontmatter gracefully transitioning to markdown.
+
+```asl
+def run(ctx, input):
+  return {"status": "ok"}
+```
+"#;
+    let parser = CommonMarkYamlParser::new();
+    let doc = parser.parse(content).expect("Unclosed frontmatter before header must parse tolerantly");
+    assert_eq!(doc.manifest.name, "unclosed-fm-skill");
+    assert_eq!(doc.manifest.description, "Skill with unclosed frontmatter");
+    assert!(doc.semantic_section.contains("# Skill Instructions"));
+    assert!(doc.deterministic_code.contains("def run(ctx, input):"));
+}
+
+
 

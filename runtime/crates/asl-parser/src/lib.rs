@@ -221,6 +221,15 @@ fn extract_frontmatter_and_markdown(content: &str) -> Result<(String, String)> {
                 frontmatter_ended = true;
                 continue;
             }
+            if trimmed.starts_with("# ")
+                || trimmed.starts_with("## ")
+                || trimmed.starts_with("### ")
+                || trimmed.starts_with("```")
+            {
+                frontmatter_ended = true;
+                markdown_lines.push(line);
+                continue;
+            }
             frontmatter_lines.push(line);
         } else {
             markdown_lines.push(line);
