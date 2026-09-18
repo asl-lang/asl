@@ -1,15 +1,16 @@
 use asl_core_traits::{CapabilityContext, HttpResponsePayload};
 use asl_spec::{AslError, Result, SkillCapabilities};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 pub mod crypto;
+pub mod fs;
 pub mod net;
 
 /// Pure in-memory security context (Mock) for fast hermetic unit tests
 pub struct MockSecurityContext {
-    virtual_fs: HashMap<String, String>,
+    virtual_fs: std::sync::RwLock<HashMap<String, String>>,
     mock_env: HashMap<String, String>,
     mock_http: HashMap<String, HttpResponsePayload>,
     fuel_budget: u64,
@@ -19,7 +20,7 @@ pub struct MockSecurityContext {
 impl MockSecurityContext {
     pub fn new(initial_fuel: u64) -> Self {
         Self {
-            virtual_fs: HashMap::new(),
+            virtual_fs: std::sync::RwLock::new(HashMap::new()),
             mock_env: HashMap::new(),
             mock_http: HashMap::new(),
             fuel_budget: initial_fuel,
@@ -27,8 +28,8 @@ impl MockSecurityContext {
         }
     }
 
-    pub fn with_file(mut self, path: impl Into<String>, content: impl Into<String>) -> Self {
-        self.virtual_fs.insert(path.into(), content.into());
+    pub fn with_file(self, path: impl Into<String>, content: impl Into<String>) -> Self {
+        self.virtual_fs.write().unwrap().insert(path.into(), content.into());
         self
     }
 
@@ -50,7 +51,25 @@ impl MockSecurityContext {
 impl CapabilityContext for MockSecurityContext {
     fn read_file(&self, path: &str) -> Result<Option<String>> {
         self.consume_fuel(1);
-        Ok(self.virtual_fs.get(path).cloned())
+        Ok(self.virtual_fs.read().unwrap().get(path).cloned())
+    }
+
+    fn write_file(&self, path: &str, content: &str) -> Result<()> {
+        self.consume_fuel(1 + (content.len() as u64 / 16));
+        self.virtual_fs.write().unwrap().insert(path.to_string(), content.to_string());
+        Ok(())
+    }
+
+    fn file_exists(&self, path: &str) -> bool {
+        self.consume_fuel(1);
+        self.virtual_fs.read().unwrap().contains_key(path)
+    }
+
+    fn list_dir(&self, _path: &str) -> Result<Vec<String>> {
+        self.consume_fuel(1);
+        let mut keys: Vec<String> = self.virtual_fs.read().unwrap().keys().cloned().collect();
+        keys.sort();
+        Ok(keys)
     }
 
     fn sha256(&self, data: &str) -> String {
@@ -110,6 +129,7 @@ impl CapabilityContext for MockSecurityContext {
 /// Security context for confined execution with root directory confinement
 pub struct ConfinedSecurityContext {
     allowed_read_roots: Vec<PathBuf>,
+    allowed_write_roots: Vec<PathBuf>,
     allowed_domains: Vec<String>,
     allowed_env_keys: Vec<String>,
     wall_clock_timeout_ms: u64,
@@ -119,23 +139,23 @@ pub struct ConfinedSecurityContext {
 
 impl ConfinedSecurityContext {
     pub fn from_capabilities(caps: &SkillCapabilities, initial_fuel: u64) -> Self {
-        let roots = caps
+        let read_roots = caps
             .fs
             .confined_read_roots
             .iter()
-            .map(|r| {
-                let p = PathBuf::from(r);
-                let abs = if p.is_relative() {
-                    std::env::current_dir().map(|c| c.join(&p)).unwrap_or_else(|_| p.clone())
-                } else {
-                    p.clone()
-                };
-                std::fs::canonicalize(&abs).unwrap_or(abs)
-            })
+            .map(|r| fs::resolve_and_canonicalize_root(r))
+            .collect();
+
+        let write_roots = caps
+            .fs
+            .allow_write
+            .iter()
+            .map(|w| fs::resolve_and_canonicalize_root(w))
             .collect();
 
         Self {
-            allowed_read_roots: roots,
+            allowed_read_roots: read_roots,
+            allowed_write_roots: write_roots,
             allowed_domains: caps.net.allow_domains.clone(),
             allowed_env_keys: caps.env.allow_keys.clone(),
             wall_clock_timeout_ms: 15_000,
@@ -157,58 +177,30 @@ impl ConfinedSecurityContext {
 impl CapabilityContext for ConfinedSecurityContext {
     fn read_file(&self, path_str: &str) -> Result<Option<String>> {
         self.consume_fuel(1);
-        let target_path = Path::new(path_str);
+        let canonical_target = fs::check_path_confinement(path_str, &self.allowed_read_roots)?;
+        fs::safe_read_file(&canonical_target)
+    }
 
-        // If no root was authorized, access is summarily denied
-        if self.allowed_read_roots.is_empty() {
-            return Err(AslError::CapabilityViolation(format!(
-                "Read access denied: no confined root authorized for '{}'",
-                path_str
-            )));
-        }
+    fn write_file(&self, path_str: &str, content: &str) -> Result<()> {
+        let fuel_cost = 1 + (content.len() as u64 / 16);
+        self.consume_fuel(fuel_cost);
+        let canonical_target = fs::check_path_confinement(path_str, &self.allowed_write_roots)?;
+        fs::safe_write_file(&canonical_target, content)
+    }
 
-        // Canonicalize target path or its parent directory
-        let canonical_target = if target_path.exists() {
-            std::fs::canonicalize(target_path).map_err(|e| AslError::Io(e.to_string()))?
-        } else if let Some(parent) = target_path.parent() {
-            let canonical_parent = if parent.as_os_str().is_empty() {
-                std::fs::canonicalize(".").map_err(|e| AslError::Io(e.to_string()))?
-            } else if parent.exists() {
-                std::fs::canonicalize(parent).map_err(|e| AslError::Io(e.to_string()))?
-            } else {
-                parent.to_path_buf()
-            };
-            if let Some(file_name) = target_path.file_name() {
-                canonical_parent.join(file_name)
-            } else {
-                canonical_parent
-            }
+    fn file_exists(&self, path_str: &str) -> bool {
+        self.consume_fuel(1);
+        if let Ok(canonical_target) = fs::check_path_confinement(path_str, &self.allowed_read_roots) {
+            canonical_target.exists()
         } else {
-            target_path.to_path_buf()
-        };
-
-        // Verify that canonical path strictly resides within an authorized root
-        let is_allowed = self
-            .allowed_read_roots
-            .iter()
-            .any(|root| canonical_target.starts_with(root));
-
-        if !is_allowed {
-            return Err(AslError::CapabilityViolation(format!(
-                "Confined directory breakout attempt detected for '{}'",
-                path_str
-            )));
+            false
         }
+    }
 
-        if !canonical_target.exists() {
-            return Ok(None);
-        }
-
-        match std::fs::read_to_string(&canonical_target) {
-            Ok(content) => Ok(Some(content)),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
-            Err(e) => Err(AslError::Io(e.to_string())),
-        }
+    fn list_dir(&self, path_str: &str) -> Result<Vec<String>> {
+        self.consume_fuel(1);
+        let canonical_target = fs::check_path_confinement(path_str, &self.allowed_read_roots)?;
+        fs::safe_list_dir(&canonical_target)
     }
 
     fn sha256(&self, data: &str) -> String {

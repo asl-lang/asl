@@ -149,37 +149,8 @@ fn default_schema() -> serde_json::Value {
     })
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct SkillCapabilities {
-    #[serde(default)]
-    pub fs: FsCapabilities,
-    #[serde(default)]
-    pub net: NetCapabilities,
-    #[serde(default)]
-    pub env: EnvCapabilities,
-    #[serde(default)]
-    pub wasi_components: Vec<String>,
-}
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct FsCapabilities {
-    #[serde(default)]
-    pub confined_read_roots: Vec<String>,
-    #[serde(default)]
-    pub allow_write: Vec<String>,
-}
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct NetCapabilities {
-    #[serde(default)]
-    pub allow_domains: Vec<String>,
-}
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct EnvCapabilities {
-    #[serde(default)]
-    pub allow_keys: Vec<String>,
-}
+pub mod capabilities;
+pub use capabilities::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkillLimits {

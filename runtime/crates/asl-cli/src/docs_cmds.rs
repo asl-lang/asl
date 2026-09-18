@@ -290,15 +290,35 @@ fn get_skill_template() -> &'static str {
 ---
 asl_version: "3.0"
 name: "custom-skill"
-description: "A hermetic agent skill"
+description: "A secure, capability-attenuated agent skill"
 interface:
   entrypoint: "run"
+  input_schema:
+    type: "object"
+    properties:
+      path: { type: "string", description: "Target file path" }
+    required: ["path"]
+capabilities:
+  # Filesystem access: list of allowed directories or files
+  fs:
+    - "."
+  # Environment variables: allowlist of keys readable via ctx.env.get()
+  env:
+    - "API_KEY"
+  # Outbound network domains accessible via ctx.http (air-gapped by default)
+  domains:
+    - "api.github.com"
+limits:
+  max_fuel_opcodes: 1000000
 ---
 # Instructions
 Describe semantic behavior for AI agents here.
 
 ```asl
 def run(ctx, input):
+    # Safe OCAP capabilities access
+    # content = ctx.fs.read(input.get("path", ""))
+    # token = ctx.env.get("API_KEY", "")
     return {"status": "ok", "echo": input}
 ```
 "#

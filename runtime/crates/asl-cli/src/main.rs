@@ -1,10 +1,8 @@
 use anyhow::{Context, Result};
-use asl_core_traits::{EnginePort, GrammarCompilerPort, ParserPort};
+use asl_core_traits::{GrammarCompilerPort, ParserPort};
 use asl_parser::{CommonMarkYamlParser, GbnfGrammarCompiler};
-use asl_security::ConfinedSecurityContext;
 use asl_vm_starlark::StarlarkEngine;
 use clap::{Parser, Subcommand};
-use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
 
@@ -14,13 +12,14 @@ mod docs_cmds;
 mod docs_rosetta;
 mod lifecycle_cmds;
 mod prefix_cmds;
+mod repl_cmds;
 mod server_cmds;
 mod shadow_cmds;
 
 #[derive(Parser)]
 #[command(name = "asl")]
-#[command(about = "Agent Skill Language (ASL 3.0) Runtime & Tooling", long_about = None)]
-#[command(version = "3.0.0")]
+#[command(about = "Agent Skill Language (ASL) Runtime & Tooling", long_about = None)]
+#[command(version)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -44,12 +43,31 @@ enum Commands {
         /// Allowed host roots for intersection with requested capabilities (Host Policy)
         #[arg(long)]
         allowed_root: Vec<PathBuf>,
+
+        /// Skips automatic Markdown shadow projection
+        #[arg(long)]
+        no_shadow: bool,
     },
 
-    /// Validates and audits the integrity of an ASL file (.skill, .tool, .asl)
+    /// Validates and audits the integrity and executability of an ASL file (.skill, .tool, .asl)
     Check {
         /// Path to the ASL file (.skill, .tool, .asl)
         skill_file: PathBuf,
+
+        /// Performs a dry-run execution against mock capability context
+        #[arg(long)]
+        dry_run: bool,
+
+        /// Skips automatic Markdown shadow projection
+        #[arg(long)]
+        no_shadow: bool,
+    },
+
+    /// Interactive ASL evaluation REPL (Read-Eval-Print Loop)
+    Repl {
+        /// Optional path to an ASL file (.skill, .tool, .asl) to preload
+        #[arg(short, long)]
+        skill: Option<PathBuf>,
     },
 
     /// Starts a Model Context Protocol (MCP) server over stdio or HTTP/SSE
@@ -218,59 +236,29 @@ fn main() -> Result<()> {
             entrypoint,
             input,
             allowed_root,
+            no_shadow,
         } => {
-            let content = fs::read_to_string(&skill_file)
-                .with_context(|| format!("Failed to read file: {:?}", skill_file))?;
-
-            let doc = parser
-                .parse(&content)
-                .with_context(|| "Error parsing ASL file")?;
-
-            // Zero-Touch Hook: project or update shadow Markdown
-            let _ = asl_parser::project_shadow_markdown(&skill_file, &doc);
-
-            let ep = entrypoint
-                .or_else(|| Some(doc.manifest.interface.entrypoint.clone()))
-                .filter(|s| !s.is_empty())
-                .unwrap_or_else(|| "run".to_string());
-
-            let input_val: Value = serde_json::from_str(&input)
-                .with_context(|| format!("Argument --input is not valid JSON: {}", input))?;
-
-            let mut effective_caps = doc.manifest.capabilities.clone();
-            if !allowed_root.is_empty() {
-                let allowed_canon: Vec<PathBuf> = allowed_root
-                    .iter()
-                    .map(|p| fs::canonicalize(p).unwrap_or_else(|_| p.clone()))
-                    .collect();
-                effective_caps.fs.confined_read_roots.retain(|r| {
-                    let r_path = PathBuf::from(r);
-                    let r_canon = fs::canonicalize(&r_path).unwrap_or(r_path);
-                    allowed_canon.iter().any(|a| r_canon.starts_with(a))
-                });
-            }
-
-            let security = ConfinedSecurityContext::from_capabilities(
-                &effective_caps,
-                doc.manifest.limits.max_fuel_opcodes,
-            );
-
-            let result = engine
-                .execute(
-                    &doc.deterministic_code,
-                    &ep,
-                    &input_val,
-                    &security,
-                    &doc.manifest.limits,
-                )
-                .with_context(|| "Failed deterministic ASL execution")?;
-
-            let output_str = serde_json::to_string_pretty(&result.output)?;
-            println!("{}", output_str);
+            prefix_cmds::handle_run(
+                &skill_file,
+                entrypoint,
+                &input,
+                &allowed_root,
+                no_shadow,
+                &parser,
+                &engine,
+            )?;
         }
 
-        Commands::Check { skill_file } => {
-            prefix_cmds::handle_check(&skill_file, &parser)?;
+        Commands::Check {
+            skill_file,
+            dry_run,
+            no_shadow,
+        } => {
+            prefix_cmds::handle_check(&skill_file, &parser, &engine, dry_run, no_shadow)?;
+        }
+
+        Commands::Repl { skill } => {
+            repl_cmds::handle_repl(skill.as_deref(), &parser, &engine)?;
         }
 
         Commands::Serve {

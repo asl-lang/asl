@@ -74,6 +74,7 @@ fn test_path_traversal_attempts_blocked() {
         net: Default::default(),
         env: Default::default(),
         wasi_components: vec![],
+        domains: vec![],
     };
 
     let ctx = ConfinedSecurityContext::from_capabilities(&caps, 1000);

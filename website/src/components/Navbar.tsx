@@ -134,7 +134,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch }) => {
               <Github className="h-4 w-4" />
               <span>GitHub Repository</span>
             </a>
-            <span className="text-[10px] font-mono text-zinc-600">v3.0.0</span>
+            <span className="text-[10px] font-mono text-zinc-600">v0.0.1</span>
           </div>
         </div>
       )}

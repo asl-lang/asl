@@ -29,6 +29,19 @@ pub struct HttpResponsePayload {
 /// Porta de abstração de capacidades ocap injetadas
 pub trait CapabilityContext: Send + Sync {
     fn read_file(&self, path: &str) -> Result<Option<String>>;
+    fn write_file(&self, _path: &str, _content: &str) -> Result<()> {
+        Err(asl_spec::AslError::CapabilityViolation(
+            "Filesystem write capability is not enabled in this context".to_string(),
+        ))
+    }
+    fn file_exists(&self, _path: &str) -> bool {
+        false
+    }
+    fn list_dir(&self, _path: &str) -> Result<Vec<String>> {
+        Err(asl_spec::AslError::CapabilityViolation(
+            "Directory listing capability is not enabled in this context".to_string(),
+        ))
+    }
     fn sha256(&self, data: &str) -> String;
     fn base64_encode(&self, data: &str) -> String;
     fn base64_decode(&self, encoded: &str) -> Result<String>;

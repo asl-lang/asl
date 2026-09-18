@@ -1,8 +1,10 @@
+pub mod desugar;
 pub mod grammar;
 pub mod prefix_analyzer;
 pub mod rules;
 pub mod shadow;
 
+pub use desugar::*;
 pub use grammar::GbnfGrammarCompiler;
 pub use prefix_analyzer::*;
 pub use rules::{
@@ -44,8 +46,9 @@ impl ParserPort for CommonMarkYamlParser {
         let manifest = if frontmatter_str.trim().is_empty() {
             infer_manifest_from_markdown(&markdown_str)
         } else {
-            let m: SkillManifest = serde_yaml::from_str(&frontmatter_str)
+            let mut m: SkillManifest = serde_yaml::from_str(&frontmatter_str)
                 .map_err(|e| AslError::InvalidFrontmatter(e.to_string()))?;
+            m.capabilities.normalize();
             m
         };
         manifest.validate()?;
@@ -106,7 +109,7 @@ impl ParserPort for CommonMarkYamlParser {
             } else {
                 transpiled.starlark_code
             };
-            (code, Some(rules_src))
+            (desugar::desugar_asl_code(&code), Some(rules_src))
         } else {
             let code = if parsed_blocks.deterministic_code.trim().is_empty() {
                 format!(
@@ -116,7 +119,7 @@ impl ParserPort for CommonMarkYamlParser {
             } else {
                 parsed_blocks.deterministic_code
             };
-            (code, None)
+            (desugar::desugar_asl_code(&code), None)
         };
 
         Ok(SkillDocument {

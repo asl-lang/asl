@@ -70,7 +70,7 @@ impl<'a> McpServer<'a> {
                     },
                     "serverInfo": {
                         "name": "asl-mcp-server",
-                        "version": "3.0.0"
+                        "version": env!("CARGO_PKG_VERSION")
                     }
                 })),
                 error: None,

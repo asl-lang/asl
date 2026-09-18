@@ -142,7 +142,7 @@ checksum = "d92bec98840b8f03a5ff5413de5293bfcd8bf96467cf5452609f939ec6f5de16"
 
 [[package]]
 name = "asl-cli"
-version = "0.3.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "asl-core-traits",
@@ -153,13 +153,15 @@ dependencies = [
  "asl-spec",
  "asl-vm-starlark",
  "clap",
+ "hex",
  "serde",
  "serde_json",
+ "sha2",
 ]
 
 [[package]]
 name = "asl-core-traits"
-version = "0.3.0"
+version = "0.0.1"
 dependencies = [
  "asl-spec",
  "serde",
@@ -168,7 +170,7 @@ dependencies = [
 
 [[package]]
 name = "asl-ffi"
-version = "0.3.0"
+version = "0.0.1"
 dependencies = [
  "asl-core-traits",
  "asl-parser",
@@ -180,7 +182,7 @@ dependencies = [
 
 [[package]]
 name = "asl-parser"
-version = "0.3.0"
+version = "0.0.1"
 dependencies = [
  "asl-core-traits",
  "asl-spec",
@@ -195,7 +197,7 @@ dependencies = [
 
 [[package]]
 name = "asl-protocol-http"
-version = "0.3.0"
+version = "0.0.1"
 dependencies = [
  "asl-core-traits",
  "asl-protocol-mcp",
@@ -208,7 +210,7 @@ dependencies = [
 
 [[package]]
 name = "asl-protocol-mcp"
-version = "0.3.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "asl-core-traits",
@@ -219,7 +221,7 @@ dependencies = [
 
 [[package]]
 name = "asl-security"
-version = "0.3.0"
+version = "0.0.1"
 dependencies = [
  "asl-core-traits",
  "asl-spec",
@@ -233,7 +235,7 @@ dependencies = [
 
 [[package]]
 name = "asl-spec"
-version = "0.3.0"
+version = "0.0.1"
 dependencies = [
  "hex",
  "serde",
@@ -245,7 +247,7 @@ dependencies = [
 
 [[package]]
 name = "asl-vm-starlark"
-version = "0.3.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "asl-core-traits",
@@ -257,7 +259,7 @@ dependencies = [
 
 [[package]]
 name = "asl-vm-wasm"
-version = "0.3.0"
+version = "0.0.1"
 dependencies = [
  "asl-core-traits",
  "asl-spec",

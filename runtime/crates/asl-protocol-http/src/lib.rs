@@ -81,7 +81,7 @@ impl<'a> McpHttpServer<'a> {
                 let body = serde_json::json!({
                     "status": "ok",
                     "server": "asl-mcp-http",
-                    "version": "3.0.0"
+                    "version": env!("CARGO_PKG_VERSION")
                 })
                 .to_string();
                 let header_ct = Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..])

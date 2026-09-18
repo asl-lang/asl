@@ -48,16 +48,35 @@ for lic in "${ROOT_DIR}/LICENSE"*; do
     fi
 done
 
+# Calculate binary SHA-256 before removing staging directory
+BIN_SHA=""
+if command -v shasum &> /dev/null; then
+    BIN_SHA="$(shasum -a 256 "${STAGE_DIR}/asl" | awk '{print $1}')"
+elif command -v sha256sum &> /dev/null; then
+    BIN_SHA="$(sha256sum "${STAGE_DIR}/asl" | awk '{print $1}')"
+fi
+
 ARCHIVE_NAME="${PACKAGE_NAME}.tar.gz"
 echo "📦 Compressing into ${ARCHIVE_NAME}..."
 (cd "${DIST_DIR}" && tar -czf "${ARCHIVE_NAME}" "${PACKAGE_NAME}")
 rm -rf "${STAGE_DIR}"
 
 CHECKSUM_FILE="${DIST_DIR}/asl-v${VERSION}-checksums.sha256"
+
+# Avoid duplicate lines for the same target across multiple runs
+if [ -f "${CHECKSUM_FILE}" ]; then
+    grep -v "${ARCHIVE_NAME}" "${CHECKSUM_FILE}" | grep -v "asl-${TARGET}" > "${CHECKSUM_FILE}.tmp" || true
+    mv "${CHECKSUM_FILE}.tmp" "${CHECKSUM_FILE}"
+fi
+
 if command -v shasum &> /dev/null; then
     (cd "${DIST_DIR}" && shasum -a 256 "${ARCHIVE_NAME}" >> "${CHECKSUM_FILE}")
 elif command -v sha256sum &> /dev/null; then
     (cd "${DIST_DIR}" && sha256sum "${ARCHIVE_NAME}" >> "${CHECKSUM_FILE}")
+fi
+
+if [ -n "${BIN_SHA}" ]; then
+    echo "${BIN_SHA}  asl-${TARGET}" >> "${CHECKSUM_FILE}"
 fi
 
 echo "========================================================"

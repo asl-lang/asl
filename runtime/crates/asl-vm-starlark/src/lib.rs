@@ -15,7 +15,9 @@ struct StarlarkContextExtra<'a> {
     limits: &'a Limits,
 }
 
-use starlark::values::none::NoneOr;
+use starlark::values::none::{NoneOr, NoneType};
+
+mod sanitizer;
 
 #[starlark_module]
 fn asl_natives(builder: &mut GlobalsBuilder) {
@@ -29,6 +31,41 @@ fn asl_natives(builder: &mut GlobalsBuilder) {
             Ok(None) => Ok(NoneOr::None),
             Err(e) => Err(anyhow::anyhow!("Ocap permission error: {}", e)),
         }
+    }
+
+    fn asl_native_fs_write(path: &str, content: &str, eval: &mut Evaluator) -> anyhow::Result<NoneType> {
+        let extra = eval
+            .extra
+            .and_then(|e| e.downcast_ref::<StarlarkContextExtra>())
+            .ok_or_else(|| anyhow::anyhow!("ASL context not configured"))?;
+        extra
+            .context
+            .write_file(path, content)
+            .map_err(|e| anyhow::anyhow!("Ocap permission error: {}", e))?;
+        Ok(NoneType)
+    }
+
+    fn asl_native_fs_exists(path: &str, eval: &mut Evaluator) -> anyhow::Result<bool> {
+        let extra = eval
+            .extra
+            .and_then(|e| e.downcast_ref::<StarlarkContextExtra>())
+            .ok_or_else(|| anyhow::anyhow!("ASL context not configured"))?;
+        Ok(extra.context.file_exists(path))
+    }
+
+    fn asl_native_fs_list(path: &str, eval: &mut Evaluator) -> anyhow::Result<Vec<String>> {
+        let extra = eval
+            .extra
+            .and_then(|e| e.downcast_ref::<StarlarkContextExtra>())
+            .ok_or_else(|| anyhow::anyhow!("ASL context not configured"))?;
+        extra
+            .context
+            .list_dir(path)
+            .map_err(|e| anyhow::anyhow!("Ocap permission error: {}", e))
+    }
+
+    fn asl_native_chars(s: &str) -> anyhow::Result<Vec<String>> {
+        Ok(s.chars().map(|c| c.to_string()).collect())
     }
 
     fn asl_native_sha256(data: &str, eval: &mut Evaluator) -> anyhow::Result<String> {
@@ -234,10 +271,53 @@ def _asl_env_get(key, default=None):
     val = asl_native_env_get(key)
     return val if val != None else default
 
-# Deterministic wrapper with Capability injection (ASL 3.0)
+# Ergonomic string and safe conversion standard library
+def chars(s):
+    if s == None:
+        return []
+    return asl_native_chars(str(s))
+
+def is_digit(s):
+    if s == None:
+        return False
+    st = str(s)
+    return len(st) > 0 and st.isdigit()
+
+def is_int(s):
+    if s == None:
+        return False
+    st = str(s).strip()
+    if len(st) == 0:
+        return False
+    if st.startswith("-"):
+        st = st[1:]
+    return len(st) > 0 and st.isdigit()
+
+def to_int(s, default=None):
+    if is_int(s):
+        return int(str(s).strip())
+    return default
+
+def to_float(s, default=None):
+    if s == None:
+        return default
+    st = str(s).strip()
+    parts = st.split(".")
+    if len(parts) == 1 and is_int(parts[0]):
+        return float(st)
+    if len(parts) == 2 and (is_int(parts[0]) or parts[0] == "" or parts[0] == "-") and parts[1].isdigit():
+        return float(st)
+    return default
+
+# Deterministic wrapper with Capability injection
 asl_raw_input = json.decode({input_json:?})
 asl_ctx = struct(
-    fs = struct(read = asl_native_fs_read),
+    fs = struct(
+        read = asl_native_fs_read,
+        write = asl_native_fs_write,
+        exists = asl_native_fs_exists,
+        list = asl_native_fs_list,
+    ),
     crypto = struct(
         sha256 = asl_native_sha256,
         base64_encode = asl_native_base64_encode,
@@ -262,8 +342,8 @@ asl_output_json = json.encode(asl_result)
             entrypoint = entrypoint
         );
 
-        let ast = AstModule::parse("asl_skill.star", invocation_script, &dialect)
-            .map_err(|e| AslError::StarlarkError(format!("Starlark syntax error: {}", e)))?;
+        let ast = AstModule::parse("ASL Code", invocation_script, &dialect)
+            .map_err(|e| AslError::StarlarkError(sanitizer::sanitize_error(&e.to_string())))?;
 
         let context_extra = StarlarkContextExtra { context, limits };
 
@@ -271,7 +351,7 @@ asl_output_json = json.encode(asl_result)
             let mut eval = Evaluator::new(&module);
             eval.extra = Some(&context_extra);
             eval.eval_module(ast, &globals).map_err(|e| {
-                AslError::StarlarkError(format!("Starlark execution error: {}", e))
+                AslError::StarlarkError(sanitizer::sanitize_error(&e.to_string()))
             })?;
 
             let output_val = module

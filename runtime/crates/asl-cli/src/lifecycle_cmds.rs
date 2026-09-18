@@ -41,24 +41,64 @@ fn fetch_latest_version() -> Result<String> {
     anyhow::bail!("Could not parse latest version from: {}", effective_url)
 }
 
+/// Computes SHA-256 hex digest of a local file
+fn compute_file_sha256(path: &Path) -> Result<String> {
+    use sha2::{Digest, Sha256};
+    let bytes = fs::read(path).context("Failed to read file for checksum")?;
+    let hash = Sha256::digest(&bytes);
+    Ok(hex::encode(hash))
+}
+
+/// Fetches remote checksums.sha256 from GitHub release
+fn fetch_remote_checksums(version: &str) -> Option<String> {
+    let url = format!(
+        "https://github.com/asl-lang/asl/releases/download/v{}/asl-v{}-checksums.sha256",
+        version, version
+    );
+    let output = Command::new("curl")
+        .args(["-fsSL", &url])
+        .output()
+        .ok()?;
+    if output.status.success() {
+        Some(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        None
+    }
+}
+
+/// Path to local installation receipt
+fn receipt_file_path() -> Option<PathBuf> {
+    dirs_home().map(|h| h.join(".asl").join("installed_build_sha"))
+}
+
+/// Reads recorded build SHA from previous installation
+fn read_installed_receipt() -> Option<String> {
+    let p = receipt_file_path()?;
+    fs::read_to_string(p).ok().map(|s| s.trim().to_string())
+}
+
+/// Writes build SHA receipt
+fn write_installed_receipt(sha: &str) -> Result<()> {
+    if let Some(p) = receipt_file_path() {
+        if let Some(parent) = p.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        fs::write(p, sha.trim())?;
+    }
+    Ok(())
+}
+
 /// Handles `asl update`: downloads and installs the latest binary release
 pub fn handle_update(check_only: bool, force: bool) -> Result<()> {
     let current_version = env!("CARGO_PKG_VERSION");
+    let current_exe = std::env::current_exe().context("Failed to locate current executable")?;
+    let local_bin_sha = compute_file_sha256(&current_exe).ok();
+
     println!("🔍 Current version: v{}", current_version);
     println!("🌐 Checking for updates from official release channel...");
 
     let latest_version = fetch_latest_version()?;
-    println!("🚀 Latest version:  v{}", latest_version);
-
-    if latest_version == current_version && !force {
-        println!("\n✨ ASL is already up to date!");
-        return Ok(());
-    }
-
-    if check_only {
-        println!("\n💡 An update is available! Run 'asl update' to install v{}.", latest_version);
-        return Ok(());
-    }
+    println!("🚀 Latest release:  v{}", latest_version);
 
     let target = detect_target()?;
     let tarball_name = format!("asl-v{}-{}.tar.gz", latest_version, target);
@@ -67,8 +107,77 @@ pub fn handle_update(check_only: bool, force: bool) -> Result<()> {
         latest_version, tarball_name
     );
 
+    // Fetch release checksums to evaluate build parity
+    let mut remote_bin_sha: Option<String> = None;
+    let mut remote_archive_sha: Option<String> = None;
+
+    if let Some(checksum_content) = fetch_remote_checksums(&latest_version) {
+        for line in checksum_content.lines() {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 2 {
+                let hash = parts[0].to_lowercase();
+                let name = parts[1];
+                if name.ends_with(&tarball_name) || name == tarball_name {
+                    remote_archive_sha = Some(hash);
+                } else if name.ends_with(&format!("asl-{}", target)) || name.ends_with(&format!("{}/asl", target)) {
+                    remote_bin_sha = Some(hash);
+                }
+            }
+        }
+    }
+
+    let installed_receipt = read_installed_receipt();
+    let is_update_needed = if force {
+        println!("\n⚡ Force re-installation requested.");
+        true
+    } else if latest_version != current_version {
+        println!("\n💡 New release version available: v{} -> v{}", current_version, latest_version);
+        true
+    } else {
+        // Same version (e.g. continuous 0.0.1 beta development)
+        if let (Some(ref local), Some(ref remote)) = (&local_bin_sha, &remote_bin_sha) {
+            if local.eq_ignore_ascii_case(remote) {
+                println!("\n✨ ASL v{} is already up to date! (build {})", latest_version, &remote[..8.min(remote.len())]);
+                return Ok(());
+            } else {
+                println!(
+                    "\n💡 A newer build of v{} is available! (local: {}, remote: {})",
+                    latest_version,
+                    &local[..8.min(local.len())],
+                    &remote[..8.min(remote.len())]
+                );
+                true
+            }
+        } else if let (Some(ref receipt), Some(ref remote_arch)) = (&installed_receipt, &remote_archive_sha) {
+            if receipt.eq_ignore_ascii_case(remote_arch) {
+                println!("\n✨ ASL v{} is already up to date! (build {})", latest_version, &remote_arch[..8.min(remote_arch.len())]);
+                return Ok(());
+            } else {
+                println!(
+                    "\n💡 A newer build of v{} is available! (installed: {}, remote: {})",
+                    latest_version,
+                    &receipt[..8.min(receipt.len())],
+                    &remote_arch[..8.min(remote_arch.len())]
+                );
+                true
+            }
+        } else if remote_archive_sha.is_some() || remote_bin_sha.is_some() {
+            println!("\n💡 Updating ASL v{} to match the latest official build...", latest_version);
+            true
+        } else {
+            println!("\n✨ ASL v{} is already up to date!", latest_version);
+            return Ok(());
+        }
+    };
+
+    if check_only {
+        if is_update_needed {
+            println!("   Run 'asl update' to install the latest build.");
+        }
+        return Ok(());
+    }
+
     println!("\n📦 Downloading pre-compiled release for {}...", target);
-    let current_exe = std::env::current_exe().context("Failed to locate current executable")?;
     let parent_dir = current_exe
         .parent()
         .context("Failed to determine binary parent directory")?;
@@ -85,6 +194,19 @@ pub fn handle_update(check_only: bool, force: bool) -> Result<()> {
     if !curl_status.success() {
         let _ = fs::remove_dir_all(&temp_dir);
         anyhow::bail!("Download failed for URL: {}", download_url);
+    }
+
+    // Verify downloaded archive hash if remote archive hash is available
+    if let Some(ref expected_sha) = remote_archive_sha {
+        let actual_sha = compute_file_sha256(&archive_path)?;
+        if !actual_sha.eq_ignore_ascii_case(expected_sha) {
+            let _ = fs::remove_dir_all(&temp_dir);
+            anyhow::bail!(
+                "Integrity check failed for {}: expected {}, got {}",
+                tarball_name, expected_sha, actual_sha
+            );
+        }
+        println!("🔒 Checksum verified: {}", &actual_sha[..8.min(actual_sha.len())]);
     }
 
     println!("✂️  Extracting binary...");
@@ -122,6 +244,13 @@ pub fn handle_update(check_only: bool, force: bool) -> Result<()> {
     // Replace running executable in-place
     install_binary(&new_bin, &current_exe, parent_dir)?;
     let _ = fs::remove_dir_all(&temp_dir);
+
+    // Save build receipt for same-version update comparison
+    if let Some(ref sha) = remote_archive_sha {
+        let _ = write_installed_receipt(sha);
+    } else if let Ok(new_bin_sha) = compute_file_sha256(&current_exe) {
+        let _ = write_installed_receipt(&new_bin_sha);
+    }
 
     println!("\n🎉 Successfully updated ASL to v{}!", latest_version);
     println!("   Installed path: {:?}", current_exe);

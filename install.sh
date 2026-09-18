@@ -92,7 +92,7 @@ DEST_DIR="$(resolve_install_dir)"
 mkdir -p "${DEST_DIR}"
 
 INSTALLED=0
-RELEASE_VERSION="${ASL_VERSION:-0.3.0}"
+RELEASE_VERSION="${ASL_VERSION:-0.0.1}"
 
 # 4. Fast-path: Download pre-built binary (< 3s, zero dependencies required)
 if [ -n "${TARGET}" ] && command -v curl &> /dev/null && command -v tar &> /dev/null; then
@@ -116,6 +116,13 @@ if [ -n "${TARGET}" ] && command -v curl &> /dev/null && command -v tar &> /dev/
         if "${DEST_DIR}/asl" --version &> /dev/null; then
             INSTALLED=1
             echo "⚡ Pre-compiled binary verified in seconds!"
+            # Save receipt of installed build checksum
+            mkdir -p "$HOME/.asl" 2>/dev/null || true
+            if command -v shasum &> /dev/null; then
+                shasum -a 256 "${TMP_DL_DIR}/${TARBALL_NAME}" | awk '{print $1}' > "$HOME/.asl/installed_build_sha" 2>/dev/null || true
+            elif command -v sha256sum &> /dev/null; then
+                sha256sum "${TMP_DL_DIR}/${TARBALL_NAME}" | awk '{print $1}' > "$HOME/.asl/installed_build_sha" 2>/dev/null || true
+            fi
         fi
     fi
 fi
