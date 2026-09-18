@@ -25,45 +25,91 @@ pub fn handle_sync_shadows_quiet(target_path: &Path, parser: &CommonMarkYamlPars
     sync_internal(target_path, parser, false)
 }
 
+fn scaffold_empty_asl_file(path: &Path) -> Option<String> {
+    let ext = path.extension()?.to_str()?.to_ascii_lowercase();
+    let stem = path.file_stem()?.to_str().unwrap_or("draft");
+    match ext.as_str() {
+        "skill" => Some(format!(
+            "#!/usr/bin/env -S asl run\n---\nasl_version: \"3.0\"\nname: \"{}\"\ndescription: \"Draft skill '{}' under construction\"\n---\n\n# {}\n\nDraft instructions here.\n",
+            stem, stem, stem
+        )),
+        "tool" => Some(format!(
+            "#!/usr/bin/env -S asl run\n---\nasl_version: \"3.0\"\nname: \"{}\"\ndescription: \"Draft tool '{}' under construction\"\ninterface:\n  protocol: \"mcp-tool-v1\"\n  entrypoint: \"run\"\n---\n\n# {}\n\nTool instructions here.\n\n```asl:deterministic\ndef run(ctx, input):\n    return {{\"status\": \"ok\"}}\n```\n",
+            stem, stem, stem
+        )),
+        "asl" => Some(format!(
+            "#!/usr/bin/env -S asl run\n---\nasl_version: \"3.0\"\nname: \"{}\"\ndescription: \"Draft module '{}' under construction\"\n---\n\n# {}\n\nModule instructions here.\n",
+            stem, stem, stem
+        )),
+        _ => None,
+    }
+}
+
+#[cfg(unix)]
+fn set_executable_permission(path: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+    if let Ok(meta) = fs::metadata(path) {
+        let mut perms = meta.permissions();
+        perms.set_mode(0o755);
+        let _ = fs::set_permissions(path, perms);
+    }
+}
+
+#[cfg(not(unix))]
+fn set_executable_permission(_path: &Path) {}
+
+fn process_asl_file(
+    path: &Path,
+    parser: &CommonMarkYamlParser,
+    stats: &mut SyncStats,
+) -> Result<()> {
+    if is_ignored_path(path) || !asl_spec::is_asl_file(path) {
+        return Ok(());
+    }
+
+    let mut content = fs::read_to_string(path)
+        .with_context(|| format!("Failed to read {:?}", path))?;
+
+    if content.trim().is_empty() {
+        if let Some(scaffold) = scaffold_empty_asl_file(path) {
+            let _ = fs::write(path, &scaffold);
+            set_executable_permission(path);
+            content = scaffold;
+        }
+    }
+
+    if asl_spec::is_shadow_eligible(path) {
+        let doc = parser
+            .parse(&content)
+            .with_context(|| format!("Failed to parse {:?}", path))?;
+
+        match project_shadow_markdown(path, &doc)? {
+            ShadowProjectResult::Created(p) => {
+                println!("⚡ Shadow created: {:?}", p);
+                stats.created += 1;
+            }
+            ShadowProjectResult::Updated(p) => {
+                println!("⚡ Shadow updated: {:?}", p);
+                stats.updated += 1;
+            }
+            ShadowProjectResult::CollisionProtected(p) => {
+                println!("⚠️ Collision protected: {:?}", p);
+                stats.collisions += 1;
+            }
+            ShadowProjectResult::Unchanged(_) => {
+                stats.unchanged += 1;
+            }
+            ShadowProjectResult::Skipped(_) => {}
+        }
+    }
+    Ok(())
+}
+
 fn sync_internal(target_path: &Path, parser: &CommonMarkYamlParser, verbose: bool) -> Result<SyncStats> {
     let mut stats = SyncStats::default();
 
     if target_path.is_file() {
-        if asl_spec::is_shadow_eligible(target_path)
-            && !is_ignored_path(target_path)
-        {
-            let content = fs::read_to_string(target_path)
-                .with_context(|| format!("Failed to read {:?}", target_path))?;
-            let doc = if content.trim().is_empty() {
-                let stem = target_path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or("draft-skill");
-                asl_spec::SkillDocument::draft_scaffold(stem)
-            } else {
-                parser
-                    .parse(&content)
-                    .with_context(|| format!("Failed to parse {:?}", target_path))?
-            };
-            match project_shadow_markdown(target_path, &doc)? {
-                ShadowProjectResult::Created(p) => {
-                    println!("⚡ Shadow created: {:?}", p);
-                    stats.created += 1;
-                }
-                ShadowProjectResult::Updated(p) => {
-                    println!("⚡ Shadow updated: {:?}", p);
-                    stats.updated += 1;
-                }
-                ShadowProjectResult::CollisionProtected(p) => {
-                    println!("⚠️ Collision protected: {:?}", p);
-                    stats.collisions += 1;
-                }
-                ShadowProjectResult::Unchanged(_) => {
-                    stats.unchanged += 1;
-                }
-                ShadowProjectResult::Skipped(_) => {}
-            }
-        }
+        process_asl_file(target_path, parser, &mut stats)?;
     } else if target_path.is_dir() {
         sync_dir_recursive(target_path, parser, &mut stats)?;
     }
@@ -97,43 +143,8 @@ fn sync_dir_recursive(
                     continue;
                 }
                 sync_dir_recursive(&path, parser, stats)?;
-            } else if asl_spec::is_shadow_eligible(&path)
-                && !is_ignored_path(&path)
-            {
-                if let Ok(content) = fs::read_to_string(&path) {
-                    let doc_opt = if content.trim().is_empty() {
-                        let stem = path
-                            .file_stem()
-                            .and_then(|s| s.to_str())
-                            .unwrap_or("draft-skill");
-                        Some(asl_spec::SkillDocument::draft_scaffold(stem))
-                    } else {
-                        parser.parse(&content).ok()
-                    };
-
-                    if let Some(doc) = doc_opt {
-                        if let Ok(res) = project_shadow_markdown(&path, &doc) {
-                            match res {
-                                ShadowProjectResult::Created(p) => {
-                                    println!("⚡ Shadow created: {:?}", p);
-                                    stats.created += 1;
-                                }
-                                ShadowProjectResult::Updated(p) => {
-                                    println!("⚡ Shadow updated: {:?}", p);
-                                    stats.updated += 1;
-                                }
-                                ShadowProjectResult::CollisionProtected(p) => {
-                                    println!("⚠️ Collision protected: {:?}", p);
-                                    stats.collisions += 1;
-                                }
-                                ShadowProjectResult::Unchanged(_) => {
-                                    stats.unchanged += 1;
-                                }
-                                ShadowProjectResult::Skipped(_) => {}
-                            }
-                        }
-                    }
-                }
+            } else if asl_spec::is_asl_file(&path) {
+                let _ = process_asl_file(&path, parser, stats);
             } else if path.extension().and_then(|e| e.to_str()) == Some("md")
                 && asl_parser::is_shadow_markdown_file(&path)
             {
@@ -228,6 +239,61 @@ def run(ctx, input):
         let stats3 = handle_sync_shadows(&temp_dir, &parser).unwrap();
         assert_eq!(stats3.orphaned_removed, 1);
         assert!(!shadow_md.exists());
+
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_empty_files_triad_scaffolding() {
+        let temp_dir = std::env::temp_dir().join(format!(
+            "asl_cli_triad_scaffold_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let skill_path = temp_dir.join("test_auto.skill");
+        let tool_path = temp_dir.join("test_auto.tool");
+        let asl_path = temp_dir.join("test_auto.asl");
+
+        fs::write(&skill_path, "").unwrap();
+        fs::write(&tool_path, "").unwrap();
+        fs::write(&asl_path, "").unwrap();
+
+        let parser = CommonMarkYamlParser::new();
+        let stats = handle_sync_shadows(&temp_dir, &parser).unwrap();
+        assert_eq!(stats.created, 1, "Only .skill generates shadow .md");
+
+        // .skill checks
+        let skill_content = fs::read_to_string(&skill_path).unwrap();
+        assert!(skill_content.starts_with("#!/usr/bin/env -S asl run"));
+        assert!(skill_content.contains("name: \"test_auto\""));
+        let shadow_md = temp_dir.join("test_auto.md");
+        assert!(shadow_md.exists());
+        let md_content = fs::read_to_string(&shadow_md).unwrap();
+        assert!(!md_content.contains("Claude Code"));
+        assert!(!md_content.contains("token savings"));
+        assert!(!md_content.contains("Directive for AI Agents"));
+
+        // .tool checks
+        let tool_content = fs::read_to_string(&tool_path).unwrap();
+        assert!(tool_content.starts_with("#!/usr/bin/env -S asl run"));
+        assert!(tool_content.contains("protocol: \"mcp-tool-v1\""));
+
+        // .asl checks
+        let asl_content = fs::read_to_string(&asl_path).unwrap();
+        assert!(asl_content.starts_with("#!/usr/bin/env -S asl run"));
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            for p in [&skill_path, &tool_path, &asl_path] {
+                let meta = fs::metadata(p).unwrap();
+                assert_eq!(meta.permissions().mode() & 0o111, 0o111, "Must be executable");
+            }
+        }
 
         let _ = fs::remove_dir_all(&temp_dir);
     }

@@ -64,23 +64,18 @@ pub fn generate_shadow_content(doc: &SkillDocument, skill_file_name: &str) -> St
     if let Some(ref pubkey) = doc.manifest.signer_pubkey {
         out.push_str(&format!("asl_signer_pubkey: \"{}\"\n", pubkey));
     }
-    out.push_str("---\n");
-
-    out.push_str(&format!("# {}\n\n", effective_name));
-    out.push_str(&format!(
-        "> ⚡ **This skill is governed and executed by the ASL 3.0 hermetic runtime.**\n> Canonical atomic file: [`{}`](./{})\n\n",
-        skill_file_name, skill_file_name
-    ));
-
-    out.push_str("### Directive for AI Agents (Claude Code, Cursor, Codex):\n");
-    out.push_str("To execute this skill deterministically, securely, and with up to 93% token savings:\n");
-    out.push_str("```bash\n");
-    out.push_str(&format!("asl run ./{}\n", skill_file_name));
-    out.push_str("```\n\n");
     out.push_str("---\n\n");
-    out.push_str("## Official Semantic Instructions\n\n");
-    out.push_str(&doc.semantic_section);
-    out.push('\n');
+
+    let trimmed = doc.semantic_section.trim();
+    if trimmed.is_empty() {
+        out.push_str(&format!("# {}\n", effective_name));
+    } else {
+        if !trimmed.starts_with('#') {
+            out.push_str(&format!("# {}\n\n", effective_name));
+        }
+        out.push_str(trimmed);
+        out.push('\n');
+    }
 
     out
 }

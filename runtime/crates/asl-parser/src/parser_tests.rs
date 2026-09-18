@@ -265,5 +265,29 @@ def run(ctx, input):
     assert!(doc.deterministic_code.contains("def run(ctx, input):"));
 }
 
+#[test]
+fn test_parser_with_shebang_header() {
+    let content = r#"#!/usr/bin/env -S asl run
+---
+asl_version: "3.0"
+name: "shebang-skill"
+description: "A self-describing executable skill"
+interface:
+  entrypoint: "run"
+---
+# Instructions
+Execute with native shebang.
 
-
+```asl
+def run(ctx, input):
+  return {"shebang": True}
+```
+"#;
+    let parser = CommonMarkYamlParser::new();
+    let doc = parser.parse(content).expect("Skill with shebang must parse successfully");
+    assert_eq!(doc.manifest.name, "shebang-skill");
+    assert_eq!(doc.manifest.asl_version, "3.0");
+    assert!(doc.semantic_section.contains("# Instructions"));
+    assert!(doc.deterministic_code.contains("def run(ctx, input):"));
+    assert!(doc.digest.starts_with("asl:sha256:"));
+}

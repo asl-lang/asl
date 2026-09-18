@@ -36,5 +36,7 @@ Utilize a skill `asl-adr` (`skills/asl-adr/SKILL.md`):
 | **[ADR-0015](./0015-daemon-universal-multiplataforma-e-parser-tolerante-zero-touch.md)** | Daemon Universal Multiplataforma de FSEvents e Parser Tolerante para Zero-Touch Ingestion | **Aceito** | 2026-09-18 | `asl-parser`, `asl-spec`, `asl-cli`, `install.sh` |
 | **[ADR-0016](./0016-guided-interactive-installer-and-opt-in-daemon.md)** | Instalação Interativa Guiada e Ativação Consentida do Daemon de Background | **Aceito** | 2026-09-18 | `install.sh`, `asl-cli` |
 | **[ADR-0017](./0017-cli-self-update-and-self-uninstall.md)** | Ciclo de Vida de Auto-Atualização e Auto-Desinstalação na CLI (`asl update` & `asl uninstall`) | **Aceito** | 2026-09-18 | `asl-cli` |
+| **[ADR-0018](./0018-minimalist-shadow-markdown-and-self-describing-skill.md)** | Projeção Sombra Minimalista e Auto-Descoberta Segura de Execução no `.skill` | **Aceito** | 2026-09-18 | `asl-parser`, `asl-spec`, `asl-cli` |
+
 
 
