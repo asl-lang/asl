@@ -4,6 +4,7 @@ import { ArrowRight, Terminal, Shield, Layers, Cpu, Code2, Check, Copy } from "l
 import { CodeSwitcher } from "@/components/CodeSwitcher";
 import { PlaygroundSimulator } from "@/components/PlaygroundSimulator";
 import { QuickstartExamples } from "@/components/QuickstartExamples";
+import { InstallSnippet } from "@/components/InstallSnippet";
 
 export default function HomePage() {
   return (
@@ -56,14 +57,7 @@ export default function HomePage() {
         </div>
 
         {/* Clean CLI Install Snippet */}
-        <div className="mt-10 max-w-md mx-auto">
-          <div className="rounded-lg border border-zinc-800 bg-black px-3.5 py-2.5 flex items-center justify-between font-mono text-xs text-zinc-300">
-            <span className="truncate mr-2">
-              <span className="text-zinc-500 select-none">$ </span>
-              curl -fsSL https://raw.githubusercontent.com/asl-lang/asl/main/install.sh | bash
-            </span>
-          </div>
-        </div>
+        <InstallSnippet />
       </section>
 
       {/* Hands-on Simple Examples: Skill, Tool, ASL */}

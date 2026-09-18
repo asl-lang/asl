@@ -9,7 +9,7 @@ interface DocsHeaderProps {
 export const DocsHeader: React.FC<DocsHeaderProps> = ({ category, title, description }) => {
   return (
     <div>
-      <div className="text-xs font-mono font-medium text-emerald-400 uppercase tracking-wider">
+      <div className="text-xs font-mono font-medium text-zinc-400 uppercase tracking-wider">
         {category}
       </div>
       <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mt-1">

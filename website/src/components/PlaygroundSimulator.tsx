@@ -184,7 +184,7 @@ export const PlaygroundSimulator: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800/80 pb-5">
         <div>
           <h3 className="text-base font-semibold text-white flex items-center gap-2">
-            <Cpu className="h-5 w-5 text-blue-400" />
+            <Cpu className="h-4 w-4 text-zinc-300" />
             ASL 3.0 In-Browser Execution Playground
           </h3>
           <p className="text-xs text-zinc-400 mt-0.5">
@@ -253,7 +253,7 @@ export const PlaygroundSimulator: React.FC = () => {
                     : "text-zinc-400 hover:text-zinc-200"
                 }`}
               >
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                <CheckCircle2 className="h-3.5 w-3.5 text-zinc-300" />
                 Execution Result
               </button>
               <button
@@ -264,7 +264,7 @@ export const PlaygroundSimulator: React.FC = () => {
                     : "text-zinc-400 hover:text-zinc-200"
                 }`}
               >
-                <Code2 className="h-3.5 w-3.5 text-blue-400" />
+                <Code2 className="h-3.5 w-3.5 text-zinc-300" />
                 Transpiled Starlark
               </button>
               <button
@@ -275,7 +275,7 @@ export const PlaygroundSimulator: React.FC = () => {
                     : "text-zinc-400 hover:text-zinc-200"
                 }`}
               >
-                <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                <Sparkles className="h-3.5 w-3.5 text-zinc-300" />
                 Tokenomics Metrics
               </button>
             </div>
@@ -294,7 +294,7 @@ export const PlaygroundSimulator: React.FC = () => {
                 {simulationResult.success ? (
                   <div>
                     <div className="text-[11px] text-zinc-500 mb-2">// Return Value (Strict Deterministic Evaluation):</div>
-                    <pre className="text-emerald-400 leading-relaxed">
+                    <pre className="text-zinc-200 leading-relaxed">
                       {JSON.stringify(simulationResult.output, null, 2)}
                     </pre>
 
@@ -304,13 +304,13 @@ export const PlaygroundSimulator: React.FC = () => {
                           Fuel Spent: <span className="text-white font-semibold">{simulationResult.metrics.fuelConsumed}</span> / {simulationResult.metrics.maxFuel} opcodes
                         </div>
                         <div>
-                          Termination: <span className="text-emerald-400 font-semibold">Deterministic Monotone</span>
+                          Termination: <span className="text-white font-semibold">Deterministic Monotone</span>
                         </div>
                         <div>
-                          KV-Cache Prefix: <span className="text-blue-400 font-semibold">{simulationResult.metrics.kvCacheHitRate} Hit Rate</span>
+                          KV-Cache Prefix: <span className="text-white font-semibold">{simulationResult.metrics.kvCacheHitRate} Hit Rate</span>
                         </div>
                         <div>
-                          Confinement: <span className="text-purple-400 font-semibold">Lampson OCap Compliant</span>
+                          Confinement: <span className="text-white font-semibold">Lampson OCap Compliant</span>
                         </div>
                       </div>
                     )}
@@ -327,7 +327,7 @@ export const PlaygroundSimulator: React.FC = () => {
             {activeView === "transpiled" && (
               <div>
                 <div className="text-[11px] text-zinc-500 mb-2">// Compiled Ahead-of-Time (AOT) to Strict Starlark L1:</div>
-                <pre className="text-blue-300 leading-relaxed">
+                <pre className="text-zinc-200 leading-relaxed">
                   {simulationResult.transpiled}
                 </pre>
               </div>
@@ -337,7 +337,7 @@ export const PlaygroundSimulator: React.FC = () => {
               <div className="space-y-4">
                 <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
                   <div className="text-xs text-zinc-400">Measured Token Efficiency</div>
-                  <div className="text-2xl font-bold text-emerald-400 mt-1">
+                  <div className="text-2xl font-bold text-white mt-1">
                     -{simulationResult.metrics.reductionPercent}% Tokens
                   </div>
                   <div className="text-[11px] text-zinc-500 mt-0.5">
@@ -348,7 +348,7 @@ export const PlaygroundSimulator: React.FC = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-lg border border-zinc-800 bg-zinc-900/20 p-3">
                     <div className="text-[11px] text-zinc-400">Legacy ReAct Loop</div>
-                    <div className="text-lg font-semibold text-red-400 mt-0.5">~{simulationResult.metrics.legacyReActTokens} tokens</div>
+                    <div className="text-lg font-semibold text-zinc-400 mt-0.5">~{simulationResult.metrics.legacyReActTokens} tokens</div>
                     <div className="text-[10px] text-zinc-500 mt-1">
                       Docs reading + bash cat + error traceback + JSON retry turns
                     </div>
@@ -356,7 +356,7 @@ export const PlaygroundSimulator: React.FC = () => {
 
                   <div className="rounded-lg border border-zinc-800 bg-zinc-900/20 p-3">
                     <div className="text-[11px] text-zinc-400">ASL 3.0 In-Process Call</div>
-                    <div className="text-lg font-semibold text-emerald-400 mt-0.5">~{simulationResult.metrics.aslTokens} tokens</div>
+                    <div className="text-lg font-semibold text-white mt-0.5">~{simulationResult.metrics.aslTokens} tokens</div>
                     <div className="text-[10px] text-zinc-500 mt-1">
                       Single-turn atomic GBNF-constrained tool invocation
                     </div>

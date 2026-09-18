@@ -18,12 +18,12 @@ export const DocsSection: React.FC<DocsSectionProps> = ({
   className = "",
 }) => {
   const badgeClasses: Record<string, string> = {
-    emerald: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
-    blue: "bg-blue-500/10 border-blue-500/20 text-blue-400",
-    purple: "bg-purple-500/10 border-purple-500/20 text-purple-400",
-    amber: "bg-amber-500/10 border-amber-500/20 text-amber-400",
-    rose: "bg-rose-500/10 border-rose-500/20 text-rose-400",
-    zinc: "bg-zinc-800 border-zinc-700 text-zinc-300",
+    emerald: "bg-zinc-900 border-zinc-800 text-zinc-200",
+    blue: "bg-zinc-900 border-zinc-800 text-zinc-200",
+    purple: "bg-zinc-900 border-zinc-800 text-zinc-200",
+    amber: "bg-zinc-900 border-zinc-800 text-zinc-200",
+    rose: "bg-zinc-900 border-zinc-800 text-zinc-200",
+    zinc: "bg-zinc-900 border-zinc-800 text-zinc-300",
   };
 
   return (

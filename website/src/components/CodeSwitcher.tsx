@@ -17,7 +17,7 @@ const EXAMPLES: Record<string, CodeExample> = {
     extension: "skill",
     filename: "conventional-commit.skill",
     badge: "Autonomous Skill",
-    badgeColor: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    badgeColor: "bg-zinc-900 text-zinc-300 border-zinc-800",
     shadowNote: "✨ Automatic Shadow Projection: Projects conventional-commit.skill.md for human / legacy inspection",
     code: `---
 asl_version: "3.0"
@@ -60,7 +60,7 @@ rule "require_non_empty_intent":
     extension: "tool",
     filename: "security-validator.tool",
     badge: "Direct MCP Tool",
-    badgeColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    badgeColor: "bg-zinc-900 text-zinc-300 border-zinc-800",
     shadowNote: "🛡️ Atomic Tool File: Zero shadow markdown generated. Clean single-file MCP contract.",
     code: `---
 asl_version: "3.0"
@@ -96,7 +96,7 @@ rule "block_eval_injection":
     extension: "asl",
     filename: "summarizer.asl",
     badge: "Native ASL Specification",
-    badgeColor: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+    badgeColor: "bg-zinc-900 text-zinc-300 border-zinc-800",
     shadowNote: "⚡ Pure ASL Unit: Zero shadow markdown. Evaluated at high throughput by the Rust VM.",
     code: `---
 asl_version: "3.0"
@@ -162,7 +162,7 @@ export const CodeSwitcher: React.FC = () => {
                 : "text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200"
             }`}
           >
-            <span className="h-2 w-2 rounded-full bg-blue-500" />
+            <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" />
             .skill
           </button>
           <button
@@ -173,7 +173,7 @@ export const CodeSwitcher: React.FC = () => {
                 : "text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200"
             }`}
           >
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" />
             .tool
           </button>
           <button
@@ -184,7 +184,7 @@ export const CodeSwitcher: React.FC = () => {
                 : "text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200"
             }`}
           >
-            <span className="h-2 w-2 rounded-full bg-purple-500" />
+            <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" />
             .asl
           </button>
         </div>
@@ -197,7 +197,7 @@ export const CodeSwitcher: React.FC = () => {
             onClick={handleCopy}
             className="flex items-center gap-1.5 rounded border border-zinc-700/60 bg-zinc-800/70 px-2.5 py-1 text-[11px] text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
           >
-            {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+            {copied ? <Check className="h-3 w-3 text-white" /> : <Copy className="h-3 w-3 text-zinc-400" />}
             <span>{copied ? "Copied!" : "Copy"}</span>
           </button>
         </div>

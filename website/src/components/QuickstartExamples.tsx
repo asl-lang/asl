@@ -535,41 +535,44 @@ def guard_payload(ctx, input):
     <section className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8 border-t border-zinc-800">
       {/* Header */}
       <div className="mb-10">
-        <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-mono text-blue-400 mb-3">
-          <Sparkles className="h-3 w-3" />
-          <span>Hands-on Quickstarts</span>
+        <div className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950 px-3 py-1 text-xs font-mono text-zinc-400 mb-3">
+          <span className="font-mono text-zinc-200">ASL Quickstarts</span>
+          <span className="text-zinc-600">•</span>
+          <span>Hands-on Examples</span>
         </div>
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
           Create in Seconds: Skill, Tool, or ASL
         </h2>
         <p className="text-xs sm:text-sm text-zinc-400 max-w-3xl mt-2 leading-relaxed">
-          Agent Skill Language simplifies autonomous agent workflows. Select any file format below to see step-by-step canonical creation and production-grade code.
+          Agent Skill Language simplifies autonomous agent workflows. Select any file format below to inspect canonical structure and execution logic.
         </p>
       </div>
 
-      {/* Main Tab Navigation */}
+      {/* Main Tab Navigation - Next.js Styled Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
         <button
           onClick={() => setActiveTab("skill")}
           className={`flex items-start gap-3.5 p-4 rounded-xl border text-left transition-all ${
             activeTab === "skill"
-              ? "bg-zinc-900 border-blue-500/50 shadow-lg shadow-blue-500/5"
-              : "bg-zinc-950/60 border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/40"
+              ? "bg-zinc-900/90 border-zinc-700 text-white shadow-sm ring-1 ring-zinc-700/50"
+              : "bg-zinc-950/60 border-zinc-850 hover:border-zinc-700 hover:bg-zinc-900/40 text-zinc-400"
           }`}
         >
           <div
-            className={`p-2.5 rounded-lg border ${
+            className={`p-2 rounded-lg border transition-colors ${
               activeTab === "skill"
-                ? "bg-blue-500/20 border-blue-500/40 text-blue-400"
+                ? "bg-zinc-800 border-zinc-700 text-white"
                 : "bg-zinc-900 border-zinc-800 text-zinc-400"
             }`}
           >
-            <Layers className="h-5 w-5" />
+            <Layers className="h-4 w-4" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-sm text-white">1. Creating a Skill</span>
-              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
+              <span className={`font-semibold text-sm ${activeTab === "skill" ? "text-white" : "text-zinc-300"}`}>
+                1. Creating a Skill
+              </span>
+              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
                 .skill
               </span>
             </div>
@@ -583,23 +586,25 @@ def guard_payload(ctx, input):
           onClick={() => setActiveTab("tool")}
           className={`flex items-start gap-3.5 p-4 rounded-xl border text-left transition-all ${
             activeTab === "tool"
-              ? "bg-zinc-900 border-emerald-500/50 shadow-lg shadow-emerald-500/5"
-              : "bg-zinc-950/60 border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/40"
+              ? "bg-zinc-900/90 border-zinc-700 text-white shadow-sm ring-1 ring-zinc-700/50"
+              : "bg-zinc-950/60 border-zinc-850 hover:border-zinc-700 hover:bg-zinc-900/40 text-zinc-400"
           }`}
         >
           <div
-            className={`p-2.5 rounded-lg border ${
+            className={`p-2 rounded-lg border transition-colors ${
               activeTab === "tool"
-                ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
+                ? "bg-zinc-800 border-zinc-700 text-white"
                 : "bg-zinc-900 border-zinc-800 text-zinc-400"
             }`}
           >
-            <Globe className="h-5 w-5" />
+            <Globe className="h-4 w-4" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-sm text-white">2. Creating a Tool</span>
-              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <span className={`font-semibold text-sm ${activeTab === "tool" ? "text-white" : "text-zinc-300"}`}>
+                2. Creating a Tool
+              </span>
+              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
                 .tool
               </span>
             </div>
@@ -613,23 +618,25 @@ def guard_payload(ctx, input):
           onClick={() => setActiveTab("asl")}
           className={`flex items-start gap-3.5 p-4 rounded-xl border text-left transition-all ${
             activeTab === "asl"
-              ? "bg-zinc-900 border-purple-500/50 shadow-lg shadow-purple-500/5"
-              : "bg-zinc-950/60 border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/40"
+              ? "bg-zinc-900/90 border-zinc-700 text-white shadow-sm ring-1 ring-zinc-700/50"
+              : "bg-zinc-950/60 border-zinc-850 hover:border-zinc-700 hover:bg-zinc-900/40 text-zinc-400"
           }`}
         >
           <div
-            className={`p-2.5 rounded-lg border ${
+            className={`p-2 rounded-lg border transition-colors ${
               activeTab === "asl"
-                ? "bg-purple-500/20 border-purple-500/40 text-purple-400"
+                ? "bg-zinc-800 border-zinc-700 text-white"
                 : "bg-zinc-900 border-zinc-800 text-zinc-400"
             }`}
           >
-            <Cpu className="h-5 w-5" />
+            <Cpu className="h-4 w-4" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-sm text-white">3. Creating Anything</span>
-              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">
+              <span className={`font-semibold text-sm ${activeTab === "asl" ? "text-white" : "text-zinc-300"}`}>
+                3. Creating Anything
+              </span>
+              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
                 .asl
               </span>
             </div>
@@ -647,26 +654,26 @@ def guard_payload(ctx, input):
           <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2.5">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/20 border border-blue-500/30 text-xs font-mono font-bold text-blue-400">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-900 border border-zinc-700 text-xs font-mono font-bold text-white">
                   1
                 </span>
                 <h3 className="text-base font-semibold text-white">
-                  Step 1: Create or rename your file to <code className="text-blue-400">.skill</code>
+                  Step 1: Create or rename your file to <code className="text-zinc-200 font-mono">.skill</code>
                 </h3>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={startAnimation}
                   disabled={isAutoPlaying}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white transition-all disabled:opacity-50 shadow-sm"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-white hover:bg-zinc-200 text-black transition-all disabled:opacity-50 shadow-sm"
                   title="Simulate renaming and shadow projection generation"
                 >
-                  <Play className="h-3.5 w-3.5" />
+                  <Play className="h-3 w-3 fill-current" />
                   <span>Simulate Renaming</span>
                 </button>
                 <button
                   onClick={resetAnimation}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors"
                   title="Reset to final synchronized state"
                 >
                   <RotateCcw className="h-3 w-3" />
@@ -678,27 +685,27 @@ def guard_payload(ctx, input):
               Simply create a file ending with <code className="text-zinc-200 font-mono">.skill</code>. The moment you save or rename it, the ASL engine automatically projects a mirror shadow markdown file <code className="text-zinc-200 font-mono">.skill.md</code> in the same directory, allowing LLMs (Claude Code, Cursor, Codex) to consume instructions without overhead.
             </p>
 
-            {/* Interactive File Tree Visualizer */}
-            <div className="rounded-lg border border-zinc-800/90 bg-zinc-900/60 p-4 sm:p-5">
-              <div className="flex items-center justify-between pb-3 mb-3 border-b border-zinc-800/80">
+            {/* Interactive File Tree Visualizer - Next.js Monochrome */}
+            <div className="rounded-lg border border-zinc-800 bg-black/80 p-4 sm:p-5">
+              <div className="flex items-center justify-between pb-3 mb-3 border-b border-zinc-850">
                 <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
-                  <FolderOpen className="h-4 w-4 text-amber-400" />
+                  <FolderOpen className="h-3.5 w-3.5 text-zinc-400" />
                   <span>my-project/</span>
                 </div>
                 <div className="text-[11px] font-mono text-zinc-400 flex items-center gap-2">
-                  <span>Compiler Engine:</span>
+                  <span className="text-zinc-500">Compiler:</span>
                   {animStep === 0 && (
                     <span className="text-zinc-400">Awaiting .skill file extension</span>
                   )}
                   {animStep === 1 && (
-                    <span className="text-blue-400 animate-pulse">Detected .skill extension...</span>
+                    <span className="text-zinc-200 animate-pulse font-medium">Detected .skill extension...</span>
                   )}
                   {animStep === 2 && (
-                    <span className="text-amber-400 animate-pulse">Emitting Shadow Projection...</span>
+                    <span className="text-zinc-200 animate-pulse font-medium">Emitting Shadow Projection...</span>
                   )}
                   {animStep === 3 && (
-                    <span className="text-emerald-400 flex items-center gap-1 font-semibold">
-                      <Check className="h-3 w-3" /> Synchronized Projection
+                    <span className="text-white flex items-center gap-1 font-medium">
+                      <Check className="h-3 w-3 text-zinc-300" /> Synchronized Projection
                     </span>
                   )}
                 </div>
@@ -708,7 +715,7 @@ def guard_payload(ctx, input):
               <div className="font-mono text-xs space-y-2 pl-2 sm:pl-4">
                 {/* Folder skills/ */}
                 <div className="flex items-center gap-2 text-zinc-300">
-                  <Folder className="h-4 w-4 text-amber-400/90" />
+                  <Folder className="h-3.5 w-3.5 text-zinc-400" />
                   <span>skills/</span>
                 </div>
 
@@ -719,23 +726,23 @@ def guard_payload(ctx, input):
                     onClick={() => animStep >= 1 && setSelectedFileInTree("skill")}
                     className={`flex flex-wrap items-center justify-between p-2 rounded-lg cursor-pointer transition-all ${
                       selectedFileInTree === "skill" && animStep >= 1
-                        ? "bg-blue-500/10 border border-blue-500/30"
-                        : "hover:bg-zinc-800/60 border border-transparent"
+                        ? "bg-zinc-800/80 border border-zinc-700 text-white"
+                        : "hover:bg-zinc-900 border border-transparent text-zinc-300"
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
                       {animStep === 0 ? (
-                        <FileText className="h-4 w-4 text-zinc-500" />
+                        <FileText className="h-3.5 w-3.5 text-zinc-500" />
                       ) : (
-                        <FileCode className="h-4 w-4 text-blue-400" />
+                        <FileCode className="h-3.5 w-3.5 text-zinc-300" />
                       )}
                       <span
                         className={`font-semibold ${
                           animStep === 0
                             ? "text-zinc-400"
                             : animStep === 1
-                            ? "text-blue-300 font-bold underline"
-                            : "text-blue-400"
+                            ? "text-white underline font-bold"
+                            : "text-zinc-200"
                         }`}
                       >
                         {animStep === 0 ? "english-only-guard.txt" : "english-only-guard.skill"}
@@ -749,8 +756,8 @@ def guard_payload(ctx, input):
                         </span>
                       )}
                       {animStep >= 1 && (
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 font-sans font-medium">
-                          Atomic Canonical Source
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-850 text-zinc-300 border border-zinc-750 font-sans font-medium">
+                          Canonical Source
                         </span>
                       )}
                     </div>
@@ -758,8 +765,8 @@ def guard_payload(ctx, input):
 
                   {/* Compiling Feedback Banner (Fase 2) */}
                   {animStep === 2 && (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs animate-pulse">
-                      <Sparkles className="h-3.5 w-3.5 animate-spin text-amber-400" />
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-200 text-xs animate-pulse">
+                      <Sparkles className="h-3 w-3 text-zinc-300" />
                       <span>Compiling AST &amp; generating mirror shadow markdown...</span>
                     </div>
                   )}
@@ -770,21 +777,21 @@ def guard_payload(ctx, input):
                       onClick={() => setSelectedFileInTree("md")}
                       className={`flex flex-wrap items-center justify-between p-2 rounded-lg cursor-pointer transition-all ${
                         selectedFileInTree === "md"
-                          ? "bg-emerald-500/10 border border-emerald-500/30"
-                          : "hover:bg-zinc-800/60 border border-transparent bg-zinc-950/40"
+                          ? "bg-zinc-800/80 border border-zinc-700 text-white"
+                          : "hover:bg-zinc-900 border border-transparent bg-zinc-950/40 text-zinc-300"
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <Sparkles className="h-4 w-4 text-emerald-400" />
-                        <span className="text-emerald-400 font-semibold">
+                        <Sparkles className="h-3.5 w-3.5 text-zinc-400" />
+                        <span className="text-zinc-300 font-semibold">
                           english-only-guard.skill.md
                         </span>
                       </div>
 
                       <div className="flex items-center gap-2 mt-1 sm:mt-0">
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-sans font-semibold flex items-center gap-1">
-                          <Check className="h-2.5 w-2.5" />
-                          Auto-generated: Shadow Projection
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-850 text-zinc-300 border border-zinc-750 font-sans font-semibold flex items-center gap-1">
+                          <Check className="h-2.5 w-2.5 text-zinc-300" />
+                          Auto-generated Shadow
                         </span>
                       </div>
                     </div>
@@ -793,9 +800,9 @@ def guard_payload(ctx, input):
               </div>
 
               {/* CLI Command Helper */}
-              <div className="mt-4 pt-3 border-t border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-zinc-400">
+              <div className="mt-4 pt-3 border-t border-zinc-850 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-zinc-400">
                 <span>Create via terminal:</span>
-                <div className="flex items-center gap-2 font-mono bg-black/60 px-3 py-1.5 rounded border border-zinc-800">
+                <div className="flex items-center gap-2 font-mono bg-zinc-950 px-3 py-1.5 rounded border border-zinc-800">
                   <span className="text-zinc-300">
                     mkdir -p skills &amp;&amp; touch skills/english-only-guard.skill
                   </span>
@@ -809,7 +816,7 @@ def guard_payload(ctx, input):
                     className="text-zinc-400 hover:text-white"
                   >
                     {copiedKey === "cli-skill" ? (
-                      <Check className="h-3.5 w-3.5 text-emerald-400" />
+                      <Check className="h-3.5 w-3.5 text-white" />
                     ) : (
                       <Copy className="h-3.5 w-3.5" />
                     )}
@@ -823,7 +830,7 @@ def guard_payload(ctx, input):
           <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2.5">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/20 border border-blue-500/30 text-xs font-mono font-bold text-blue-400">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-900 border border-zinc-700 text-xs font-mono font-bold text-white">
                   2
                 </span>
                 <h3 className="text-base font-semibold text-white">
@@ -837,7 +844,7 @@ def guard_payload(ctx, input):
                   onClick={() => setSelectedFileInTree("skill")}
                   className={`px-2.5 py-1 text-xs font-mono rounded-md transition-all ${
                     selectedFileInTree === "skill"
-                      ? "bg-blue-600 text-white font-medium"
+                      ? "bg-zinc-800 text-white font-semibold border border-zinc-700 shadow-sm"
                       : "text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
@@ -847,7 +854,7 @@ def guard_payload(ctx, input):
                   onClick={() => setSelectedFileInTree("md")}
                   className={`flex items-center gap-1 px-2.5 py-1 text-xs font-mono rounded-md transition-all ${
                     selectedFileInTree === "md"
-                      ? "bg-emerald-600 text-white font-medium"
+                      ? "bg-zinc-800 text-white font-semibold border border-zinc-700 shadow-sm"
                       : "text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
@@ -878,13 +885,7 @@ def guard_payload(ctx, input):
                       ? "skills/english-only-guard.skill"
                       : "skills/english-only-guard.skill.md"}
                   </span>
-                  <span
-                    className={`text-[10px] px-2 py-0.5 rounded border ${
-                      selectedFileInTree === "skill"
-                        ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
-                        : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                    }`}
-                  >
+                  <span className="text-[10px] px-2 py-0.5 rounded border bg-zinc-850 text-zinc-300 border-zinc-750">
                     {selectedFileInTree === "skill" ? "Canonical Source" : "Mirror Shadow Projection"}
                   </span>
                 </div>
@@ -895,16 +896,16 @@ def guard_payload(ctx, input):
                       "code-skill"
                     )
                   }
-                  className="flex items-center gap-1.5 text-zinc-400 hover:text-white px-2 py-1 rounded bg-zinc-800/60 border border-zinc-700/50 text-[11px]"
+                  className="flex items-center gap-1.5 text-zinc-300 hover:text-white px-2 py-1 rounded bg-zinc-850 border border-zinc-750 text-[11px] transition-colors"
                 >
                   {copiedKey === "code-skill" ? (
                     <>
-                      <Check className="h-3 w-3 text-emerald-400" />
-                      <span className="text-emerald-400">Copied!</span>
+                      <Check className="h-3 w-3 text-white" />
+                      <span className="text-white font-medium">Copied!</span>
                     </>
                   ) : (
                     <>
-                      <Copy className="h-3 w-3" />
+                      <Copy className="h-3 w-3 text-zinc-400" />
                       <span>Copy Code</span>
                     </>
                   )}
@@ -926,15 +927,15 @@ def guard_payload(ctx, input):
           {/* Step 1 Card */}
           <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5 sm:p-6">
             <div className="flex items-center gap-2.5 mb-3">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 border border-emerald-500/30 text-xs font-mono font-bold text-emerald-400">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-900 border border-zinc-700 text-xs font-mono font-bold text-white">
                 1
               </span>
               <h3 className="text-base font-semibold text-white">
-                Step 1: Create your <code className="text-emerald-400">.tool</code> file
+                Step 1: Create your <code className="text-zinc-200 font-mono">.tool</code> file
               </h3>
             </div>
             <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed mb-4">
-              Unlike a <code className="text-zinc-200 font-mono">.skill</code>, a <code className="text-emerald-400 font-mono">.tool</code> file is a <strong>pure atomic MCP tool</strong>. It generates zero shadow <code className="text-zinc-200 font-mono">.md</code> files because it is consumed directly by agent tool-call runtimes without ambient markdown overhead.
+              Unlike a <code className="text-zinc-200 font-mono">.skill</code>, a <code className="text-zinc-200 font-mono">.tool</code> file is a <strong>pure atomic MCP tool</strong>. It generates zero shadow <code className="text-zinc-200 font-mono">.md</code> files because it is consumed directly by agent tool-call runtimes without ambient markdown overhead.
             </p>
 
             <div className="flex items-center justify-between font-mono text-xs bg-black/60 p-3 rounded-lg border border-zinc-800">
@@ -945,12 +946,12 @@ def guard_payload(ctx, input):
                 onClick={() =>
                   handleCopy("mkdir -p tools && touch tools/news-webfetch.tool", "cli-tool")
                 }
-                className="flex items-center gap-1 text-zinc-400 hover:text-white px-2 py-1 rounded bg-zinc-800/60 border border-zinc-700/50 text-[11px]"
+                className="flex items-center gap-1 text-zinc-300 hover:text-white px-2 py-1 rounded bg-zinc-850 border border-zinc-750 text-[11px] transition-colors"
               >
                 {copiedKey === "cli-tool" ? (
-                  <Check className="h-3 w-3 text-emerald-400" />
+                  <Check className="h-3 w-3 text-white" />
                 ) : (
-                  <Copy className="h-3 w-3" />
+                  <Copy className="h-3 w-3 text-zinc-400" />
                 )}
                 <span>Copy</span>
               </button>
@@ -961,12 +962,12 @@ def guard_payload(ctx, input):
           <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2.5">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 border border-emerald-500/30 text-xs font-mono font-bold text-emerald-400">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-900 border border-zinc-700 text-xs font-mono font-bold text-white">
                   2
                 </span>
                 <div>
                   <h3 className="text-base font-semibold text-white">
-                    Step 2: Production Tool: <code className="text-emerald-400">webfetch</code> for News Portals
+                    Step 2: Production Tool: <code className="text-zinc-200 font-mono">webfetch</code> for News Portals
                   </h3>
                   <span className="text-xs text-zinc-400">
                     Network access to approved news outlets (BBC, Reuters, TechCrunch, Hacker News) bounded by OCap.
@@ -975,8 +976,8 @@ def guard_payload(ctx, input):
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-mono text-emerald-400">
-                  <Shield className="h-3 w-3" />
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-300">
+                  <Shield className="h-3 w-3 text-zinc-400" />
                   <span>OCap: Net Whitelist</span>
                 </span>
               </div>
@@ -992,16 +993,16 @@ def guard_payload(ctx, input):
                 <span className="text-zinc-300 font-medium">tools/news-webfetch.tool</span>
                 <button
                   onClick={() => handleCopy(TOOL_CODE, "code-tool")}
-                  className="flex items-center gap-1.5 text-zinc-400 hover:text-white px-2 py-1 rounded bg-zinc-800/60 border border-zinc-700/50 text-[11px]"
+                  className="flex items-center gap-1.5 text-zinc-300 hover:text-white px-2 py-1 rounded bg-zinc-850 border border-zinc-750 text-[11px] transition-colors"
                 >
                   {copiedKey === "code-tool" ? (
                     <>
-                      <Check className="h-3 w-3 text-emerald-400" />
-                      <span className="text-emerald-400">Copied!</span>
+                      <Check className="h-3 w-3 text-white" />
+                      <span className="text-white font-medium">Copied!</span>
                     </>
                   ) : (
                     <>
-                      <Copy className="h-3 w-3" />
+                      <Copy className="h-3 w-3 text-zinc-400" />
                       <span>Copy Code</span>
                     </>
                   )}
@@ -1023,15 +1024,15 @@ def guard_payload(ctx, input):
           {/* Step 1 Card */}
           <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5 sm:p-6">
             <div className="flex items-center gap-2.5 mb-3">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-500/20 border border-purple-500/30 text-xs font-mono font-bold text-purple-400">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-900 border border-zinc-700 text-xs font-mono font-bold text-white">
                 1
               </span>
               <h3 className="text-base font-semibold text-white">
-                Step 1: Create your <code className="text-purple-400">.asl</code> file
+                Step 1: Create your <code className="text-zinc-200 font-mono">.asl</code> file
               </h3>
             </div>
             <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed mb-4">
-              Files with <code className="text-purple-400 font-mono">.asl</code> extension are pure root language units. Create reusable libraries, mathematical routines, data pipelines, or security firewalls that execute at native Rust speed with bounded monotonic fuel guarantees.
+              Files with <code className="text-zinc-200 font-mono">.asl</code> extension are pure root language units. Create reusable libraries, mathematical routines, data pipelines, or security firewalls that execute at native Rust speed with bounded monotonic fuel guarantees.
             </p>
 
             <div className="flex items-center justify-between font-mono text-xs bg-black/60 p-3 rounded-lg border border-zinc-800">
@@ -1042,12 +1043,12 @@ def guard_payload(ctx, input):
                 onClick={() =>
                   handleCopy("mkdir -p modules && touch modules/token-budget-guard.asl", "cli-asl")
                 }
-                className="flex items-center gap-1 text-zinc-400 hover:text-white px-2 py-1 rounded bg-zinc-800/60 border border-zinc-700/50 text-[11px]"
+                className="flex items-center gap-1 text-zinc-300 hover:text-white px-2 py-1 rounded bg-zinc-850 border border-zinc-750 text-[11px] transition-colors"
               >
                 {copiedKey === "cli-asl" ? (
-                  <Check className="h-3 w-3 text-emerald-400" />
+                  <Check className="h-3 w-3 text-white" />
                 ) : (
-                  <Copy className="h-3 w-3" />
+                  <Copy className="h-3 w-3 text-zinc-400" />
                 )}
                 <span>Copy</span>
               </button>
@@ -1058,7 +1059,7 @@ def guard_payload(ctx, input):
           <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div className="flex items-center gap-2.5">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-500/20 border border-purple-500/30 text-xs font-mono font-bold text-purple-400">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-zinc-900 border border-zinc-700 text-xs font-mono font-bold text-white">
                   2
                 </span>
                 <div>
@@ -1072,8 +1073,8 @@ def guard_payload(ctx, input):
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-[11px] font-mono text-purple-400">
-                  <Cpu className="h-3 w-3" />
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-300">
+                  <Cpu className="h-3 w-3 text-zinc-400" />
                   <span>Monotonic Fuel &amp; Zero Latency</span>
                 </span>
               </div>
@@ -1089,16 +1090,16 @@ def guard_payload(ctx, input):
                 <span className="text-zinc-300 font-medium">modules/token-budget-guard.asl</span>
                 <button
                   onClick={() => handleCopy(ASL_CODE, "code-asl")}
-                  className="flex items-center gap-1.5 text-zinc-400 hover:text-white px-2 py-1 rounded bg-zinc-800/60 border border-zinc-700/50 text-[11px]"
+                  className="flex items-center gap-1.5 text-zinc-300 hover:text-white px-2 py-1 rounded bg-zinc-850 border border-zinc-750 text-[11px] transition-colors"
                 >
                   {copiedKey === "code-asl" ? (
                     <>
-                      <Check className="h-3 w-3 text-emerald-400" />
-                      <span className="text-emerald-400">Copied!</span>
+                      <Check className="h-3 w-3 text-white" />
+                      <span className="text-white font-medium">Copied!</span>
                     </>
                   ) : (
                     <>
-                      <Copy className="h-3 w-3" />
+                      <Copy className="h-3 w-3 text-zinc-400" />
                       <span>Copy Code</span>
                     </>
                   )}
