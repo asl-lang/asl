@@ -200,3 +200,26 @@ signature: fake signature
     let doc_tampered = parser.parse(tampered).unwrap();
     assert_ne!(doc_base.digest, doc_tampered.digest, "Lines in markdown body MUST alter digest even if starting with digest: or signature:");
 }
+
+#[test]
+fn test_tolerant_raw_markdown_ingestion_without_frontmatter() {
+    let raw_md = r#"# My Awesome Custom Skill
+This is an imported markdown skill without YAML frontmatter.
+
+Execute this command carefully.
+"#;
+    let parser = CommonMarkYamlParser::new();
+    let doc = parser
+        .parse(raw_md)
+        .expect("Raw markdown without frontmatter must parse tolerantly per ADR-0015");
+    assert_eq!(doc.manifest.asl_version, "3.0");
+    assert_eq!(doc.manifest.name, "my-awesome-custom-skill");
+    assert_eq!(
+        doc.manifest.description,
+        "This is an imported markdown skill without YAML frontmatter."
+    );
+    assert_eq!(doc.manifest.interface.entrypoint, "run");
+    assert!(doc.deterministic_code.contains("def run(ctx, input):"));
+    assert!(doc.digest.starts_with("asl:sha256:"));
+}
+

@@ -24,13 +24,12 @@ fn test_greenfield_empty_and_whitespace_scaffold_or_rejected() {
         assert_eq!(doc.manifest.name, "draft-skill");
     }
 
-    // Non-empty content without frontmatter delimiters must be rejected
-    let res = parser.parse("# Apenas comentário solto\n");
-    assert!(res.is_err(), "Deveria rejeitar conteúdo sem delimitadores de frontmatter");
-    match res.unwrap_err() {
-        AslError::InvalidFrontmatter(_) => {}
-        other => panic!("Esperado InvalidFrontmatter, obtido: {:?}", other),
-    }
+    // ADR-0015: Non-empty markdown content without frontmatter delimiters is ingested tolerantly
+    let res = parser.parse("# Loose markdown comment\n");
+    assert!(res.is_ok(), "ADR-0015: Raw markdown without frontmatter must parse tolerantly");
+    let doc = res.unwrap();
+    assert_eq!(doc.manifest.asl_version, "3.0");
+    assert_eq!(doc.manifest.name, "loose-markdown-comment");
 }
 
 #[test]

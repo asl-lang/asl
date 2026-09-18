@@ -39,41 +39,53 @@ impl ParserPort for CommonMarkYamlParser {
         // 1. Extração do Frontmatter YAML delimitado por ---
         let (frontmatter_str, markdown_str) = extract_frontmatter_and_markdown(raw_content)?;
 
-        // 2. Parse YAML into SkillManifest
-        let manifest: SkillManifest = serde_yaml::from_str(&frontmatter_str)
-            .map_err(|e| AslError::InvalidFrontmatter(e.to_string()))?;
+        // 2. Parse YAML into SkillManifest or infer from Markdown (ADR-0015)
+        let manifest = if frontmatter_str.trim().is_empty() {
+            infer_manifest_from_markdown(&markdown_str)
+        } else {
+            let m: SkillManifest = serde_yaml::from_str(&frontmatter_str)
+                .map_err(|e| AslError::InvalidFrontmatter(e.to_string()))?;
+            m
+        };
         manifest.validate()?;
 
         // 3. Canonical digest calculation: signature fields are omitted EXCLUSIVELY from the frontmatter
         let mut hasher = Sha256::new();
-        let mut in_frontmatter = false;
-        let mut frontmatter_ended = false;
+        if frontmatter_str.trim().is_empty() {
+            for line in raw_content.lines() {
+                hasher.update(line.as_bytes());
+                hasher.update(b"\n");
+            }
+        } else {
+            let mut in_frontmatter = false;
+            let mut frontmatter_ended = false;
 
-        for line in raw_content.lines() {
-            let trimmed = line.trim();
-            if !in_frontmatter && !frontmatter_ended {
-                if trimmed == "---" {
-                    in_frontmatter = true;
-                }
-                hasher.update(line.as_bytes());
-                hasher.update(b"\n");
-            } else if in_frontmatter && !frontmatter_ended {
-                if trimmed == "---" {
-                    in_frontmatter = false;
-                    frontmatter_ended = true;
+            for line in raw_content.lines() {
+                let trimmed = line.trim();
+                if !in_frontmatter && !frontmatter_ended {
+                    if trimmed == "---" {
+                        in_frontmatter = true;
+                    }
                     hasher.update(line.as_bytes());
                     hasher.update(b"\n");
-                } else if !trimmed.starts_with("digest:")
-                    && !trimmed.starts_with("signature:")
-                    && !trimmed.starts_with("signer_pubkey:")
-                {
+                } else if in_frontmatter && !frontmatter_ended {
+                    if trimmed == "---" {
+                        in_frontmatter = false;
+                        frontmatter_ended = true;
+                        hasher.update(line.as_bytes());
+                        hasher.update(b"\n");
+                    } else if !trimmed.starts_with("digest:")
+                        && !trimmed.starts_with("signature:")
+                        && !trimmed.starts_with("signer_pubkey:")
+                    {
+                        hasher.update(line.as_bytes());
+                        hasher.update(b"\n");
+                    }
+                } else {
+                    // Markdown body and code: all lines included in digest
                     hasher.update(line.as_bytes());
                     hasher.update(b"\n");
                 }
-            } else {
-                // Corpo Markdown e código: NENHUMA linha é omitida do digest
-                hasher.update(line.as_bytes());
-                hasher.update(b"\n");
             }
         }
         let digest = format!("asl:sha256:{}", hex::encode(hasher.finalize()));
@@ -116,6 +128,52 @@ impl ParserPort for CommonMarkYamlParser {
     }
 }
 
+fn infer_manifest_from_markdown(markdown: &str) -> SkillManifest {
+    let mut name = None;
+    let mut desc = None;
+
+    for line in markdown.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with("<!--") || trimmed.starts_with("#!") {
+            continue;
+        }
+        if name.is_none() && trimmed.starts_with('#') {
+            let header_text = trimmed.trim_start_matches('#').trim();
+            if !header_text.is_empty() {
+                let clean_name: String = header_text
+                    .chars()
+                    .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '-' })
+                    .collect();
+                let clean_name = clean_name.trim_matches('-').to_lowercase();
+                if !clean_name.is_empty() {
+                    name = Some(clean_name);
+                    continue;
+                }
+            }
+        }
+        if desc.is_none() && !trimmed.starts_with('#') && !trimmed.starts_with("```") {
+            desc = Some(trimmed.to_string());
+        }
+        if name.is_some() && desc.is_some() {
+            break;
+        }
+    }
+
+    SkillManifest {
+        asl_version: "3.0".to_string(),
+        name: name.unwrap_or_else(|| "legacy-skill".to_string()),
+        description: desc.unwrap_or_else(|| "Imported markdown skill".to_string()),
+        interface: asl_spec::SkillInterface::default(),
+        capabilities: asl_spec::SkillCapabilities::default(),
+        limits: asl_spec::SkillLimits::default(),
+        digest: None,
+        signature: None,
+        signer_pubkey: None,
+        version: None,
+        license: None,
+    }
+}
+
 fn extract_frontmatter_and_markdown(content: &str) -> Result<(String, String)> {
     if content.trim().is_empty() {
         return Ok((String::new(), String::new()));
@@ -147,9 +205,15 @@ fn extract_frontmatter_and_markdown(content: &str) -> Result<(String, String)> {
                 frontmatter_started = true;
                 continue;
             }
-            return Err(AslError::InvalidFrontmatter(
-                "Expected '---' frontmatter opening delimiter.".to_string(),
-            ));
+            if trimmed.starts_with("asl_version:") {
+                return Err(AslError::InvalidFrontmatter(
+                    "Expected '---' frontmatter opening delimiter.".to_string(),
+                ));
+            }
+            // Tolerant legacy markdown ingestion (ADR-0015):
+            // When renaming an existing markdown file or creating a markdown-first skill
+            // without YAML delimiters, ingest entire content as markdown.
+            return Ok((String::new(), content.to_string()));
         } else if !frontmatter_ended {
             if trimmed == "---" {
                 frontmatter_ended = true;
