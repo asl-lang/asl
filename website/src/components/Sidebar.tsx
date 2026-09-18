@@ -34,6 +34,7 @@ export const DOCS_NAV: NavSection[] = [
     title: "Getting Started",
     items: [
       { title: "Overview & Philosophy", href: "/docs", icon: BookOpen },
+      { title: "Real-World Projects & Use Cases", href: "/docs/use-cases", icon: Sparkles, badge: "Blueprint" },
       { title: "CLI & Tooling Reference", href: "/docs/cli", icon: Terminal },
     ],
   },
