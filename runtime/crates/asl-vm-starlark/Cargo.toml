@@ -10,3 +10,4 @@ asl-core-traits.workspace = true
 serde_json.workspace = true
 starlark.workspace = true
 anyhow.workspace = true
+regex.workspace = true

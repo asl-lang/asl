@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight, Terminal, Shield, Layers, Cpu, Code2, Check, Copy } from "lucide-react";
 import { CodeSwitcher } from "@/components/CodeSwitcher";
 import { PlaygroundSimulator } from "@/components/PlaygroundSimulator";
+import { QuickstartExamples } from "@/components/QuickstartExamples";
 
 export default function HomePage() {
   return (
@@ -64,6 +65,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Hands-on Simple Examples: Skill, Tool, ASL */}
+      <QuickstartExamples />
 
       {/* Code Architecture Triad Section */}
       <section className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8 border-t border-zinc-800">
