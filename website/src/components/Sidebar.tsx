@@ -14,6 +14,9 @@ import {
   Menu,
   X,
   ChevronRight,
+  Sparkles,
+  Binary,
+  Workflow,
 } from "lucide-react";
 
 export interface NavSection {
@@ -35,18 +38,27 @@ export const DOCS_NAV: NavSection[] = [
     ],
   },
   {
-    title: "Language Specification",
+    title: "Language Reference",
     items: [
-      { title: "Syntax Reference", href: "/docs/syntax", icon: Code2, badge: "Spec" },
+      { title: "Syntax & File Anatomy", href: "/docs/syntax", icon: Code2, badge: "Spec" },
+      { title: "Types & Data Model", href: "/docs/types", icon: Binary, badge: "Manual" },
+      { title: "Variables, Loops & Functions", href: "/docs/control-flow", icon: Workflow, badge: "Manual" },
+      { title: "Standard Library & Builtins", href: "/docs/stdlib", icon: Terminal, badge: "API" },
+      { title: "Capability Context (ctx)", href: "/docs/context", icon: Shield, badge: "OCap" },
+      { title: "Declarative Rules (asl:rules)", href: "/docs/rules", icon: Sparkles, badge: "DSL" },
+    ],
+  },
+  {
+    title: "Architecture & Specs",
+    items: [
       { title: "The Triad (.skill, .tool, .asl)", href: "/docs/triad", icon: Layers },
-      { title: "Declarative Rules (asl:rules)", href: "/docs/rules", icon: BookOpen },
       { title: "The 7 Axioms & OCap", href: "/docs/axioms", icon: Shield },
+      { title: "Tokenomics & KV-Cache", href: "/docs/tokenomics", icon: Terminal },
     ],
   },
   {
     title: "Foundation & Ecosystem",
     items: [
-      { title: "Tokenomics & KV-Cache", href: "/docs/tokenomics", icon: Terminal },
       { title: "Scientific Paper", href: "/paper", icon: FileText, badge: "Full-Text" },
       { title: "WebAssembly Playground", href: "/playground", icon: Cpu },
     ],
