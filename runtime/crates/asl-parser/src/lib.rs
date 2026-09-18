@@ -5,7 +5,10 @@ pub mod shadow;
 
 pub use grammar::GbnfGrammarCompiler;
 pub use prefix_analyzer::*;
-pub use rules::{parse_rules, Action, GuardClause, MatchSection, PathExpr, PatternCondition, RulesBlock, WhenClause};
+pub use rules::{
+    parse_rules, Action, GuardClause, MatchSection, PathExpr, PatternCondition, RulesBlock,
+    WhenClause,
+};
 pub use shadow::*;
 
 use asl_core_traits::ParserPort;
@@ -29,19 +32,6 @@ impl Default for CommonMarkYamlParser {
 
 impl ParserPort for CommonMarkYamlParser {
     fn parse(&self, raw_content: &str) -> Result<SkillDocument> {
-        let mut hasher = Sha256::new();
-        for line in raw_content.lines() {
-            let trimmed = line.trim();
-            if !trimmed.starts_with("digest:")
-                && !trimmed.starts_with("signature:")
-                && !trimmed.starts_with("signer_pubkey:")
-            {
-                hasher.update(line.as_bytes());
-                hasher.update(b"\n");
-            }
-        }
-        let digest = format!("asl:sha256:{}", hex::encode(hasher.finalize()));
-
         // 1. Extração do Frontmatter YAML delimitado por ---
         let (frontmatter_str, markdown_str) = extract_frontmatter_and_markdown(raw_content)?;
 
@@ -50,7 +40,41 @@ impl ParserPort for CommonMarkYamlParser {
             .map_err(|e| AslError::InvalidFrontmatter(e.to_string()))?;
         manifest.validate()?;
 
-        // 3. Parse de Markdown com pulldown-cmark
+        // 3. Cálculo canônico de digest: campos de assinatura são omitidos EXCLUSIVAMENTE do frontmatter
+        let mut hasher = Sha256::new();
+        let mut in_frontmatter = false;
+        let mut frontmatter_ended = false;
+
+        for line in raw_content.lines() {
+            let trimmed = line.trim();
+            if !in_frontmatter && !frontmatter_ended {
+                if trimmed == "---" {
+                    in_frontmatter = true;
+                }
+                hasher.update(line.as_bytes());
+                hasher.update(b"\n");
+            } else if in_frontmatter && !frontmatter_ended {
+                if trimmed == "---" {
+                    in_frontmatter = false;
+                    frontmatter_ended = true;
+                    hasher.update(line.as_bytes());
+                    hasher.update(b"\n");
+                } else if !trimmed.starts_with("digest:")
+                    && !trimmed.starts_with("signature:")
+                    && !trimmed.starts_with("signer_pubkey:")
+                {
+                    hasher.update(line.as_bytes());
+                    hasher.update(b"\n");
+                }
+            } else {
+                // Corpo Markdown e código: NENHUMA linha é omitida do digest
+                hasher.update(line.as_bytes());
+                hasher.update(b"\n");
+            }
+        }
+        let digest = format!("asl:sha256:{}", hex::encode(hasher.finalize()));
+
+        // 4. Parse de Markdown com pulldown-cmark
         let parsed_blocks = parse_markdown_blocks(&markdown_str)?;
 
         let (deterministic_code, rules_code) = if let Some(rules_src) = parsed_blocks.rules_code {
@@ -58,14 +82,20 @@ impl ParserPort for CommonMarkYamlParser {
             let transpiler = rules::RulesTranspiler::new();
             let transpiled = transpiler.transpile(&rules_src, &manifest)?;
             let code = if !parsed_blocks.deterministic_code.trim().is_empty() {
-                format!("{}\n\n# --- CÓDIGO DETERMINÍSTICO MANUAL EMBUTIDO ---\n{}", transpiled.starlark_code, parsed_blocks.deterministic_code)
+                format!(
+                    "{}\n\n# --- CÓDIGO DETERMINÍSTICO MANUAL EMBUTIDO ---\n{}",
+                    transpiled.starlark_code, parsed_blocks.deterministic_code
+                )
             } else {
                 transpiled.starlark_code
             };
             (code, Some(rules_src))
         } else {
             let code = if parsed_blocks.deterministic_code.trim().is_empty() {
-                "def run(ctx, input):\n    return input".to_string()
+                format!(
+                    "def {}(ctx, input):\n    return input",
+                    manifest.interface.entrypoint
+                )
             } else {
                 parsed_blocks.deterministic_code
             };
@@ -81,7 +111,6 @@ impl ParserPort for CommonMarkYamlParser {
         })
     }
 }
-
 
 fn extract_frontmatter_and_markdown(content: &str) -> Result<(String, String)> {
     let mut in_comment = false;
@@ -306,7 +335,9 @@ interface:
 Você é um redator de documentação técnica.
 "#;
         let parser = CommonMarkYamlParser::new();
-        let doc = parser.parse(raw).expect("Skill puramente semântica deve ser válida");
+        let doc = parser
+            .parse(raw)
+            .expect("Skill puramente semântica deve ser válida");
         assert_eq!(doc.manifest.name, "pure-prompt");
         assert!(doc.deterministic_code.contains("def run(ctx, input)"));
         assert!(doc.semantic_section.contains("Instruções Puras de Prompt"));
@@ -335,10 +366,64 @@ match input.text:
 ```
 "#;
         let parser = CommonMarkYamlParser::new();
-        let doc = parser.parse(raw).expect("Skill com regras deve ser parseada e transpilada in-memory");
+        let doc = parser
+            .parse(raw)
+            .expect("Skill com regras deve ser parseada e transpilada in-memory");
         assert_eq!(doc.manifest.name, "rules-skill");
         assert!(doc.rules_code.is_some());
         assert!(doc.deterministic_code.contains("def validate(ctx, input):"));
-        assert!(doc.deterministic_code.contains("_asl_get(input, [\"text\"], \"\")"));
+        assert!(doc
+            .deterministic_code
+            .contains("_asl_get(input, [\"text\"], \"\")"));
+    }
+
+    #[test]
+    fn test_pure_semantic_skill_with_custom_entrypoint() {
+        let raw = r#"---
+asl_version: "3.0"
+name: "custom-ep-skill"
+interface:
+  entrypoint: "process_query"
+---
+# Prompt
+Apenas semântica.
+"#;
+        let parser = CommonMarkYamlParser::new();
+        let doc = parser
+            .parse(raw)
+            .expect("Skill sem código com custom ep deve ser válida");
+        assert_eq!(doc.manifest.interface.entrypoint, "process_query");
+        assert!(doc
+            .deterministic_code
+            .contains("def process_query(ctx, input):"));
+    }
+
+    #[test]
+    fn test_digest_includes_markdown_lines_starting_with_digest_or_signature() {
+        let base = r#"---
+asl_version: "3.0"
+name: "markdown-test"
+interface:
+  entrypoint: "run"
+---
+# Semantic Section
+Linha normal.
+"#;
+
+        let tampered = r#"---
+asl_version: "3.0"
+name: "markdown-test"
+interface:
+  entrypoint: "run"
+---
+# Semantic Section
+Linha normal.
+digest: alteracao maliciosa
+signature: assinatura falsa
+"#;
+        let parser = CommonMarkYamlParser::new();
+        let doc_base = parser.parse(base).unwrap();
+        let doc_tampered = parser.parse(tampered).unwrap();
+        assert_ne!(doc_base.digest, doc_tampered.digest, "Linhas no corpo do markdown DEVEM alterar o digest mesmo iniciando por digest: ou signature:");
     }
 }

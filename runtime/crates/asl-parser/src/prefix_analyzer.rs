@@ -22,7 +22,8 @@ pub struct PrefixAnalysisReport {
 /// Analisa a seção semântica para mensurar invariância e potencial de reuso do KV-cache
 pub fn analyze_semantic_prefix(semantic_text: &str) -> PrefixAnalysisReport {
     let trimmed = semantic_text.trim();
-    let total_semantic_chars = trimmed.len();
+    let chars: Vec<char> = trimmed.chars().collect();
+    let total_semantic_chars = chars.len();
     let total_estimated_tokens = total_semantic_chars.div_ceil(4);
 
     if total_semantic_chars == 0 {
@@ -42,7 +43,6 @@ pub fn analyze_semantic_prefix(semantic_text: &str) -> PrefixAnalysisReport {
     let mut hazards = Vec::new();
 
     // Varredura por marcadores dinâmicos: {{var}}, ${var}, ou {var}
-    let chars: Vec<char> = trimmed.chars().collect();
     let n = chars.len();
     let mut i = 0;
 
@@ -206,5 +206,14 @@ mod tests {
 
         let report = analyze_semantic_prefix(&optimized);
         assert!(report.projected_cache_hit_rate_pct > 40.0);
+    }
+
+    #[test]
+    fn test_unicode_chars_count_consistency() {
+        let text = "Olá mundo! Ação de teste número 1.";
+        let report = analyze_semantic_prefix(text);
+        assert_eq!(report.total_semantic_chars, text.chars().count());
+        assert_eq!(report.static_prefix_chars, text.chars().count());
+        assert_eq!(report.projected_cache_hit_rate_pct, 100.0);
     }
 }

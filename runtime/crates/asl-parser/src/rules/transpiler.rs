@@ -1,8 +1,8 @@
 //! Gerador de código Strict Starlark L1 e verificador AOT para a linguagem ASL Rules.
 
 use super::ast::*;
-use super::parser::Parser;
 use super::lexer::Lexer;
+use super::parser::Parser;
 use asl_core_traits::{RulesTranspilerPort, SourceMapEntry, TranspilationResult};
 use asl_spec::{AslError, Result, SkillManifest};
 use starlark::syntax::{AstModule, Dialect};
@@ -22,18 +22,28 @@ impl Default for RulesTranspiler {
 }
 
 impl RulesTranspilerPort for RulesTranspiler {
-    fn transpile(&self, rules_source: &str, manifest: &SkillManifest) -> Result<TranspilationResult> {
+    fn transpile(
+        &self,
+        rules_source: &str,
+        manifest: &SkillManifest,
+    ) -> Result<TranspilationResult> {
         let lexer = Lexer::new(rules_source);
-        let tokens = lexer.tokenize().map_err(|e| AslError::RulesTranspileError(format!("Erro léxico: {}", e)))?;
+        let tokens = lexer
+            .tokenize()
+            .map_err(|e| AslError::RulesTranspileError(format!("Erro léxico: {}", e)))?;
         let mut parser = Parser::new(tokens);
-        let block = parser.parse_rules_block().map_err(|e| AslError::RulesTranspileError(format!("Erro sintático: {}", e)))?;
+        let block = parser
+            .parse_rules_block()
+            .map_err(|e| AslError::RulesTranspileError(format!("Erro sintático: {}", e)))?;
 
         let mut lines = Vec::new();
         let mut source_map = Vec::new();
         let mut static_invariants = Vec::new();
 
         // 1. Preâmbulo Universal Hermético L1
-        lines.push("# --- PREÂMBULO STRICT STARLARK L1 GERADO PELO ASL RULES TRANSPILER ---".to_string());
+        lines.push(
+            "# --- PREÂMBULO STRICT STARLARK L1 GERADO PELO ASL RULES TRANSPILER ---".to_string(),
+        );
         lines.push("def _asl_get(obj, path, default=None):".to_string());
         lines.push("    curr = obj".to_string());
         lines.push("    for key in path:".to_string());
@@ -82,14 +92,20 @@ impl RulesTranspilerPort for RulesTranspiler {
             let var_name = format!("_g_{}", i);
             let path_get = render_path_get(&guard.target);
             lines.push(format!("    {} = {}", var_name, path_get));
-            static_invariants.push(format!("guard:{}:{}", guard.target.to_dotted(), guard.error_msg));
+            static_invariants.push(format!(
+                "guard:{}:{}",
+                guard.target.to_dotted(),
+                guard.error_msg
+            ));
 
             let condition_expr = match &guard.condition {
                 GuardCondition::IsNotEmpty => format!("len(str({}).strip()) == 0", var_name),
                 GuardCondition::IsEmpty => format!("len(str({}).strip()) > 0", var_name),
                 GuardCondition::IsTrue => format!("{} != True", var_name),
                 GuardCondition::IsFalse => format!("{} != False", var_name),
-                GuardCondition::CompareOp(op, val) => format!("not ({} {} {})", var_name, op, escape_str(val)),
+                GuardCondition::CompareOp(op, val) => {
+                    format!("not ({} {} {})", var_name, op, escape_str(val))
+                }
             };
 
             lines.push(format!("    if {}:", condition_expr));
@@ -114,13 +130,21 @@ impl RulesTranspilerPort for RulesTranspiler {
                 match &when.condition {
                     PatternCondition::StartsWithAny(prefixes) => {
                         let pref_var = format!("_p_{}_{}", m_idx, w_idx);
-                        let prefixes_json = serde_json::to_string(prefixes).unwrap_or_else(|_| "[]".to_string());
-                        lines.push(format!("    {} = _asl_starts_with_any({}, {})", pref_var, target_var, prefixes_json));
+                        let prefixes_json =
+                            serde_json::to_string(prefixes).unwrap_or_else(|_| "[]".to_string());
+                        lines.push(format!(
+                            "    {} = _asl_starts_with_any({}, {})",
+                            pref_var, target_var, prefixes_json
+                        ));
                     }
                     PatternCondition::EndsWithAny(suffixes) => {
                         let suff_var = format!("_s_{}_{}", m_idx, w_idx);
-                        let suffixes_json = serde_json::to_string(suffixes).unwrap_or_else(|_| "[]".to_string());
-                        lines.push(format!("    {} = _asl_ends_with_any({}, {})", suff_var, target_var, suffixes_json));
+                        let suffixes_json =
+                            serde_json::to_string(suffixes).unwrap_or_else(|_| "[]".to_string());
+                        lines.push(format!(
+                            "    {} = _asl_ends_with_any({}, {})",
+                            suff_var, target_var, suffixes_json
+                        ));
                     }
                     _ => {}
                 }
@@ -146,15 +170,27 @@ impl RulesTranspilerPort for RulesTranspiler {
                         }
                     }
                     PatternCondition::ContainsAny(needles) => {
-                        let needles_json = serde_json::to_string(needles).unwrap_or_else(|_| "[]".to_string());
-                        lines.push(format!("    {} _asl_contains_any({}, {}):", if_keyword, target_var, needles_json));
+                        let needles_json =
+                            serde_json::to_string(needles).unwrap_or_else(|_| "[]".to_string());
+                        lines.push(format!(
+                            "    {} _asl_contains_any({}, {}):",
+                            if_keyword, target_var, needles_json
+                        ));
                     }
                     PatternCondition::Equals(expr) => {
                         let expr_str = render_value_expr(expr);
-                        lines.push(format!("    {} {} == {}:", if_keyword, target_var, expr_str));
+                        lines.push(format!(
+                            "    {} {} == {}:",
+                            if_keyword, target_var, expr_str
+                        ));
                     }
                     PatternCondition::MatchesRegex(pattern) => {
-                        lines.push(format!("    {} True: # Regex fallback: {}", if_keyword, escape_str(pattern)));
+                        lines.push(format!(
+                            "    {} _asl_matches_regex({}, {}):",
+                            if_keyword,
+                            target_var,
+                            escape_str(pattern)
+                        ));
                     }
                 }
 
@@ -169,18 +205,27 @@ impl RulesTranspilerPort for RulesTranspiler {
             }
 
             // Otherwise no Match
+            let is_last_match = m_idx + 1 == block.matches.len();
             if let Some(oth) = &match_sec.otherwise {
+                if !is_last_match {
+                    return Err(AslError::RulesTranspileError(
+                        "Cláusula 'otherwise' em match intermediário torna matches posteriores inalcançáveis.".to_string(),
+                    ));
+                }
                 lines.push("    else:".to_string());
                 let action_code = render_action(oth, manifest);
                 lines.push(format!("        return {}", action_code));
-            } else if let Some(global_oth) = &block.otherwise {
-                lines.push("    else:".to_string());
-                let action_code = render_action(global_oth, manifest);
-                lines.push(format!("        return {}", action_code));
-            } else {
-                return Err(AslError::RulesTranspileError(
-                    "Exaustividade violada: O bloco 'match' requer cláusula 'otherwise:'.".to_string(),
-                ));
+            } else if is_last_match {
+                if let Some(global_oth) = &block.otherwise {
+                    lines.push("    else:".to_string());
+                    let action_code = render_action(global_oth, manifest);
+                    lines.push(format!("        return {}", action_code));
+                } else {
+                    return Err(AslError::RulesTranspileError(
+                        "Exaustividade violada: O bloco 'match' requer cláusula 'otherwise:'."
+                            .to_string(),
+                    ));
+                }
             }
         }
 
@@ -199,12 +244,14 @@ impl RulesTranspilerPort for RulesTranspiler {
 
         // 5. Verificação AOT em Memória via AstModule
         let dialect = Dialect::Standard;
-        AstModule::parse("rules_transpiled.star", starlark_code.clone(), &dialect).map_err(|e| {
-            AslError::RulesTranspileError(format!(
-                "Falha na validação sintática AOT do código Starlark gerado: {}\nCódigo:\n{}",
-                e, starlark_code
-            ))
-        })?;
+        AstModule::parse("rules_transpiled.star", starlark_code.clone(), &dialect).map_err(
+            |e| {
+                AslError::RulesTranspileError(format!(
+                    "Falha na validação sintática AOT do código Starlark gerado: {}\nCódigo:\n{}",
+                    e, starlark_code
+                ))
+            },
+        )?;
 
         Ok(TranspilationResult {
             starlark_code,
@@ -225,10 +272,17 @@ fn render_value_expr(expr: &ValueExpr) -> String {
         ValueExpr::LiteralString(s) => escape_str(s),
         ValueExpr::LiteralInt(i) => i.to_string(),
         ValueExpr::LiteralFloat(f) => format!("{:.4}", f),
-        ValueExpr::LiteralBool(b) => if *b { "True".to_string() } else { "False".to_string() },
+        ValueExpr::LiteralBool(b) => {
+            if *b {
+                "True".to_string()
+            } else {
+                "False".to_string()
+            }
+        }
         ValueExpr::Identifier(name) => name.clone(),
         ValueExpr::Path(path) => {
-            let segs_json = serde_json::to_string(&path.segments).unwrap_or_else(|_| "[]".to_string());
+            let segs_json =
+                serde_json::to_string(&path.segments).unwrap_or_else(|_| "[]".to_string());
             format!("_asl_get({}, {}, \"\")", path.root, segs_json)
         }
         ValueExpr::Concat(parts) => {
@@ -269,11 +323,13 @@ fn render_rejection_dict(msg: &str, manifest: &SkillManifest) -> String {
                     "boolean" => "False".to_string(),
                     "array" => format!("[{}]", msg_escaped),
                     "integer" | "number" => "0".to_string(),
-                    _ => if key.contains("error") || key.contains("msg") || key.contains("diag") {
-                        msg_escaped.clone()
-                    } else {
-                        escape_str("unknown")
-                    },
+                    _ => {
+                        if key.contains("error") || key.contains("msg") || key.contains("diag") {
+                            msg_escaped.clone()
+                        } else {
+                            escape_str("unknown")
+                        }
+                    }
                 };
                 pairs.push(format!("{}: {}", key_escaped, default_val));
             }
@@ -281,7 +337,10 @@ fn render_rejection_dict(msg: &str, manifest: &SkillManifest) -> String {
         }
     }
 
-    format!("{{\"is_valid\": False, \"diagnostics\": [{}]}}", msg_escaped)
+    format!(
+        "{{\"is_valid\": False, \"diagnostics\": [{}]}}",
+        msg_escaped
+    )
 }
 
 fn render_default_accept(manifest: &SkillManifest) -> String {

@@ -32,7 +32,8 @@ pub fn handle_keygen(out: Option<PathBuf>) -> Result<()> {
 /// Manipula o comando `asl sign`
 pub fn handle_sign(skill_file: &Path, key: &str, parser: &CommonMarkYamlParser) -> Result<()> {
     let key_str = if Path::new(key).is_file() {
-        fs::read_to_string(key).with_context(|| format!("Falha ao ler chave privada de {:?}", key))?
+        fs::read_to_string(key)
+            .with_context(|| format!("Falha ao ler chave privada de {:?}", key))?
     } else {
         key.to_string()
     };
@@ -87,20 +88,24 @@ pub fn handle_verify(
         .as_ref()
         .with_context(|| "Arquivo ASL não possui campo 'signature' no manifesto")?;
 
-    let key_to_use = match pubkey {
+    let (key_to_use, is_embedded) = match pubkey {
         Some(k) => {
-            if Path::new(&k).is_file() {
+            let key = if Path::new(&k).is_file() {
                 fs::read_to_string(&k)?
             } else {
                 k
-            }
+            };
+            (key, false)
         }
-        None => doc
-            .manifest
-            .signer_pubkey
-            .as_ref()
-            .with_context(|| "Chave pública não fornecida via --pubkey e ausente no manifesto")?
-            .clone(),
+        None => {
+            let key = doc
+                .manifest
+                .signer_pubkey
+                .as_ref()
+                .with_context(|| "Chave pública não fornecida via --pubkey e ausente no manifesto")?
+                .clone();
+            (key, true)
+        }
     };
 
     let valid = asl_security::crypto::verify_signature(&key_to_use, &doc.digest, sig)
@@ -111,8 +116,14 @@ pub fn handle_verify(
         println!("Arquivo:       {:?}", skill_file);
         println!("Digest:        {}", doc.digest);
         println!("Chave Pública: {}", key_to_use.trim());
+        if is_embedded {
+            println!("⚠️  Aviso: Chave pública extraída do manifesto do arquivo (auto-assinada). Comprova integridade com a chave declarada, mas não atesta a identidade do autor. Para verificação estrita de identidade, utilize --pubkey <CHAVE_CONFIÁVEL>.");
+        }
     } else {
-        eprintln!("❌ Assinatura Ed25519 INVÁLIDA para o digest {}", doc.digest);
+        eprintln!(
+            "❌ Assinatura Ed25519 INVÁLIDA para o digest {}",
+            doc.digest
+        );
         anyhow::bail!("Falha na validação da assinatura: o arquivo foi alterado ou a chave pública não confere.");
     }
 
@@ -157,7 +168,10 @@ pub fn inject_or_update_frontmatter(
         }
     }
 
-    let clean_sig = signature.trim().strip_prefix("asl:ed25519:").unwrap_or(signature);
+    let clean_sig = signature
+        .trim()
+        .strip_prefix("asl:ed25519:")
+        .unwrap_or(signature);
     let clean_pub = signer_pubkey
         .trim()
         .strip_prefix("asl:ed25519:pub:")

@@ -37,6 +37,10 @@ enum Commands {
         /// Argumentos de entrada em formato JSON
         #[arg(short, long, default_value = "{}")]
         input: String,
+
+        /// Raízes permitidas no host para interseção com capabilities solicitadas (Host Policy)
+        #[arg(long)]
+        allowed_root: Vec<PathBuf>,
     },
 
     /// Valida e audita a integridade de um arquivo ASL (.skill, .tool, .asl)
@@ -54,6 +58,10 @@ enum Commands {
         /// Transporte de comunicação (stdio ou http)
         #[arg(short, long, default_value = "stdio")]
         transport: String,
+
+        /// Endereço host para bind do servidor HTTP (padrão: 127.0.0.1)
+        #[arg(long, default_value = "127.0.0.1")]
+        host: String,
 
         /// Porta para o servidor HTTP (utilizado apenas quando --transport http)
         #[arg(short, long, default_value = "8080")]
@@ -149,6 +157,7 @@ fn main() -> Result<()> {
             skill_file,
             entrypoint,
             input,
+            allowed_root,
         } => {
             let content = fs::read_to_string(&skill_file)
                 .with_context(|| format!("Falha ao ler arquivo: {:?}", skill_file))?;
@@ -168,8 +177,21 @@ fn main() -> Result<()> {
             let input_val: Value = serde_json::from_str(&input)
                 .with_context(|| format!("Argumento --input não é um JSON válido: {}", input))?;
 
+            let mut effective_caps = doc.manifest.capabilities.clone();
+            if !allowed_root.is_empty() {
+                let allowed_canon: Vec<PathBuf> = allowed_root
+                    .iter()
+                    .map(|p| fs::canonicalize(p).unwrap_or_else(|_| p.clone()))
+                    .collect();
+                effective_caps.fs.confined_read_roots.retain(|r| {
+                    let r_path = PathBuf::from(r);
+                    let r_canon = fs::canonicalize(&r_path).unwrap_or(r_path);
+                    allowed_canon.iter().any(|a| r_canon.starts_with(a))
+                });
+            }
+
             let security = ConfinedSecurityContext::from_capabilities(
-                &doc.manifest.capabilities,
+                &effective_caps,
                 doc.manifest.limits.max_fuel_opcodes,
             );
 
@@ -215,7 +237,9 @@ fn main() -> Result<()> {
                         println!("Signatário:  {}", pubkey);
                     } else {
                         eprintln!("Assinatura:  ❌ INVÁLIDA (Ed25519)");
-                        anyhow::bail!("Assinatura digital do arquivo ASL é inválida ou foi corrompida.");
+                        anyhow::bail!(
+                            "Assinatura digital do arquivo ASL é inválida ou foi corrompida."
+                        );
                     }
                 } else {
                     println!("Assinatura:  ⚠️ Presente, mas chave pública ausente no manifesto");
@@ -252,6 +276,7 @@ fn main() -> Result<()> {
         Commands::Serve {
             path,
             transport,
+            host,
             port,
         } => {
             let mut skills = Vec::new();
@@ -270,19 +295,24 @@ fn main() -> Result<()> {
             let root_str = if path.is_dir() {
                 path.to_string_lossy().to_string()
             } else {
-                path.parent().unwrap_or_else(|| Path::new(".")).to_string_lossy().to_string()
+                path.parent()
+                    .unwrap_or_else(|| Path::new("."))
+                    .to_string_lossy()
+                    .to_string()
             };
             server_caps.fs.confined_read_roots.push(root_str);
             let security = ConfinedSecurityContext::from_capabilities(&server_caps, 1_000_000);
 
             if transport.to_lowercase() == "http" {
                 eprintln!(
-                    "[ASL MCP Server] Iniciado sobre HTTP/SSE em http://0.0.0.0:{} com {} skill(s) carregada(s)",
+                    "[ASL MCP Server] Iniciado sobre HTTP/SSE em http://{}:{} com {} skill(s) carregada(s)",
+                    host,
                     port,
                     skills.len()
                 );
                 let mcp_server = McpServer::new(skills, &engine, &security);
-                let http_server = asl_protocol_http::McpHttpServer::new(mcp_server, port);
+                let http_server =
+                    asl_protocol_http::McpHttpServer::with_host(mcp_server, host, port);
                 let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
                 http_server
                     .run(running)
@@ -379,9 +409,7 @@ fn load_skills_recursive(dir: &Path, parser: &CommonMarkYamlParser, acc: &mut Ve
             let p = entry.path();
             if p.is_dir() {
                 load_skills_recursive(&p, parser, acc);
-            } else if asl_spec::is_asl_file(&p)
-                && !asl_parser::is_ignored_path(&p)
-            {
+            } else if asl_spec::is_asl_file(&p) && !asl_parser::is_ignored_path(&p) {
                 if let Ok(content) = fs::read_to_string(&p) {
                     if let Ok(doc) = parser.parse(&content) {
                         acc.push(doc);

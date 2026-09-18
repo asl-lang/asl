@@ -21,9 +21,9 @@ pub fn compile_schema_to_gbnf(schema: &Value) -> Result<String> {
 
     // Terminais primitivos da gramática GBNF
     out.push_str("ws ::= [ \\t\\n\\r]*\n");
-    out.push_str("string ::= \"\\\"\" ([^\"\\\\] | \"\\\\\" ([\"\\\\/bfnrt] | \"u\" [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F]))* \"\\\"\"\n");
-    out.push_str("number ::= \"-\"? [0-9]+ (\".\" [0-9]+)? ([eE] [-+]? [0-9]+)?\n");
-    out.push_str("integer ::= \"-\"? [0-9]+\n");
+    out.push_str("string ::= \"\\\"\" ([^\"\\\\\x00-\x1F] | \"\\\\\" ([\"\\\\/bfnrt] | \"u\" [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F]))* \"\\\"\"\n");
+    out.push_str("number ::= \"-\"? (\"0\" | [1-9] [0-9]*) (\".\" [0-9]+)? ([eE] [-+]? [0-9]+)?\n");
+    out.push_str("integer ::= \"-\"? (\"0\" | [1-9] [0-9]*)\n");
     out.push_str("boolean ::= \"true\" | \"false\"\n");
     out.push_str("null ::= \"null\"\n");
     out.push_str("any_value ::= any_object | any_array | string | number | boolean | null\n");
@@ -93,7 +93,10 @@ fn compile_array(
     };
 
     let rule_name = alloc_rule_name(name_hint, counter);
-    let rule_def = format!("\"[\" ws ({} (\",\" ws {})*)? \"]\" ws", item_expr, item_expr);
+    let rule_def = format!(
+        "\"[\" ws ({} (\",\" ws {})*)? \"]\" ws",
+        item_expr, item_expr
+    );
     rules.push((rule_name.clone(), rule_def));
     Ok(rule_name)
 }
@@ -156,7 +159,10 @@ fn compile_object(
         let all_opts = optional_props.join(" | ");
         let opt_rule_name = alloc_rule_name(&format!("{}_opt", name_hint), counter);
         rules.push((opt_rule_name.clone(), all_opts));
-        parts.push(format!("({} (\",\" ws {})*)?", opt_rule_name, opt_rule_name));
+        parts.push(format!(
+            "({} (\",\" ws {})*)?",
+            opt_rule_name, opt_rule_name
+        ));
     }
 
     parts.push("\"}\" ws".to_string());
@@ -233,5 +239,16 @@ mod tests {
         let gbnf = compile_schema_to_gbnf(&schema).expect("Deve compilar objeto com opcionais");
         assert!(gbnf.contains("_opt_1 ::="));
         assert!(gbnf.contains("(\",\" ws"));
+    }
+
+    #[test]
+    fn test_gbnf_primitives_rfc8259_compliance() {
+        let schema = json!({ "type": "number" });
+        let gbnf = compile_schema_to_gbnf(&schema).unwrap();
+        assert!(gbnf.contains("integer ::= \"-\"? (\"0\" | [1-9] [0-9]*)"));
+        assert!(gbnf.contains(
+            "number ::= \"-\"? (\"0\" | [1-9] [0-9]*) (\".\" [0-9]+)? ([eE] [-+]? [0-9]+)?"
+        ));
+        assert!(gbnf.contains("[^\"\\\\\x00-\x1F]"));
     }
 }

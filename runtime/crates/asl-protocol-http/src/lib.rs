@@ -5,12 +5,29 @@ use tiny_http::{Header, Method, Response, Server, StatusCode};
 
 pub struct McpHttpServer<'a> {
     mcp_server: McpServer<'a>,
+    host: String,
     port: u16,
 }
 
 impl<'a> McpHttpServer<'a> {
     pub fn new(mcp_server: McpServer<'a>, port: u16) -> Self {
-        Self { mcp_server, port }
+        Self {
+            mcp_server,
+            host: "127.0.0.1".to_string(),
+            port,
+        }
+    }
+
+    pub fn with_host(mcp_server: McpServer<'a>, host: String, port: u16) -> Self {
+        Self {
+            mcp_server,
+            host,
+            port,
+        }
+    }
+
+    pub fn host(&self) -> &str {
+        &self.host
     }
 
     pub fn port(&self) -> u16 {
@@ -18,13 +35,16 @@ impl<'a> McpHttpServer<'a> {
     }
 
     pub fn run(&self, is_running: Arc<AtomicBool>) -> std::io::Result<()> {
-        let addr = format!("0.0.0.0:{}", self.port);
-        let server = Server::http(&addr)
-            .map_err(|e| std::io::Error::other(e.to_string()))?;
+        let addr = format!("{}:{}", self.host, self.port);
+        let server = Server::http(&addr).map_err(|e| std::io::Error::other(e.to_string()))?;
         self.serve_requests(server, is_running)
     }
 
-    pub fn serve_requests(&self, server: Server, is_running: Arc<AtomicBool>) -> std::io::Result<()> {
+    pub fn serve_requests(
+        &self,
+        server: Server,
+        is_running: Arc<AtomicBool>,
+    ) -> std::io::Result<()> {
         while is_running.load(Ordering::Relaxed) {
             let mut request = match server.recv_timeout(std::time::Duration::from_millis(100)) {
                 Ok(Some(rq)) => rq,
@@ -39,12 +59,19 @@ impl<'a> McpHttpServer<'a> {
             let method = request.method().clone();
 
             if method == Method::Options {
-                let header_origin = Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..])
-                    .map_err(|_| std::io::Error::other("Invalid header"))?;
-                let header_methods = Header::from_bytes(&b"Access-Control-Allow-Methods"[..], &b"GET, POST, OPTIONS"[..])
-                    .map_err(|_| std::io::Error::other("Invalid header"))?;
-                let header_headers = Header::from_bytes(&b"Access-Control-Allow-Headers"[..], &b"Content-Type, *"[..])
-                    .map_err(|_| std::io::Error::other("Invalid header"))?;
+                let header_origin =
+                    Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..])
+                        .map_err(|_| std::io::Error::other("Invalid header"))?;
+                let header_methods = Header::from_bytes(
+                    &b"Access-Control-Allow-Methods"[..],
+                    &b"GET, POST, OPTIONS"[..],
+                )
+                .map_err(|_| std::io::Error::other("Invalid header"))?;
+                let header_headers = Header::from_bytes(
+                    &b"Access-Control-Allow-Headers"[..],
+                    &b"Content-Type, *"[..],
+                )
+                .map_err(|_| std::io::Error::other("Invalid header"))?;
                 let resp = Response::empty(StatusCode(204))
                     .with_header(header_origin)
                     .with_header(header_methods)
@@ -59,27 +86,78 @@ impl<'a> McpHttpServer<'a> {
                 .to_string();
                 let header_ct = Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..])
                     .map_err(|_| std::io::Error::other("Invalid header"))?;
-                let header_cors = Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..])
-                    .map_err(|_| std::io::Error::other("Invalid header"))?;
+                let header_cors =
+                    Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..])
+                        .map_err(|_| std::io::Error::other("Invalid header"))?;
                 let resp = Response::from_string(body)
                     .with_status_code(StatusCode(200))
                     .with_header(header_ct)
                     .with_header(header_cors);
                 let _ = request.respond(resp);
             } else if method == Method::Get && url.starts_with("/sse") {
+                let has_connection_close = request.headers().iter().any(|h| {
+                    h.field.equiv("connection") && h.value.as_str().eq_ignore_ascii_case("close")
+                });
+
                 let sse_event = "event: endpoint\ndata: /messages\n\n";
                 let header_ct = Header::from_bytes(&b"Content-Type"[..], &b"text/event-stream"[..])
                     .map_err(|_| std::io::Error::other("Invalid header"))?;
                 let header_cache = Header::from_bytes(&b"Cache-Control"[..], &b"no-cache"[..])
                     .map_err(|_| std::io::Error::other("Invalid header"))?;
-                let header_cors = Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..])
-                    .map_err(|_| std::io::Error::other("Invalid header"))?;
-                let resp = Response::from_string(sse_event)
-                    .with_status_code(StatusCode(200))
-                    .with_header(header_ct)
-                    .with_header(header_cache)
-                    .with_header(header_cors);
-                let _ = request.respond(resp);
+                let header_cors =
+                    Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..])
+                        .map_err(|_| std::io::Error::other("Invalid header"))?;
+
+                if has_connection_close {
+                    let resp = Response::from_string(sse_event)
+                        .with_status_code(StatusCode(200))
+                        .with_header(header_ct)
+                        .with_header(header_cache)
+                        .with_header(header_cors);
+                    let _ = request.respond(resp);
+                } else {
+                    let running_flag = is_running.clone();
+                    std::thread::spawn(move || {
+                        struct SseKeepAliveReader {
+                            initial: Option<std::io::Cursor<Vec<u8>>>,
+                            running: Arc<AtomicBool>,
+                        }
+                        impl std::io::Read for SseKeepAliveReader {
+                            fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+                                if let Some(ref mut cur) = self.initial {
+                                    let n = cur.read(buf)?;
+                                    if n > 0 {
+                                        return Ok(n);
+                                    }
+                                    self.initial = None;
+                                }
+                                if self.running.load(Ordering::Relaxed) {
+                                    std::thread::sleep(std::time::Duration::from_millis(500));
+                                    if self.running.load(Ordering::Relaxed) {
+                                        let ping = b": keepalive\n\n";
+                                        let to_write = ping.len().min(buf.len());
+                                        buf[..to_write].copy_from_slice(&ping[..to_write]);
+                                        return Ok(to_write);
+                                    }
+                                }
+                                Ok(0)
+                            }
+                        }
+
+                        let reader = SseKeepAliveReader {
+                            initial: Some(std::io::Cursor::new(sse_event.as_bytes().to_vec())),
+                            running: running_flag,
+                        };
+                        let resp = Response::new(
+                            StatusCode(200),
+                            vec![header_ct, header_cache, header_cors],
+                            reader,
+                            None,
+                            None,
+                        );
+                        let _ = request.respond(resp);
+                    });
+                }
             } else if method == Method::Post && url.starts_with("/messages") {
                 let mut content = String::new();
                 if let Err(e) = request.as_reader().read_to_string(&mut content) {
@@ -90,13 +168,15 @@ impl<'a> McpHttpServer<'a> {
                     continue;
                 }
 
-                let header_cors = Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..])
-                    .map_err(|_| std::io::Error::other("Invalid header"))?;
+                let header_cors =
+                    Header::from_bytes(&b"Access-Control-Allow-Origin"[..], &b"*"[..])
+                        .map_err(|_| std::io::Error::other("Invalid header"))?;
 
                 if let Some(rpc_res) = self.mcp_server.handle_message(&content) {
                     let out_json = serde_json::to_string(&rpc_res).unwrap_or_default();
-                    let header_ct = Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..])
-                        .map_err(|_| std::io::Error::other("Invalid header"))?;
+                    let header_ct =
+                        Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..])
+                            .map_err(|_| std::io::Error::other("Invalid header"))?;
                     let resp = Response::from_string(out_json)
                         .with_status_code(StatusCode(200))
                         .with_header(header_ct)
@@ -218,20 +298,28 @@ interface:
                 stream.read_to_string(&mut resp).unwrap();
                 assert!(resp.contains("200 OK"));
                 assert!(resp.contains("test-tool"));
-                assert!(resp.contains("access-control-allow-origin: *") || resp.contains("Access-Control-Allow-Origin: *"));
+                assert!(
+                    resp.contains("access-control-allow-origin: *")
+                        || resp.contains("Access-Control-Allow-Origin: *")
+                );
             }
 
             // Teste 4: OPTIONS /messages (CORS Preflight)
             {
                 let mut stream = TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-                let req = "OPTIONS /messages HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n";
+                let req =
+                    "OPTIONS /messages HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n";
                 stream.write_all(req.as_bytes()).unwrap();
 
                 let mut resp = String::new();
                 stream.read_to_string(&mut resp).unwrap();
                 assert!(resp.contains("204 No Content"));
-                assert!(resp.to_lowercase().contains("access-control-allow-origin: *"));
-                assert!(resp.to_lowercase().contains("access-control-allow-methods: get, post, options"));
+                assert!(resp
+                    .to_lowercase()
+                    .contains("access-control-allow-origin: *"));
+                assert!(resp
+                    .to_lowercase()
+                    .contains("access-control-allow-methods: get, post, options"));
             }
 
             running.store(false, Ordering::Relaxed);

@@ -17,7 +17,8 @@ pub enum ShadowProjectResult {
     Skipped(String),
 }
 
-const SHADOW_WATERMARK: &str = "<!-- ⚡ ASL AUTO-GENERATED SHADOW PROJECTION | DO NOT EDIT MANUALLY -->";
+const SHADOW_WATERMARK: &str =
+    "<!-- ⚡ ASL AUTO-GENERATED SHADOW PROJECTION | DO NOT EDIT MANUALLY -->";
 
 /// Gera o conteúdo textual da projeção sombra em Markdown
 pub fn generate_shadow_content(doc: &SkillDocument, skill_file_name: &str) -> String {
@@ -30,11 +31,20 @@ pub fn generate_shadow_content(doc: &SkillDocument, skill_file_name: &str) -> St
     ));
     out.push_str("---\n");
     out.push_str(&format!("asl_version: \"{}\"\n", doc.manifest.asl_version));
-    out.push_str(&format!("name: \"{}\"\n", doc.manifest.name));
+    let clean_name = doc.manifest.name.replace('\"', "\\\"").replace('\n', " ");
+    out.push_str(&format!("name: \"{}\"\n", clean_name));
     if !doc.manifest.description.is_empty() {
-        out.push_str(&format!("description: \"{}\"\n", doc.manifest.description.replace('\"', "\\\"")));
+        let clean_desc = doc
+            .manifest
+            .description
+            .replace('\"', "\\\"")
+            .replace('\n', " ");
+        out.push_str(&format!("description: \"{}\"\n", clean_desc));
     }
-    out.push_str(&format!("asl_canonical_source: \"./{}\"\n", skill_file_name));
+    out.push_str(&format!(
+        "asl_canonical_source: \"./{}\"\n",
+        skill_file_name
+    ));
     out.push_str(&format!("asl_digest: \"{}\"\n", doc.digest));
     if let Some(ref sig) = doc.manifest.signature {
         out.push_str(&format!("asl_signature: \"{}\"\n", sig));
@@ -93,7 +103,10 @@ pub fn is_ignored_path(path: &Path) -> bool {
 
 /// Projeta e sincroniza atomicamente o arquivo .md sombra correspondente ao .skill
 /// Apenas arquivos .skill geram sombra Markdown; outros formatos de IA operam sem projeção sombra.
-pub fn project_shadow_markdown(skill_path: &Path, doc: &SkillDocument) -> Result<ShadowProjectResult> {
+pub fn project_shadow_markdown(
+    skill_path: &Path,
+    doc: &SkillDocument,
+) -> Result<ShadowProjectResult> {
     if is_ignored_path(skill_path) || !asl_spec::is_shadow_eligible(skill_path) {
         return Ok(ShadowProjectResult::Skipped(
             skill_path.to_string_lossy().to_string(),
@@ -190,18 +203,32 @@ fn write_atomic(target: &Path, content: &str) -> Result<()> {
             let _ = fs::create_dir_all(parent);
         }
     }
-    let tmp_path = target.with_extension("tmp");
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let pid = std::process::id();
+    let tmp_path = target.with_extension(format!("tmp.{}.{}", pid, nanos));
+
     if let Err(e) = fs::write(&tmp_path, content) {
         // EC-9: Em ambiente somente-leitura (ex: Docker --read-only), loga aviso sem pânico
         if e.kind() == std::io::ErrorKind::PermissionDenied || e.raw_os_error() == Some(30) {
-            eprintln!("⚠️ [ASL Shadow] Somente-leitura ao escrever {:?}: {}", tmp_path, e);
+            eprintln!(
+                "⚠️ [ASL Shadow] Somente-leitura ao escrever {:?}: {}",
+                tmp_path, e
+            );
             return Ok(());
         }
         return Err(AslError::Io(e.to_string()));
     }
     if let Err(e) = fs::rename(&tmp_path, target) {
+        let _ = fs::remove_file(&tmp_path);
         if e.kind() == std::io::ErrorKind::PermissionDenied || e.raw_os_error() == Some(30) {
-            eprintln!("⚠️ [ASL Shadow] Somente-leitura ao renomear {:?}: {}", target, e);
+            eprintln!(
+                "⚠️ [ASL Shadow] Somente-leitura ao renomear {:?}: {}",
+                target, e
+            );
             return Ok(());
         }
         return Err(AslError::Io(e.to_string()));
@@ -243,14 +270,20 @@ mod tests {
 
     #[test]
     fn test_shadow_projection_lifecycle() {
-        let temp_dir = std::env::temp_dir().join(format!("asl_test_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let temp_dir = std::env::temp_dir().join(format!(
+            "asl_test_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
         fs::create_dir_all(&temp_dir).unwrap();
 
         let skill_path = temp_dir.join("test_skill.skill");
         fs::write(&skill_path, "mock skill content").unwrap();
 
         let doc1 = sample_doc("test_skill", "asl:sha256:digest_1");
-        
+
         // 1. Criação do zero (EC-1)
         let res1 = project_shadow_markdown(&skill_path, &doc1).unwrap();
         assert!(matches!(res1, ShadowProjectResult::Created(_)));
@@ -282,20 +315,33 @@ mod tests {
 
     #[test]
     fn test_collision_protection_preexisting_manual_md() {
-        let temp_dir = std::env::temp_dir().join(format!("asl_test_collision_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let temp_dir = std::env::temp_dir().join(format!(
+            "asl_test_collision_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
         fs::create_dir_all(&temp_dir).unwrap();
 
         let skill_path = temp_dir.join("existing.skill");
         fs::write(&skill_path, "mock skill").unwrap();
         let manual_md = temp_dir.join("existing.md");
-        fs::write(&manual_md, "# Minha documentação manual importante! Não apagar.").unwrap();
+        fs::write(
+            &manual_md,
+            "# Minha documentação manual importante! Não apagar.",
+        )
+        .unwrap();
 
         let doc = sample_doc("existing", "asl:sha256:dummy");
         let res = project_shadow_markdown(&skill_path, &doc).unwrap();
 
         // Não deve sobrescrever existing.md, mas criar existing.asl.md
         assert!(matches!(res, ShadowProjectResult::CollisionProtected(_)));
-        assert_eq!(fs::read_to_string(&manual_md).unwrap(), "# Minha documentação manual importante! Não apagar.");
+        assert_eq!(
+            fs::read_to_string(&manual_md).unwrap(),
+            "# Minha documentação manual importante! Não apagar."
+        );
         let protected_path = temp_dir.join("existing.asl.md");
         assert!(protected_path.exists());
 
@@ -317,7 +363,13 @@ mod tests {
 
     #[test]
     fn test_non_skill_extensions_skip_shadow_projection() {
-        let temp_dir = std::env::temp_dir().join(format!("asl_test_no_shadow_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        let temp_dir = std::env::temp_dir().join(format!(
+            "asl_test_no_shadow_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
         fs::create_dir_all(&temp_dir).unwrap();
 
         let doc = sample_doc("test", "asl:sha256:dummy");
@@ -327,7 +379,11 @@ mod tests {
             let path = temp_dir.join(format!("artifact.{}", ext));
             fs::write(&path, "content").unwrap();
             let res = project_shadow_markdown(&path, &doc).unwrap();
-            assert!(matches!(res, ShadowProjectResult::Skipped(_)), "Extensão .{} deve ser ignorada na projeção sombra", ext);
+            assert!(
+                matches!(res, ShadowProjectResult::Skipped(_)),
+                "Extensão .{} deve ser ignorada na projeção sombra",
+                ext
+            );
             let md = temp_dir.join("artifact.md");
             assert!(!md.exists(), "Não deve gerar .md para .{}", ext);
         }

@@ -242,6 +242,7 @@ dependencies = [
  "anyhow",
  "asl-core-traits",
  "asl-spec",
+ "regex",
  "serde_json",
  "starlark",
 ]

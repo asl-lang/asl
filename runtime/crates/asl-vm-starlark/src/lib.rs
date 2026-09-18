@@ -51,7 +51,16 @@ fn asl_natives(builder: &mut GlobalsBuilder) {
             .extra
             .and_then(|e| e.downcast_ref::<StarlarkContextExtra>())
             .ok_or_else(|| anyhow::anyhow!("Contexto ASL não configurado"))?;
-        Ok(extra.limits.max_fuel_opcodes.saturating_sub(extra.context.fuel_consumed()))
+        Ok(extra
+            .limits
+            .max_fuel_opcodes
+            .saturating_sub(extra.context.fuel_consumed()))
+    }
+
+    fn _asl_matches_regex(haystack: &str, pattern: &str) -> anyhow::Result<bool> {
+        let re = regex::Regex::new(pattern)
+            .map_err(|e| anyhow::anyhow!("Expressão regular inválida '{}': {}", pattern, e))?;
+        Ok(re.is_match(haystack))
     }
 }
 
@@ -133,11 +142,9 @@ asl_output_json = json.encode(asl_result)
                 .get("asl_output_json")
                 .ok_or_else(|| AslError::EntrypointNotFound(entrypoint.to_string()))?;
 
-            let output_str = output_val
-                .unpack_str()
-                .ok_or_else(|| {
-                    AslError::StarlarkError("Saída de asl_output_json não é string".to_string())
-                })?;
+            let output_str = output_val.unpack_str().ok_or_else(|| {
+                AslError::StarlarkError("Saída de asl_output_json não é string".to_string())
+            })?;
 
             let parsed_output: Value = serde_json::from_str(output_str).map_err(AslError::Json)?;
 
@@ -260,4 +267,3 @@ def inspect_system(ctx, input):
         assert_eq!(res.fuel_consumed, 42);
     }
 }
-
