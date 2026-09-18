@@ -42,8 +42,17 @@ pub enum AslError {
 
 pub type Result<T> = std::result::Result<T, AslError>;
 
+fn default_asl_version() -> String {
+    "3.0".to_string()
+}
+
+fn default_interface() -> SkillInterface {
+    SkillInterface::default()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkillManifest {
+    #[serde(default = "default_asl_version")]
     pub asl_version: String,
     #[serde(default)]
     pub digest: Option<String>,
@@ -51,6 +60,7 @@ pub struct SkillManifest {
     pub signature: Option<String>,
     #[serde(default)]
     pub signer_pubkey: Option<String>,
+    #[serde(default)]
     pub name: String,
     #[serde(default)]
     pub version: Option<String>,
@@ -58,6 +68,7 @@ pub struct SkillManifest {
     pub description: String,
     #[serde(default)]
     pub license: Option<String>,
+    #[serde(default = "default_interface")]
     pub interface: SkillInterface,
     #[serde(default)]
     pub capabilities: SkillCapabilities,
@@ -100,15 +111,31 @@ impl SkillManifest {
     }
 }
 
+fn default_entrypoint() -> String {
+    "run".to_string()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkillInterface {
     #[serde(default = "default_protocol")]
     pub protocol: String,
+    #[serde(default = "default_entrypoint")]
     pub entrypoint: String,
     #[serde(default = "default_schema")]
     pub input_schema: serde_json::Value,
     #[serde(default)]
     pub output_schema: Option<serde_json::Value>,
+}
+
+impl Default for SkillInterface {
+    fn default() -> Self {
+        Self {
+            protocol: default_protocol(),
+            entrypoint: default_entrypoint(),
+            input_schema: default_schema(),
+            output_schema: None,
+        }
+    }
 }
 
 fn default_protocol() -> String {
@@ -188,6 +215,37 @@ pub struct SkillDocument {
     #[serde(default)]
     pub rules_code: Option<String>,
     pub digest: String,
+}
+
+impl SkillDocument {
+    pub fn draft_scaffold(name: &str) -> Self {
+        let manifest = SkillManifest {
+            asl_version: "3.0".to_string(),
+            digest: None,
+            signature: None,
+            signer_pubkey: None,
+            name: name.to_string(),
+            version: Some("0.1.0".to_string()),
+            description: format!("Draft skill '{}' under construction", name),
+            license: None,
+            interface: SkillInterface::default(),
+            capabilities: SkillCapabilities::default(),
+            limits: SkillLimits::default(),
+        };
+        let semantic_section = format!(
+            "# {}\n\nDraft skill initialized via touch. Provide instructions here.",
+            name
+        );
+        let deterministic_code = "def run(ctx, input):\n    return {}\n".to_string();
+        let digest = "asl:sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855".to_string();
+        Self {
+            manifest,
+            semantic_section,
+            deterministic_code,
+            rules_code: None,
+            digest,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

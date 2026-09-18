@@ -1,6 +1,6 @@
 use asl_core_traits::ParserPort;
 use asl_parser::CommonMarkYamlParser;
-use asl_spec::{is_asl_file, is_shadow_eligible, AslError, ASL_EXTENSIONS};
+use asl_spec::{is_asl_file, is_shadow_eligible, AslError};
 use std::path::Path;
 
 fn build_document(asl_ver: &str, name: &str, entrypoint: &str, body: &str) -> String {
@@ -11,23 +11,25 @@ fn build_document(asl_ver: &str, name: &str, entrypoint: &str, body: &str) -> St
 }
 
 #[test]
-fn test_empty_and_whitespace_rejected_for_all_formats() {
+fn test_greenfield_empty_and_whitespace_scaffold_or_rejected() {
     let parser = CommonMarkYamlParser::new();
-    let empty_inputs = ["", "   ", "\n\n\t  \n  ", "# Apenas comentário solto\n"];
+    let empty_inputs = ["", "   ", "\n\n\t  \n  "];
 
-    for ext in ASL_EXTENSIONS {
-        for input in empty_inputs {
-            let res = parser.parse(input);
-            assert!(
-                res.is_err(),
-                "Extensão .{} deveria rejeitar conteúdo vazio ou sem frontmatter",
-                ext
-            );
-            match res.unwrap_err() {
-                AslError::InvalidFrontmatter(_) => {}
-                other => panic!("Esperado InvalidFrontmatter, obtido: {:?}", other),
-            }
-        }
+    // ADR-0015: Greenfield 0-byte and whitespace files synthesize draft scaffolds
+    for input in empty_inputs {
+        let res = parser.parse(input);
+        assert!(res.is_ok(), "ADR-0015: Greenfield empty files must parse as draft scaffold");
+        let doc = res.unwrap();
+        assert_eq!(doc.manifest.asl_version, "3.0");
+        assert_eq!(doc.manifest.name, "draft-skill");
+    }
+
+    // Non-empty content without frontmatter delimiters must be rejected
+    let res = parser.parse("# Apenas comentário solto\n");
+    assert!(res.is_err(), "Deveria rejeitar conteúdo sem delimitadores de frontmatter");
+    match res.unwrap_err() {
+        AslError::InvalidFrontmatter(_) => {}
+        other => panic!("Esperado InvalidFrontmatter, obtido: {:?}", other),
     }
 }
 

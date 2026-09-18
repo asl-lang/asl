@@ -18,6 +18,14 @@ pub struct SyncStats {
 
 /// Synchronizes Markdown shadow projections for a .skill file or full directory
 pub fn handle_sync_shadows(target_path: &Path, parser: &CommonMarkYamlParser) -> Result<SyncStats> {
+    sync_internal(target_path, parser, true)
+}
+
+pub fn handle_sync_shadows_quiet(target_path: &Path, parser: &CommonMarkYamlParser) -> Result<SyncStats> {
+    sync_internal(target_path, parser, false)
+}
+
+fn sync_internal(target_path: &Path, parser: &CommonMarkYamlParser, verbose: bool) -> Result<SyncStats> {
     let mut stats = SyncStats::default();
 
     if target_path.is_file() {
@@ -26,9 +34,17 @@ pub fn handle_sync_shadows(target_path: &Path, parser: &CommonMarkYamlParser) ->
         {
             let content = fs::read_to_string(target_path)
                 .with_context(|| format!("Failed to read {:?}", target_path))?;
-            let doc = parser
-                .parse(&content)
-                .with_context(|| format!("Failed to parse {:?}", target_path))?;
+            let doc = if content.trim().is_empty() {
+                let stem = target_path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("draft-skill");
+                asl_spec::SkillDocument::draft_scaffold(stem)
+            } else {
+                parser
+                    .parse(&content)
+                    .with_context(|| format!("Failed to parse {:?}", target_path))?
+            };
             match project_shadow_markdown(target_path, &doc)? {
                 ShadowProjectResult::Created(p) => {
                     println!("⚡ Shadow created: {:?}", p);
@@ -57,12 +73,14 @@ pub fn handle_sync_shadows(target_path: &Path, parser: &CommonMarkYamlParser) ->
         }
     }
 
-    println!("\n📊 Shadow Synchronization Summary:");
-    println!("  Created:              {}", stats.created);
-    println!("  Updated:              {}", stats.updated);
-    println!("  Unchanged:            {}", stats.unchanged);
-    println!("  Collisions Protected: {}", stats.collisions);
-    println!("  Orphans Removed:      {}", stats.orphaned_removed);
+    if verbose {
+        println!("\n📊 Shadow Synchronization Summary:");
+        println!("  Created:              {}", stats.created);
+        println!("  Updated:              {}", stats.updated);
+        println!("  Unchanged:            {}", stats.unchanged);
+        println!("  Collisions Protected: {}", stats.collisions);
+        println!("  Orphans Removed:      {}", stats.orphaned_removed);
+    }
 
     Ok(stats)
 }
@@ -75,30 +93,60 @@ fn sync_dir_recursive(
     if let Ok(entries) = fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
+            if path.is_symlink() {
+                continue;
+            }
+            let file_name = path.file_name().and_then(|f| f.to_str()).unwrap_or("");
             if path.is_dir() {
+                if file_name.starts_with('.')
+                    || file_name == "node_modules"
+                    || file_name == "target"
+                    || file_name == "dist"
+                    || file_name == "build"
+                    || file_name == "out"
+                    || file_name == "vendor"
+                    || file_name == "venv"
+                    || file_name == "__pycache__"
+                    || file_name == "Library"
+                    || file_name == "Applications"
+                {
+                    continue;
+                }
                 sync_dir_recursive(&path, parser, stats)?;
             } else if asl_spec::is_shadow_eligible(&path)
                 && !is_ignored_path(&path)
             {
                 if let Ok(content) = fs::read_to_string(&path) {
-                    if let Ok(doc) = parser.parse(&content) {
-                        match project_shadow_markdown(&path, &doc)? {
-                            ShadowProjectResult::Created(p) => {
-                                println!("⚡ Shadow created: {:?}", p);
-                                stats.created += 1;
+                    let doc_opt = if content.trim().is_empty() {
+                        let stem = path
+                            .file_stem()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or("draft-skill");
+                        Some(asl_spec::SkillDocument::draft_scaffold(stem))
+                    } else {
+                        parser.parse(&content).ok()
+                    };
+
+                    if let Some(doc) = doc_opt {
+                        if let Ok(res) = project_shadow_markdown(&path, &doc) {
+                            match res {
+                                ShadowProjectResult::Created(p) => {
+                                    println!("⚡ Shadow created: {:?}", p);
+                                    stats.created += 1;
+                                }
+                                ShadowProjectResult::Updated(p) => {
+                                    println!("⚡ Shadow updated: {:?}", p);
+                                    stats.updated += 1;
+                                }
+                                ShadowProjectResult::CollisionProtected(p) => {
+                                    println!("⚠️ Collision protected: {:?}", p);
+                                    stats.collisions += 1;
+                                }
+                                ShadowProjectResult::Unchanged(_) => {
+                                    stats.unchanged += 1;
+                                }
+                                ShadowProjectResult::Skipped(_) => {}
                             }
-                            ShadowProjectResult::Updated(p) => {
-                                println!("⚡ Shadow updated: {:?}", p);
-                                stats.updated += 1;
-                            }
-                            ShadowProjectResult::CollisionProtected(p) => {
-                                println!("⚠️ Collision protected: {:?}", p);
-                                stats.collisions += 1;
-                            }
-                            ShadowProjectResult::Unchanged(_) => {
-                                stats.unchanged += 1;
-                            }
-                            ShadowProjectResult::Skipped(_) => {}
                         }
                     }
                 }

@@ -141,8 +141,29 @@ echo "========================================================"
 echo "🎉 ASL 3.0 installed successfully!"
 echo "========================================================"
 
-# 6. Verify PATH accessibility
+# 6. Configure universal zero-touch background daemon
+ASL_BIN=""
+if [ -x "${DEST_DIR}/asl" ]; then
+    ASL_BIN="${DEST_DIR}/asl"
+elif command -v asl &> /dev/null; then
+    ASL_BIN="$(command -v asl)"
+elif [ -x "${HOME}/.cargo/bin/asl" ]; then
+    ASL_BIN="${HOME}/.cargo/bin/asl"
+fi
+
+if [ -n "${ASL_BIN}" ]; then
+    echo ""
+    echo "⚡ Configuring universal zero-touch daemon (LaunchAgent / systemd / background service)..."
+    if "${ASL_BIN}" daemon install &> /dev/null; then
+        echo "✅ Zero-touch shadow projection daemon installed and active across your OS!"
+    else
+        echo "ℹ️  Run '${ASL_BIN} daemon install' to activate automatic zero-touch shadow projection."
+    fi
+fi
+
+# 7. Verify PATH accessibility
 if ! command -v asl &> /dev/null; then
+    echo ""
     echo "⚠️  Note: '${DEST_DIR}' is not yet in your PATH."
     echo "Add the following line to your shell profile (~/.zshrc or ~/.bashrc):"
     echo "    export PATH=\"${DEST_DIR}:\$PATH\""
@@ -154,6 +175,11 @@ fi
 
 echo "To verify the installation:"
 echo "    asl --version"
+echo ""
+echo "To manage the zero-touch background daemon:"
+echo "    asl daemon status"
+echo "    asl daemon install"
+echo "    asl daemon stop"
 echo ""
 echo "To run an ASL skill:"
 echo "    asl run examples/git-conventional-commit.skill"

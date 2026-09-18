@@ -22,6 +22,15 @@ const SHADOW_WATERMARK: &str =
 
 /// Gera o conteúdo textual da projeção sombra em Markdown
 pub fn generate_shadow_content(doc: &SkillDocument, skill_file_name: &str) -> String {
+    let clean_stem = skill_file_name
+        .strip_suffix(".skill")
+        .unwrap_or(skill_file_name);
+    let effective_name = if doc.manifest.name == "draft-skill" || doc.manifest.name.is_empty() {
+        clean_stem
+    } else {
+        &doc.manifest.name
+    };
+
     let mut out = String::new();
     out.push_str(SHADOW_WATERMARK);
     out.push('\n');
@@ -31,7 +40,7 @@ pub fn generate_shadow_content(doc: &SkillDocument, skill_file_name: &str) -> St
     ));
     out.push_str("---\n");
     out.push_str(&format!("asl_version: \"{}\"\n", doc.manifest.asl_version));
-    let clean_name = doc.manifest.name.replace('\"', "\\\"").replace('\n', " ");
+    let clean_name = effective_name.replace('\"', "\\\"").replace('\n', " ");
     out.push_str(&format!("name: \"{}\"\n", clean_name));
     if !doc.manifest.description.is_empty() {
         let clean_desc = doc
@@ -54,7 +63,7 @@ pub fn generate_shadow_content(doc: &SkillDocument, skill_file_name: &str) -> St
     }
     out.push_str("---\n");
 
-    out.push_str(&format!("# {}\n\n", doc.manifest.name));
+    out.push_str(&format!("# {}\n\n", effective_name));
     out.push_str(&format!(
         "> ⚡ **This skill is governed and executed by the ASL 3.0 hermetic runtime.**\n> Canonical atomic file: [`{}`](./{})\n\n",
         skill_file_name, skill_file_name
@@ -125,7 +134,7 @@ pub fn project_shadow_markdown(
         let existing = fs::read_to_string(&target_md).map_err(|e| AslError::Io(e.to_string()))?;
 
         // Check if it is a legitimate ASL shadow projection
-        if !existing.contains(SHADOW_WATERMARK) {
+        if !existing.trim_start().starts_with(SHADOW_WATERMARK) {
             // Collision with manual file: protect and create .asl.md (EC-4)
             let protected_md = skill_path.with_extension("asl.md");
             let digest_token = format!("DIGEST: {}", doc.digest);
@@ -166,12 +175,31 @@ pub fn clean_orphaned_shadows(dir: &Path) -> Result<Vec<PathBuf>> {
     if let Ok(entries) = fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
+            if path.is_symlink() {
+                continue;
+            }
+            let file_name = path.file_name().and_then(|f| f.to_str()).unwrap_or("");
             if path.is_dir() {
-                let sub_removed = clean_orphaned_shadows(&path)?;
-                removed.extend(sub_removed);
+                if file_name.starts_with('.')
+                    || file_name == "node_modules"
+                    || file_name == "target"
+                    || file_name == "dist"
+                    || file_name == "build"
+                    || file_name == "out"
+                    || file_name == "vendor"
+                    || file_name == "venv"
+                    || file_name == "__pycache__"
+                    || file_name == "Library"
+                    || file_name == "Applications"
+                {
+                    continue;
+                }
+                if let Ok(sub_removed) = clean_orphaned_shadows(&path) {
+                    removed.extend(sub_removed);
+                }
             } else if path.extension().and_then(|e| e.to_str()) == Some("md") {
                 if let Ok(content) = fs::read_to_string(&path) {
-                    if content.contains(SHADOW_WATERMARK) {
+                    if content.trim_start().starts_with(SHADOW_WATERMARK) {
                         // Deriva o .skill original esperado tratando .asl.md e SKILL.md
                         let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
                         let expected_skill = if file_name.ends_with(".asl.md") {

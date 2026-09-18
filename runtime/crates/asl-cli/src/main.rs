@@ -1,17 +1,17 @@
 use anyhow::{Context, Result};
 use asl_core_traits::{EnginePort, GrammarCompilerPort, ParserPort};
 use asl_parser::{CommonMarkYamlParser, GbnfGrammarCompiler};
-use asl_protocol_mcp::McpServer;
 use asl_security::ConfinedSecurityContext;
-use asl_spec::SkillDocument;
 use asl_vm_starlark::StarlarkEngine;
 use clap::{Parser, Subcommand};
 use serde_json::Value;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 mod crypto_cmds;
+mod daemon_cmds;
 mod prefix_cmds;
+mod server_cmds;
 mod shadow_cmds;
 
 #[derive(Parser)]
@@ -122,6 +122,7 @@ enum Commands {
     },
 
     /// Synchronizes all Markdown (.md) shadow projections for .skill files
+    #[command(alias = "sync")]
     SyncShadows {
         /// Path to file or base directory (default: '.')
         #[arg(default_value = ".")]
@@ -143,6 +144,12 @@ enum Commands {
     Expand {
         /// Path to the .skill file
         skill_file: PathBuf,
+    },
+
+    /// Manages native background zero-touch shadow projection daemon (launchd/systemd/tasks)
+    Daemon {
+        #[command(subcommand)]
+        action: daemon_cmds::DaemonAction,
     },
 }
 
@@ -279,57 +286,7 @@ fn main() -> Result<()> {
             host,
             port,
         } => {
-            let mut skills = Vec::new();
-
-            if path.is_file() {
-                if let Ok(c) = fs::read_to_string(&path) {
-                    if let Ok(doc) = parser.parse(&c) {
-                        skills.push(doc);
-                    }
-                }
-            } else if path.is_dir() {
-                load_skills_recursive(&path, &parser, &mut skills);
-            }
-
-            let mut server_caps = asl_spec::SkillCapabilities::default();
-            let root_str = if path.is_dir() {
-                path.to_string_lossy().to_string()
-            } else {
-                path.parent()
-                    .unwrap_or_else(|| Path::new("."))
-                    .to_string_lossy()
-                    .to_string()
-            };
-            server_caps.fs.confined_read_roots.push(root_str);
-            let security = ConfinedSecurityContext::from_capabilities(&server_caps, 1_000_000);
-
-            if transport.to_lowercase() == "http" {
-                eprintln!(
-                    "[ASL MCP Server] Started over HTTP/SSE on http://{}:{} with {} skill(s) loaded",
-                    host,
-                    port,
-                    skills.len()
-                );
-                let mcp_server = McpServer::new(skills, &engine, &security);
-                let http_server =
-                    asl_protocol_http::McpHttpServer::with_host(mcp_server, host, port);
-                let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
-                http_server
-                    .run(running)
-                    .with_context(|| "Error in MCP HTTP server")?;
-            } else {
-                eprintln!(
-                    "[ASL MCP Server] Started over stdio with {} skill(s) loaded",
-                    skills.len()
-                );
-                let server = McpServer::new(skills, &engine, &security);
-                let stdin = std::io::stdin();
-                let stdout = std::io::stdout();
-
-                server
-                    .run_stdio_loop(stdin.lock(), stdout.lock())
-                    .with_context(|| "Error in MCP stdio message loop")?;
-            }
+            server_cmds::handle_serve(&path, &transport, &host, port, &parser, &engine)?;
         }
 
         Commands::CompileGrammar { skill_file, format } => {
@@ -380,6 +337,31 @@ fn main() -> Result<()> {
             shadow_cmds::handle_watch_shadows(&path, &parser, interval)?;
         }
 
+        Commands::Daemon { action } => match action {
+            daemon_cmds::DaemonAction::Start { watch_dir, detach } => {
+                let dir = watch_dir.unwrap_or_else(daemon_cmds::resolve_default_watch_dir);
+                if detach {
+                    let exe = std::env::current_exe()?;
+                    daemon_cmds::spawn_detached_daemon(&exe, &dir)?;
+                } else {
+                    daemon_cmds::handle_daemon_start(&dir)?;
+                }
+            }
+            daemon_cmds::DaemonAction::Install { watch_dir } => {
+                let dir = watch_dir.unwrap_or_else(daemon_cmds::resolve_default_watch_dir);
+                daemon_cmds::handle_daemon_install(&dir)?;
+            }
+            daemon_cmds::DaemonAction::Stop => {
+                daemon_cmds::handle_daemon_stop()?;
+            }
+            daemon_cmds::DaemonAction::Status => {
+                daemon_cmds::handle_daemon_status()?;
+            }
+            daemon_cmds::DaemonAction::Uninstall => {
+                daemon_cmds::handle_daemon_uninstall()?;
+            }
+        },
+
         Commands::Expand { skill_file } => {
             let content = fs::read_to_string(&skill_file)
                 .with_context(|| format!("Failed to read file: {:?}", skill_file))?;
@@ -401,21 +383,4 @@ fn main() -> Result<()> {
     }
 
     Ok(())
-}
-
-fn load_skills_recursive(dir: &Path, parser: &CommonMarkYamlParser, acc: &mut Vec<SkillDocument>) {
-    if let Ok(entries) = fs::read_dir(dir) {
-        for entry in entries.flatten() {
-            let p = entry.path();
-            if p.is_dir() {
-                load_skills_recursive(&p, parser, acc);
-            } else if asl_spec::is_asl_file(&p) && !asl_parser::is_ignored_path(&p) {
-                if let Ok(content) = fs::read_to_string(&p) {
-                    if let Ok(doc) = parser.parse(&content) {
-                        acc.push(doc);
-                    }
-                }
-            }
-        }
-    }
 }

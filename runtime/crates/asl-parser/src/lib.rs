@@ -32,6 +32,10 @@ impl Default for CommonMarkYamlParser {
 
 impl ParserPort for CommonMarkYamlParser {
     fn parse(&self, raw_content: &str) -> Result<SkillDocument> {
+        if raw_content.trim().is_empty() {
+            return Ok(SkillDocument::draft_scaffold("draft-skill"));
+        }
+
         // 1. Extração do Frontmatter YAML delimitado por ---
         let (frontmatter_str, markdown_str) = extract_frontmatter_and_markdown(raw_content)?;
 
@@ -113,6 +117,10 @@ impl ParserPort for CommonMarkYamlParser {
 }
 
 fn extract_frontmatter_and_markdown(content: &str) -> Result<(String, String)> {
+    if content.trim().is_empty() {
+        return Ok((String::new(), String::new()));
+    }
+
     let mut in_comment = false;
     let mut frontmatter_started = false;
     let mut frontmatter_lines = Vec::new();
@@ -140,7 +148,7 @@ fn extract_frontmatter_and_markdown(content: &str) -> Result<(String, String)> {
                 continue;
             }
             return Err(AslError::InvalidFrontmatter(
-                "Esperado '---' delimitando início do YAML frontmatter.".to_string(),
+                "Expected '---' frontmatter opening delimiter.".to_string(),
             ));
         } else if !frontmatter_ended {
             if trimmed == "---" {
@@ -173,70 +181,54 @@ fn parse_markdown_blocks(markdown_raw: &str) -> Result<ParsedBlocks> {
 
     let mut deterministic_blocks = Vec::new();
     let mut rules_blocks = Vec::new();
-    let mut code_ranges = Vec::new();
-
-    let mut in_deterministic_block = false;
-    let mut in_rules_block = false;
-    let mut current_code = String::new();
-    let mut current_start = 0;
+    let mut current_block_kind: Option<String> = None;
+    let mut semantic_section = String::new();
+    let mut last_event_end = 0;
 
     for (event, range) in parser {
         match event {
-            Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(lang))) => {
-                let tag_str = lang.trim().to_lowercase();
-                if is_rules_code_tag(&tag_str) {
-                    in_rules_block = true;
-                    current_code.clear();
-                    current_start = range.start;
-                } else if is_deterministic_code_tag(&tag_str) {
-                    in_deterministic_block = true;
-                    current_code.clear();
-                    current_start = range.start;
+            Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(tag))) => {
+                let tag_str = tag.as_ref().trim().to_lowercase();
+                if is_rules_code_tag(&tag_str) || is_deterministic_code_tag(&tag_str) {
+                    current_block_kind = Some(tag_str);
+                    if range.start > last_event_end {
+                        semantic_section.push_str(&markdown_raw[last_event_end..range.start]);
+                    }
+                }
+            }
+            Event::Text(text) => {
+                if let Some(ref tag) = current_block_kind {
+                    if is_rules_code_tag(tag) {
+                        rules_blocks.push(text.to_string());
+                    } else if is_deterministic_code_tag(tag) {
+                        deterministic_blocks.push(text.to_string());
+                    }
                 }
             }
             Event::End(TagEnd::CodeBlock) => {
-                if in_rules_block {
-                    rules_blocks.push(current_code.clone());
-                    code_ranges.push(current_start..range.end);
-                    in_rules_block = false;
-                } else if in_deterministic_block {
-                    deterministic_blocks.push(current_code.clone());
-                    code_ranges.push(current_start..range.end);
-                    in_deterministic_block = false;
+                if current_block_kind.is_some() {
+                    current_block_kind = None;
+                    last_event_end = range.end;
                 }
-            }
-            Event::Text(text) if in_rules_block || in_deterministic_block => {
-                current_code.push_str(&text);
-            }
-            Event::SoftBreak | Event::HardBreak if in_rules_block || in_deterministic_block => {
-                current_code.push('\n');
             }
             _ => {}
         }
     }
 
-    let deterministic_code = deterministic_blocks.join("\n\n");
+    if last_event_end < markdown_raw.len() {
+        semantic_section.push_str(&markdown_raw[last_event_end..]);
+    }
+
+    let deterministic_code = deterministic_blocks.join("\n");
     let rules_code = if rules_blocks.is_empty() {
         None
     } else {
-        Some(rules_blocks.join("\n\n"))
+        Some(rules_blocks.join("\n"))
     };
-
-    let mut semantic_section = String::new();
-    let mut last_idx = 0;
-    for r in &code_ranges {
-        if r.start > last_idx {
-            semantic_section.push_str(&markdown_raw[last_idx..r.start]);
-        }
-        last_idx = r.end;
-    }
-    if last_idx < markdown_raw.len() {
-        semantic_section.push_str(&markdown_raw[last_idx..]);
-    }
 
     Ok(ParsedBlocks {
         semantic_section: semantic_section.trim().to_string(),
-        deterministic_code: deterministic_code.trim().to_string(),
+        deterministic_code,
         rules_code,
     })
 }
@@ -254,176 +246,4 @@ fn is_deterministic_code_tag(tag: &str) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_parser_valid_skill() {
-        let raw = r#"---
-asl_version: "3.0"
-name: "test-skill"
-description: "A test skill"
-interface:
-  entrypoint: "run"
----
-# Instruções Semânticas
-Execute a função determinística.
-
-```asl:deterministic
-def run(ctx, input):
-    return {"status": "ok"}
-```
-"#;
-
-        let parser = CommonMarkYamlParser::new();
-        let doc = parser.parse(raw).expect("Parsing deve suceder");
-        assert_eq!(doc.manifest.name, "test-skill");
-        assert_eq!(doc.manifest.asl_version, "3.0");
-        assert!(doc.deterministic_code.contains("def run(ctx, input)"));
-        assert!(doc.semantic_section.contains("Instruções Semânticas"));
-        assert!(doc.digest.starts_with("asl:sha256:"));
-    }
-
-    #[test]
-    fn test_digest_invariance_with_signature_and_digest_fields() {
-        let raw1 = r#"---
-asl_version: "3.0"
-name: "signed-skill"
-interface:
-  entrypoint: "run"
----
-# Semantic
-
-```asl
-def run(ctx, input):
-    return {}
-```
-"#;
-
-        let raw2 = r#"---
-asl_version: "3.0"
-name: "signed-skill"
-interface:
-  entrypoint: "run"
-digest: "asl:sha256:dummy"
-signature: "asl:ed25519:dummy_sig"
-signer_pubkey: "asl:ed25519:pub:dummy_pub"
----
-# Semantic
-
-```asl
-def run(ctx, input):
-    return {}
-```
-"#;
-
-        let parser = CommonMarkYamlParser::new();
-        let doc1 = parser.parse(raw1).unwrap();
-        let doc2 = parser.parse(raw2).unwrap();
-        assert_eq!(doc1.digest, doc2.digest);
-    }
-
-    #[test]
-    fn test_pure_semantic_skill_without_code_block() {
-        let raw = r#"---
-asl_version: "3.0"
-name: "pure-prompt"
-interface:
-  entrypoint: "run"
----
-# Instruções Puras de Prompt
-Você é um redator de documentação técnica.
-"#;
-        let parser = CommonMarkYamlParser::new();
-        let doc = parser
-            .parse(raw)
-            .expect("Skill puramente semântica deve ser válida");
-        assert_eq!(doc.manifest.name, "pure-prompt");
-        assert!(doc.deterministic_code.contains("def run(ctx, input)"));
-        assert!(doc.semantic_section.contains("Instruções Puras de Prompt"));
-    }
-
-    #[test]
-    fn test_rules_skill_parsing_and_in_memory_transpilation() {
-        let raw = r#"---
-asl_version: "3.0"
-name: "rules-skill"
-interface:
-  entrypoint: "validate"
----
-# Instruções Semânticas
-Regras declarativas em execução.
-
-```asl:rules
-guard:
-  input.text is not empty else reject("Texto vazio")
-
-match input.text:
-  when starts_with "hello":
-    accept(status="greeting")
-  otherwise:
-    accept(status="normal")
-```
-"#;
-        let parser = CommonMarkYamlParser::new();
-        let doc = parser
-            .parse(raw)
-            .expect("Skill com regras deve ser parseada e transpilada in-memory");
-        assert_eq!(doc.manifest.name, "rules-skill");
-        assert!(doc.rules_code.is_some());
-        assert!(doc.deterministic_code.contains("def validate(ctx, input):"));
-        assert!(doc
-            .deterministic_code
-            .contains("_asl_get(input, [\"text\"], \"\")"));
-    }
-
-    #[test]
-    fn test_pure_semantic_skill_with_custom_entrypoint() {
-        let raw = r#"---
-asl_version: "3.0"
-name: "custom-ep-skill"
-interface:
-  entrypoint: "process_query"
----
-# Prompt
-Apenas semântica.
-"#;
-        let parser = CommonMarkYamlParser::new();
-        let doc = parser
-            .parse(raw)
-            .expect("Skill sem código com custom ep deve ser válida");
-        assert_eq!(doc.manifest.interface.entrypoint, "process_query");
-        assert!(doc
-            .deterministic_code
-            .contains("def process_query(ctx, input):"));
-    }
-
-    #[test]
-    fn test_digest_includes_markdown_lines_starting_with_digest_or_signature() {
-        let base = r#"---
-asl_version: "3.0"
-name: "markdown-test"
-interface:
-  entrypoint: "run"
----
-# Semantic Section
-Normal line.
-"#;
-
-        let tampered = r#"---
-asl_version: "3.0"
-name: "markdown-test"
-interface:
-  entrypoint: "run"
----
-# Semantic Section
-Normal line.
-digest: malicious alteration
-signature: fake signature
-"#;
-        let parser = CommonMarkYamlParser::new();
-        let doc_base = parser.parse(base).unwrap();
-        let doc_tampered = parser.parse(tampered).unwrap();
-        assert_ne!(doc_base.digest, doc_tampered.digest, "Lines in markdown body MUST alter digest even if starting with digest: or signature:");
-    }
-}
+mod parser_tests;
