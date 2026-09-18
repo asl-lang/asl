@@ -66,11 +66,6 @@ fn sync_internal(target_path: &Path, parser: &CommonMarkYamlParser, verbose: boo
         }
     } else if target_path.is_dir() {
         sync_dir_recursive(target_path, parser, &mut stats)?;
-        let removed = clean_orphaned_shadows(target_path).unwrap_or_default();
-        stats.orphaned_removed = removed.len();
-        for r in removed {
-            println!("🧹 Orphan removed: {:?}", r);
-        }
     }
 
     if verbose {
@@ -98,18 +93,7 @@ fn sync_dir_recursive(
             }
             let file_name = path.file_name().and_then(|f| f.to_str()).unwrap_or("");
             if path.is_dir() {
-                if file_name.starts_with('.')
-                    || file_name == "node_modules"
-                    || file_name == "target"
-                    || file_name == "dist"
-                    || file_name == "build"
-                    || file_name == "out"
-                    || file_name == "vendor"
-                    || file_name == "venv"
-                    || file_name == "__pycache__"
-                    || file_name == "Library"
-                    || file_name == "Applications"
-                {
+                if asl_parser::is_skippable_dir(file_name) {
                     continue;
                 }
                 sync_dir_recursive(&path, parser, stats)?;
@@ -149,6 +133,15 @@ fn sync_dir_recursive(
                             }
                         }
                     }
+                }
+            } else if path.extension().and_then(|e| e.to_str()) == Some("md")
+                && asl_parser::is_shadow_markdown_file(&path)
+            {
+                let expected_skill = asl_parser::get_expected_skill_path(&path);
+                if !expected_skill.exists() {
+                    let _ = fs::remove_file(&path);
+                    stats.orphaned_removed += 1;
+                    println!("🧹 Orphan removed: {:?}", path);
                 }
             }
         }

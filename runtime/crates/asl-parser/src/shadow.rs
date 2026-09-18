@@ -171,6 +171,51 @@ pub fn project_shadow_markdown(
     Ok(ShadowProjectResult::Created(target_md))
 }
 
+/// Checks if directory should be skipped during recursive traversal
+pub fn is_skippable_dir(name: &str) -> bool {
+    name.starts_with('.')
+        || name == "node_modules"
+        || name == "target"
+        || name == "dist"
+        || name == "build"
+        || name == "out"
+        || name == "vendor"
+        || name == "venv"
+        || name == "env"
+        || name == "site-packages"
+        || name == "coverage"
+        || name == "__pycache__"
+        || name == "Library"
+        || name == "Applications"
+}
+
+/// Checks if a file is an ASL shadow markdown projection by reading only first 128 bytes
+pub fn is_shadow_markdown_file(path: &Path) -> bool {
+    use std::io::Read;
+    if let Ok(mut file) = fs::File::open(path) {
+        let mut buf = [0u8; 128];
+        if let Ok(n) = file.read(&mut buf) {
+            if let Ok(s) = std::str::from_utf8(&buf[..n]) {
+                return s.trim_start().starts_with(SHADOW_WATERMARK);
+            }
+        }
+    }
+    false
+}
+
+/// Derives the expected canonical .skill file for a shadow markdown file
+pub fn get_expected_skill_path(path: &Path) -> PathBuf {
+    let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    if file_name.ends_with(".asl.md") {
+        let base = file_name.strip_suffix(".asl.md").unwrap_or("");
+        path.with_file_name(format!("{}.skill", base))
+    } else if file_name.eq_ignore_ascii_case("SKILL.md") {
+        path.with_file_name("SKILL.skill")
+    } else {
+        path.with_extension("skill")
+    }
+}
+
 /// Removes orphaned shadow .md files whose original .skill was deleted (EC-2)
 pub fn clean_orphaned_shadows(dir: &Path) -> Result<Vec<PathBuf>> {
     let mut removed = Vec::new();
@@ -183,42 +228,19 @@ pub fn clean_orphaned_shadows(dir: &Path) -> Result<Vec<PathBuf>> {
             }
             let file_name = path.file_name().and_then(|f| f.to_str()).unwrap_or("");
             if path.is_dir() {
-                if file_name.starts_with('.')
-                    || file_name == "node_modules"
-                    || file_name == "target"
-                    || file_name == "dist"
-                    || file_name == "build"
-                    || file_name == "out"
-                    || file_name == "vendor"
-                    || file_name == "venv"
-                    || file_name == "__pycache__"
-                    || file_name == "Library"
-                    || file_name == "Applications"
-                {
+                if is_skippable_dir(file_name) {
                     continue;
                 }
                 if let Ok(sub_removed) = clean_orphaned_shadows(&path) {
                     removed.extend(sub_removed);
                 }
-            } else if path.extension().and_then(|e| e.to_str()) == Some("md") {
-                if let Ok(content) = fs::read_to_string(&path) {
-                    if content.trim_start().starts_with(SHADOW_WATERMARK) {
-                        // Deriva o .skill original esperado tratando .asl.md e SKILL.md
-                        let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
-                        let expected_skill = if file_name.ends_with(".asl.md") {
-                            let base = file_name.strip_suffix(".asl.md").unwrap_or("");
-                            path.with_file_name(format!("{}.skill", base))
-                        } else if file_name.eq_ignore_ascii_case("SKILL.md") {
-                            path.with_file_name("SKILL.skill")
-                        } else {
-                            path.with_extension("skill")
-                        };
-
-                        if !expected_skill.exists() {
-                            let _ = fs::remove_file(&path);
-                            removed.push(path);
-                        }
-                    }
+            } else if path.extension().and_then(|e| e.to_str()) == Some("md")
+                && is_shadow_markdown_file(&path)
+            {
+                let expected_skill = get_expected_skill_path(&path);
+                if !expected_skill.exists() {
+                    let _ = fs::remove_file(&path);
+                    removed.push(path);
                 }
             }
         }
@@ -283,12 +305,7 @@ mod tests {
                 digest: Some(digest.to_string()),
                 signature: None,
                 signer_pubkey: None,
-                interface: asl_spec::SkillInterface {
-                    protocol: "mcp-v1".to_string(),
-                    entrypoint: "run".to_string(),
-                    input_schema: serde_json::json!({}),
-                    output_schema: None,
-                },
+                interface: asl_spec::SkillInterface::default(),
                 capabilities: Default::default(),
                 limits: Default::default(),
             },
