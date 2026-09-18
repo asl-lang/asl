@@ -37,6 +37,7 @@ Utilize a skill `asl-plan` (`skills/asl-plan/SKILL.md`):
 | **[PLAN-0011](./0011-multi-extension-ai-ecosystem.md)** | Suporte Nativo a Múltiplas Extensões de IA/Agentes/LLM no ASL | [ADR-0011](../adrs/0011-multi-extension-ai-ecosystem.md) | **Concluído** | 5/5 Fases (100%) |
 | **[PLAN-0012](./0012-github-pages-documentation-platform.md)** | Plataforma de Documentação no GitHub Pages para ASL | [ADR-0012](../adrs/0012-github-pages-documentation-platform.md) | **Concluído** | 5/5 Fases (100%) |
 | **[PLAN-0013](./0013-auditoria-e-correcoes-ecossistema-dual-consumer.md)** | Auditoria Científica e Correções do Ecossistema Dual-Consumer | [ADR-0013](../adrs/0013-auditoria-e-correcoes-ecossistema-dual-consumer.md) | **Concluído** | 5/5 Fases (100%) |
+| **[PLAN-0014](./0014-prebuilt-binary-distribution-and-fast-installer.md)** | Distribuição de Binários Pré-Compilados e Instalador Instantâneo | [ADR-0014](../adrs/0014-prebuilt-binary-distribution-and-fast-installer.md) | **Concluído** | 4/4 Fases (100%) |
 
 
 

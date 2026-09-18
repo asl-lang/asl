@@ -32,4 +32,5 @@ Utilize a skill `asl-adr` (`skills/asl-adr/SKILL.md`):
 | **[ADR-0011](./0011-multi-extension-ai-ecosystem.md)** | Tríade Canônica de Extensões do ASL (`.skill`, `.tool`, `.asl`) e Isolamento de Sombra | **Aceito** | 2026-09-17 | `asl-spec`, `asl-core-traits`, `asl-parser`, `asl-cli` |
 | **[ADR-0012](./0012-github-pages-documentation-platform.md)** | GitHub Pages Documentation Platform for ASL (Next.js Design Aesthetic) | **Aceito** | 2026-09-17 | `docs/`, `website/`, `.github/workflows/` |
 | **[ADR-0013](./0013-auditoria-e-correcoes-ecossistema-dual-consumer.md)** | Auditoria Científica e Correções do Ecossistema Dual-Consumer | **Concluído** | 2026-09-18 | `asl-spec`, `asl-core-traits`, `asl-parser`, `asl-vm-starlark`, `asl-protocol-http`, `asl-cli` |
+| **[ADR-0014](./0014-prebuilt-binary-distribution-and-fast-installer.md)** | Distribuição de Binários Pré-Compilados e Instalador Instantâneo de Zero Dependências | **Aceito** | 2026-09-18 | `install.sh`, `scripts/package_release.sh`, `asl-cli` |
 
