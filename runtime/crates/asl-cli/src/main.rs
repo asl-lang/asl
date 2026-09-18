@@ -10,6 +10,7 @@ use std::path::PathBuf;
 
 mod crypto_cmds;
 mod daemon_cmds;
+mod lifecycle_cmds;
 mod prefix_cmds;
 mod server_cmds;
 mod shadow_cmds;
@@ -154,6 +155,30 @@ enum Commands {
 
     /// Interactive guided setup for configuring ASL and background services
     Setup,
+
+    /// Updates ASL binary to the latest release from the official channel
+    #[command(alias = "upgrade", alias = "self-update")]
+    Update {
+        /// Only check for updates without downloading
+        #[arg(short, long)]
+        check: bool,
+
+        /// Force re-installation even if already on the latest version
+        #[arg(short, long)]
+        force: bool,
+    },
+
+    /// Uninstalls ASL and removes the binary from the system
+    #[command(alias = "self-uninstall")]
+    Uninstall {
+        /// Automatically confirm uninstallation without prompting
+        #[arg(short, long)]
+        yes: bool,
+
+        /// Purge configuration and daemon runtime files (~/.asl)
+        #[arg(short, long)]
+        purge: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -365,6 +390,14 @@ fn main() -> Result<()> {
 
         Commands::Setup => {
             daemon_cmds::handle_setup()?;
+        }
+
+        Commands::Update { check, force } => {
+            lifecycle_cmds::handle_update(check, force)?;
+        }
+
+        Commands::Uninstall { yes, purge } => {
+            lifecycle_cmds::handle_uninstall(yes, purge)?;
         }
 
         Commands::Expand { skill_file } => {

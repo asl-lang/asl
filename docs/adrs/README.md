@@ -35,4 +35,6 @@ Utilize a skill `asl-adr` (`skills/asl-adr/SKILL.md`):
 | **[ADR-0014](./0014-prebuilt-binary-distribution-and-fast-installer.md)** | Distribuição de Binários Pré-Compilados e Instalador Instantâneo de Zero Dependências | **Aceito** | 2026-09-18 | `install.sh`, `scripts/package_release.sh`, `asl-cli` |
 | **[ADR-0015](./0015-daemon-universal-multiplataforma-e-parser-tolerante-zero-touch.md)** | Daemon Universal Multiplataforma de FSEvents e Parser Tolerante para Zero-Touch Ingestion | **Aceito** | 2026-09-18 | `asl-parser`, `asl-spec`, `asl-cli`, `install.sh` |
 | **[ADR-0016](./0016-guided-interactive-installer-and-opt-in-daemon.md)** | Instalação Interativa Guiada e Ativação Consentida do Daemon de Background | **Aceito** | 2026-09-18 | `install.sh`, `asl-cli` |
+| **[ADR-0017](./0017-cli-self-update-and-self-uninstall.md)** | Ciclo de Vida de Auto-Atualização e Auto-Desinstalação na CLI (`asl update` & `asl uninstall`) | **Aceito** | 2026-09-18 | `asl-cli` |
+
 

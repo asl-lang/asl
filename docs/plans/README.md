@@ -39,7 +39,9 @@ Utilize a skill `asl-plan` (`skills/asl-plan/SKILL.md`):
 | **[PLAN-0013](./0013-auditoria-e-correcoes-ecossistema-dual-consumer.md)** | Auditoria Científica e Correções do Ecossistema Dual-Consumer | [ADR-0013](../adrs/0013-auditoria-e-correcoes-ecossistema-dual-consumer.md) | **Concluído** | 5/5 Fases (100%) |
 | **[PLAN-0014](./0014-prebuilt-binary-distribution-and-fast-installer.md)** | Distribuição de Binários Pré-Compilados e Instalador Instantâneo | [ADR-0014](../adrs/0014-prebuilt-binary-distribution-and-fast-installer.md) | **Concluído** | 4/4 Fases (100%) |
 | **[PLAN-0015](./0015-daemon-universal-multiplataforma-e-parser-tolerante-zero-touch.md)** | Daemon Universal Multiplataforma e Parser Tolerante para Zero-Touch Ingestion | [ADR-0015](../adrs/0015-daemon-universal-multiplataforma-e-parser-tolerante-zero-touch.md) | **Concluído** | 5/5 Fases (100%) |
-| **[PLAN-0016](./0016-guided-interactive-installer-and-opt-in-daemon.md)** | Instalação Interativa Guiada e Ativação Consentida do Daemon | [ADR-0016](../adrs/0016-guided-interactive-installer-and-opt-in-daemon.md) | **Em Execução** | 1/3 Fases |
+| **[PLAN-0016](./0016-guided-interactive-installer-and-opt-in-daemon.md)** | Instalação Interativa Guiada e Ativação Consentida do Daemon | [ADR-0016](../adrs/0016-guided-interactive-installer-and-opt-in-daemon.md) | **Concluído** | 3/3 Fases (100%) |
+| **[PLAN-0017](./0017-cli-self-update-and-self-uninstall.md)** | Ciclo de Vida de Auto-Atualização e Auto-Desinstalação | [ADR-0017](../adrs/0017-cli-self-update-and-self-uninstall.md) | **Em Execução** | 1/3 Fases |
+
 
 
 
