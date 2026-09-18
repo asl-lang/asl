@@ -151,6 +151,9 @@ enum Commands {
         #[command(subcommand)]
         action: daemon_cmds::DaemonAction,
     },
+
+    /// Interactive guided setup for configuring ASL and background services
+    Setup,
 }
 
 fn main() -> Result<()> {
@@ -359,6 +362,10 @@ fn main() -> Result<()> {
                 daemon_cmds::handle_daemon_uninstall()?;
             }
         },
+
+        Commands::Setup => {
+            daemon_cmds::handle_setup()?;
+        }
 
         Commands::Expand { skill_file } => {
             let content = fs::read_to_string(&skill_file)

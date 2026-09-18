@@ -237,6 +237,42 @@ pub fn handle_daemon_uninstall() -> Result<()> {
     Ok(())
 }
 
+/// Interactive guided setup for configuring zero-touch background daemon
+pub fn handle_setup() -> Result<()> {
+    println!("========================================================");
+    println!("💡 Guided Configuration: Automatic Zero-Touch Sync");
+    println!("========================================================");
+    println!("ASL includes a lightweight background watcher that automatically");
+    println!("projects and updates .md files whenever a .skill is created or edited");
+    println!("in Claude Code, Cursor, Gemini, or your workspaces.\n");
+    print!("Enable automatic background sync? (Recommended) [Y/n]: ");
+    use std::io::Write;
+    let _ = std::io::stdout().flush();
+
+    let mut input = String::new();
+    let _ = std::io::stdin().read_line(&mut input);
+    let trimmed = input.trim().to_lowercase();
+
+    if trimmed == "n" || trimmed == "no" {
+        let _ = handle_daemon_stop();
+        let _ = handle_daemon_uninstall();
+        println!("\nℹ️  Automatic background daemon disabled (operating in clean, on-demand mode).");
+        println!("💡 Useful on-demand commands:");
+        println!("    asl sync <path>       # Project .md from .skill files on demand");
+        println!("    asl watch <path>      # Run temporary watcher in foreground");
+        println!("    asl daemon install    # Activate background service later anytime");
+    } else {
+        println!("\n⚡ Installing native background service...");
+        handle_daemon_install(None)?;
+        println!("✅ Automatic background sync is enabled and active across your OS!");
+        println!("ℹ️  Manage it anytime with:");
+        println!("    asl daemon status");
+        println!("    asl daemon stop");
+        println!("    asl daemon uninstall");
+    }
+    Ok(())
+}
+
 fn install_macos_launchd(exe: &Path, custom_dir: Option<&Path>) -> Result<()> {
     let home = dirs_home().context("Home dir not found")?;
     let agents_dir = home.join("Library/LaunchAgents");
@@ -364,9 +400,13 @@ fn uninstall_windows_task() -> Result<()> {
 }
 
 fn is_pid_running(pid: &str) -> bool {
+    let pid = pid.trim();
+    if pid.is_empty() || !pid.chars().all(|c| c.is_ascii_digit()) {
+        return false;
+    }
     #[cfg(unix)]
     {
-        if let Ok(status) = Command::new("kill").args(["-0", pid]).status() {
+        if let Ok(status) = Command::new("kill").args(["-0", pid]).stderr(std::process::Stdio::null()).status() {
             return status.success();
         }
     }
@@ -380,9 +420,13 @@ fn is_pid_running(pid: &str) -> bool {
 }
 
 fn kill_pid(pid: &str) -> Result<()> {
+    let pid = pid.trim();
+    if pid.is_empty() || !pid.chars().all(|c| c.is_ascii_digit()) {
+        return Ok(());
+    }
     #[cfg(unix)]
     {
-        let _ = Command::new("kill").args(["-TERM", pid]).status();
+        let _ = Command::new("kill").args(["-TERM", pid]).stderr(std::process::Stdio::null()).status();
     }
     #[cfg(windows)]
     {

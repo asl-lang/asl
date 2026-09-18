@@ -4,6 +4,27 @@
 # ==============================================================================
 set -euo pipefail
 
+DAEMON_ARG=""
+for arg in "$@"; do
+    case "$arg" in
+        --enable-daemon|--yes|-y)
+            DAEMON_ARG="yes"
+            ;;
+        --no-daemon|--no|-n)
+            DAEMON_ARG="no"
+            ;;
+        --help|-h)
+            echo "Usage: install.sh [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --enable-daemon, -y   Automatically enable background zero-touch sync"
+            echo "  --no-daemon, -n       Skip background daemon installation (clean on-demand mode)"
+            echo "  --help, -h            Show this help message"
+            exit 0
+            ;;
+    esac
+done
+
 # 1. Environment & PATH configuration
 if [ -f "$HOME/.cargo/env" ]; then
     # shellcheck source=/dev/null
@@ -141,7 +162,7 @@ echo "========================================================"
 echo "🎉 ASL 3.0 installed successfully!"
 echo "========================================================"
 
-# 6. Configure universal zero-touch background daemon
+# 6. Guided configuration of zero-touch background daemon
 ASL_BIN=""
 if [ -x "${DEST_DIR}/asl" ]; then
     ASL_BIN="${DEST_DIR}/asl"
@@ -152,12 +173,68 @@ elif [ -x "${HOME}/.cargo/bin/asl" ]; then
 fi
 
 if [ -n "${ASL_BIN}" ]; then
-    echo ""
-    echo "⚡ Configuring universal zero-touch daemon (LaunchAgent / systemd / background service)..."
-    if "${ASL_BIN}" daemon install; then
-        echo "✅ Zero-touch shadow projection daemon installed and active across your OS!"
+    WANT_DAEMON=""
+
+    if [ "$DAEMON_ARG" = "yes" ]; then
+        WANT_DAEMON=1
+    elif [ "$DAEMON_ARG" = "no" ]; then
+        WANT_DAEMON=0
+    elif [ -n "${ASL_ENABLE_DAEMON:-}" ]; then
+        case "$ASL_ENABLE_DAEMON" in
+            1|true|yes|YES) WANT_DAEMON=1 ;;
+            0|false|no|NO)  WANT_DAEMON=0 ;;
+        esac
+    fi
+
+    if [ -z "${WANT_DAEMON}" ]; then
+        # Check if an interactive terminal is available (direct or through /dev/tty when piped)
+        if [ -c /dev/tty ] || [ -t 0 ]; then
+            echo ""
+            echo "========================================================"
+            echo "💡 Guided Configuration: Automatic Zero-Touch Sync"
+            echo "========================================================"
+            echo "ASL includes a lightweight background watcher that automatically"
+            echo "projects and updates .md files whenever a .skill is created or edited"
+            echo "in Claude Code, Cursor, Gemini, or your workspaces."
+            echo ""
+            printf "Enable automatic background sync? (Recommended) [Y/n]: "
+
+            USER_INPUT=""
+            if [ -c /dev/tty ]; then
+                read -r USER_INPUT < /dev/tty || USER_INPUT=""
+            else
+                read -r USER_INPUT || USER_INPUT=""
+            fi
+
+            case "${USER_INPUT}" in
+                [nN]|[nN][oO])
+                    WANT_DAEMON=0
+                    ;;
+                *)
+                    WANT_DAEMON=1
+                    ;;
+            esac
+        else
+            # Headless / CI non-interactive environment: default to safe, non-intrusive opt-out
+            WANT_DAEMON=0
+        fi
+    fi
+
+    if [ "${WANT_DAEMON}" -eq 1 ]; then
+        echo ""
+        echo "⚡ Configuring universal zero-touch daemon (LaunchAgent / systemd / background service)..."
+        if "${ASL_BIN}" daemon install; then
+            echo "✅ Zero-touch shadow projection daemon installed and active across your OS!"
+        else
+            echo "ℹ️  Run '${ASL_BIN} daemon install' to activate automatic zero-touch shadow projection."
+        fi
     else
-        echo "ℹ️  Run '${ASL_BIN} daemon install' to activate automatic zero-touch shadow projection."
+        echo ""
+        echo "ℹ️  Automatic background daemon skipped (operating in clean, on-demand mode)."
+        echo "💡 Useful on-demand commands:"
+        echo "    asl sync <path>       # Project .md from .skill files on demand"
+        echo "    asl watch <path>      # Run temporary watcher in foreground"
+        echo "    asl daemon install    # Activate background service later anytime"
     fi
 fi
 
