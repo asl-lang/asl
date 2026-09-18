@@ -55,7 +55,7 @@ pub fn is_domain_allowed(domain: &str, allowed_domains: &[String]) -> bool {
     let target = domain.to_lowercase();
     allowed_domains.iter().any(|allowed| {
         let a = allowed.trim().trim_end_matches('.').to_lowercase();
-        target == a || target.ends_with(&format!(".{}", a))
+        a == "*" || target == a || target.ends_with(&format!(".{}", a))
     })
 }
 

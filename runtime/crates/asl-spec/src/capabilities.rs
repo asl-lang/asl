@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 enum FsCapabilitiesHelper {
+    Bool(bool),
     List(Vec<String>),
     Struct(FsCapabilitiesStruct),
 }
@@ -18,6 +19,7 @@ struct FsCapabilitiesStruct {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 enum NetCapabilitiesHelper {
+    Bool(bool),
     List(Vec<String>),
     Struct(NetCapabilitiesStruct),
 }
@@ -31,6 +33,7 @@ struct NetCapabilitiesStruct {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 enum EnvCapabilitiesHelper {
+    Bool(bool),
     List(Vec<String>),
     Struct(EnvCapabilitiesStruct),
 }
@@ -47,6 +50,11 @@ where
 {
     let helper = Option::<FsCapabilitiesHelper>::deserialize(deserializer)?;
     match helper {
+        Some(FsCapabilitiesHelper::Bool(true)) => Ok(FsCapabilities {
+            confined_read_roots: vec![".".to_string()],
+            allow_write: vec![".".to_string()],
+        }),
+        Some(FsCapabilitiesHelper::Bool(false)) => Ok(FsCapabilities::default()),
         Some(FsCapabilitiesHelper::List(roots)) => Ok(FsCapabilities {
             confined_read_roots: roots,
             allow_write: Vec::new(),
@@ -65,6 +73,10 @@ where
 {
     let helper = Option::<NetCapabilitiesHelper>::deserialize(deserializer)?;
     match helper {
+        Some(NetCapabilitiesHelper::Bool(true)) => Ok(NetCapabilities {
+            allow_domains: vec!["*".to_string()],
+        }),
+        Some(NetCapabilitiesHelper::Bool(false)) => Ok(NetCapabilities::default()),
         Some(NetCapabilitiesHelper::List(domains)) => Ok(NetCapabilities {
             allow_domains: domains,
         }),
@@ -81,6 +93,10 @@ where
 {
     let helper = Option::<EnvCapabilitiesHelper>::deserialize(deserializer)?;
     match helper {
+        Some(EnvCapabilitiesHelper::Bool(true)) => Ok(EnvCapabilities {
+            allow_keys: vec!["*".to_string()],
+        }),
+        Some(EnvCapabilitiesHelper::Bool(false)) => Ok(EnvCapabilities::default()),
         Some(EnvCapabilitiesHelper::List(keys)) => Ok(EnvCapabilities {
             allow_keys: keys,
         }),
@@ -102,7 +118,7 @@ pub struct SkillCapabilities {
     #[serde(default)]
     pub wasi_components: Vec<String>,
     /// Top-level convenience alias: `capabilities: domains: [...]`
-    #[serde(default)]
+    #[serde(default, alias = "allow_domains")]
     pub domains: Vec<String>,
 }
 

@@ -283,3 +283,155 @@ capabilities:
     assert_eq!(doc2.manifest.capabilities.net.allow_domains, vec!["service.internal".to_string()]);
     assert_eq!(doc2.manifest.capabilities.env.allow_keys, vec!["SECRET_KEY".to_string()]);
 }
+
+#[test]
+fn test_problem_3_nested_matches_and_advanced_patterns() {
+    let parser = CommonMarkYamlParser::new();
+    let engine = StarlarkEngine::new();
+    let mock_ctx = MockSecurityContext::new(100_000);
+
+    let skill_code = r#"---
+asl_version: "3.0"
+name: "advanced-match"
+description: "Test nested match and advanced patterns"
+interface:
+  entrypoint: "route_action"
+---
+# Routing
+
+```asl
+def route_action(ctx, input):
+    scope = input.get("scope", "")
+    op = input.get("op", "")
+    detail = input.get("detail", "")
+    res = "none"
+
+    match scope:  # test inline comments
+        when "auth":
+            match op:  # nested match
+                when "login", "sso":
+                    res = "auth_entry"
+                when _:
+                    res = "auth_other"
+        when "data":
+            match detail:
+                when contains("export"):
+                    res = "data_export"
+                when is empty:
+                    res = "data_blank"
+                otherwise:
+                    res = "data_general"
+        when _:
+            res = "fallback"
+
+    return {"result": res}
+```
+"#;
+
+    let doc = parser.parse(skill_code).expect("Must parse nested match");
+
+    let cases = [
+        (("auth", "login", ""), "auth_entry"),
+        (("auth", "sso", ""), "auth_entry"),
+        (("auth", "logout", ""), "auth_other"),
+        (("data", "", "bulk_export_csv"), "data_export"),
+        (("data", "", ""), "data_blank"),
+        (("data", "", "single_row"), "data_general"),
+        (("unknown", "", ""), "fallback"),
+    ];
+
+    for ((s, o, d), expected) in cases {
+        let out = engine
+            .execute(
+                &doc.deterministic_code,
+                "route_action",
+                &json!({"scope": s, "op": o, "detail": d}),
+                &mock_ctx,
+                &doc.manifest.limits,
+            )
+            .unwrap();
+        assert_eq!(out.output["result"], expected);
+    }
+}
+
+#[test]
+fn test_problem_4_and_5_extended_string_helpers_and_try_json() {
+    let parser = CommonMarkYamlParser::new();
+    let engine = StarlarkEngine::new();
+    let mock_ctx = MockSecurityContext::new(100_000);
+
+    let skill_code = r#"---
+asl_version: "3.0"
+name: "extended-helpers"
+description: "Verify is_alpha, is_alnum, try_json, and functional string helpers"
+interface:
+  entrypoint: "run_helpers"
+---
+# Helpers
+
+```asl
+def run_helpers(ctx, input):
+    raw_str = input.get("raw", "")
+    raw_json = input.get("json_str", "")
+
+    parsed_json = try_json(raw_json, default={"fallback": True})
+    bad_json = try_json("not valid json", default={"ok": False})
+
+    return {
+        "is_alpha": is_alpha(raw_str),
+        "is_alnum": is_alnum(raw_str),
+        "stripped": strip("  trimmed  "),
+        "parts": split("a,b,c", sep=","),
+        "has_prefix": starts_with(raw_str, "ASL"),
+        "has_suffix": ends_with(raw_str, "99"),
+        "contains_val": contains(raw_str, "CORE"),
+        "parsed_json": parsed_json,
+        "bad_json": bad_json,
+    }
+```
+"#;
+
+    let doc = parser.parse(skill_code).unwrap();
+    let out = engine
+        .execute(
+            &doc.deterministic_code,
+            "run_helpers",
+            &json!({"raw": "ASL-CORE-99", "json_str": "{\"user\": \"alice\"}"}),
+            &mock_ctx,
+            &doc.manifest.limits,
+        )
+        .unwrap();
+
+    assert_eq!(out.output["is_alpha"], false);
+    assert_eq!(out.output["is_alnum"], false);
+    assert_eq!(out.output["stripped"], "trimmed");
+    assert_eq!(out.output["parts"], json!(["a", "b", "c"]));
+    assert_eq!(out.output["has_prefix"], true);
+    assert_eq!(out.output["has_suffix"], true);
+    assert_eq!(out.output["contains_val"], true);
+    assert_eq!(out.output["parsed_json"]["user"], "alice");
+    assert_eq!(out.output["bad_json"]["ok"], false);
+}
+
+#[test]
+fn test_problem_6_boolean_capabilities_and_wildcards() {
+    let parser = CommonMarkYamlParser::new();
+
+    let yaml_bool = r#"---
+asl_version: "3.0"
+name: "bool-caps"
+description: "Testing boolean true capabilities"
+capabilities:
+  fs: true
+  net: true
+  env: true
+---
+# Prompt
+"#;
+
+    let doc = parser.parse(yaml_bool).expect("Must parse boolean capabilities");
+    assert_eq!(doc.manifest.capabilities.fs.confined_read_roots, vec![".".to_string()]);
+    assert_eq!(doc.manifest.capabilities.fs.allow_write, vec![".".to_string()]);
+    assert_eq!(doc.manifest.capabilities.net.allow_domains, vec!["*".to_string()]);
+    assert_eq!(doc.manifest.capabilities.env.allow_keys, vec!["*".to_string()]);
+}

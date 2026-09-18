@@ -223,7 +223,7 @@ impl CapabilityContext for ConfinedSecurityContext {
 
     fn env_var(&self, key: &str) -> Result<Option<String>> {
         self.consume_fuel(1);
-        if !self.allowed_env_keys.iter().any(|k| k == key) {
+        if !self.allowed_env_keys.iter().any(|k| k == key || k == "*") {
             return Err(AslError::CapabilityViolation(format!(
                 "Environment variable '{}' is not authorized in capabilities.env.allow_keys ({:?})",
                 key, self.allowed_env_keys

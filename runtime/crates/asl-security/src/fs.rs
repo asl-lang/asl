@@ -4,6 +4,10 @@ use std::path::{Path, PathBuf};
 /// Resolves a directory root string into an absolute canonical PathBuf.
 /// Expands leading `~` with the user's home directory.
 pub fn resolve_and_canonicalize_root(root_str: &str) -> PathBuf {
+    if root_str == "*" {
+        return PathBuf::from("/");
+    }
+
     let expanded = if let Some(rest) = root_str.strip_prefix("~/") {
         if let Some(home) = dirs_home() {
             home.join(rest)
@@ -71,7 +75,7 @@ pub fn check_path_confinement(path_str: &str, allowed_roots: &[PathBuf]) -> Resu
 
     let is_allowed = allowed_roots
         .iter()
-        .any(|root| canonical_target.starts_with(root));
+        .any(|root| root == &PathBuf::from("/") || canonical_target.starts_with(root));
 
     if !is_allowed {
         return Err(AslError::CapabilityViolation(format!(

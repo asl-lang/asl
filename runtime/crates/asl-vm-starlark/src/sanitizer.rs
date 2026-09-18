@@ -7,6 +7,8 @@ pub fn sanitize_error(err_str: &str) -> String {
     clean_msg = clean_msg.replace("asl_skill.star", "ASL Code");
     clean_msg = clean_msg.replace("Starlark execution error: ", "");
     clean_msg = clean_msg.replace("Starlark syntax error: ", "");
+    clean_msg = clean_msg.replace("Starlark", "ASL");
+    clean_msg = clean_msg.replace(".star", ".asl");
 
     // 2. Specific capability diagnostics with helpful hints
     if clean_msg.contains("has no attribute `env`") || clean_msg.contains("has no attribute 'env'") {
