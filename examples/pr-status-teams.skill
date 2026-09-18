@@ -1,6 +1,6 @@
 ---
 asl_version: "3.0"
-digest: "asl:sha256:6dee73fe02e2f80736034cc36fb20515021b5ccac2640dea5c2d481c21e16b85"
+digest: "asl:sha256:69794ddc43a58498d8433fe9c16b941449ff8993766ecc4c3e8078e9701cc618"
 name: "pr-status-teams"
 version: "3.0.0"
 description: "Gera status de PRs em Code Review (Backend e Mobile) para Microsoft Teams com zero dependências externas e zero MCP."
@@ -266,8 +266,9 @@ def analyze_single_pr(card):
 
     if len(unresolved_threads) > 0:
         first_t = unresolved_threads[0]
-        author = first_t.get("author", "autor")
-        path = first_t.get("path", "arquivo")
+        author_val = first_t.get("author", "autor")
+        author = author_val.get("login", "autor") if type(author_val) == "dict" else str(author_val)
+        path = str(first_t.get("path", "arquivo"))
         reasons.append("💬 " + str(len(unresolved_threads)) + " comentário(s) aberto(s) (" + author + " em " + path + ")")
 
     if mergeable == "UNKNOWN":
@@ -331,7 +332,8 @@ def format_board_section(board_title, project_code, items):
     if max_likes >= 1:
         names_text = " e ".join(top_reviewers)
         prs_text = " PR" if max_likes == 1 else " PRs"
-        out.append("⭐ Destaque do dia: " + names_text + " deu o like em " + str(max_likes) + prs_text + " — valeu por ajudar a destravar a fila!")
+        verb_text = "deu o like" if len(top_reviewers) == 1 else "deram o like"
+        out.append("⭐ Destaque do dia: " + names_text + " " + verb_text + " em " + str(max_likes) + prs_text + " — valeu por ajudar a destravar a fila!")
         out.append("")
 
     total_prs = len(items)
@@ -383,8 +385,14 @@ def format_board_section(board_title, project_code, items):
     return "\n".join(out), summary
 
 def generate_teams_status(ctx, input):
-    boards = input.get("boards", ["CORE", "APP"])
-    cards = input.get("cards", [])
+    if input == None:
+        input = {}
+    boards = input.get("boards")
+    if boards == None:
+        boards = ["CORE", "APP"]
+    cards = input.get("cards")
+    if cards == None:
+        cards = []
     
     backend_items = []
     mobile_items = []

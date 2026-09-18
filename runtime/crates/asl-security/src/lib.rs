@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 pub mod crypto;
 pub mod net;
 
-/// Contexto de segurança puramente em memória (Mock) para testes herméticos rápidos
+/// Pure in-memory security context (Mock) for fast hermetic unit tests
 pub struct MockSecurityContext {
     virtual_fs: HashMap<String, String>,
     mock_env: HashMap<String, String>,
@@ -83,16 +83,19 @@ impl CapabilityContext for MockSecurityContext {
         _headers: &[(String, String)],
         body: Option<&str>,
     ) -> Result<HttpResponsePayload> {
-        self.consume_fuel(10);
-        if let Some(resp) = self.mock_http.get(url) {
-            Ok(resp.clone())
+        let body_len = body.map(|b| b.len()).unwrap_or(0);
+        self.consume_fuel(10 + (body_len as u64 / 16));
+        let resp = if let Some(resp) = self.mock_http.get(url) {
+            resp.clone()
         } else {
-            Ok(HttpResponsePayload {
+            HttpResponsePayload {
                 status: 200,
                 headers: vec![("content-type".to_string(), "application/json".to_string())],
                 body: body.unwrap_or("{}").to_string(),
-            })
-        }
+            }
+        };
+        self.consume_fuel(resp.body.len() as u64 / 16);
+        Ok(resp)
     }
 
     fn check_fuel(&self) -> Result<u64> {
@@ -104,7 +107,7 @@ impl CapabilityContext for MockSecurityContext {
     }
 }
 
-/// Contexto de segurança para execução real com confinamento de diretórios raiz
+/// Security context for confined execution with root directory confinement
 pub struct ConfinedSecurityContext {
     allowed_read_roots: Vec<PathBuf>,
     allowed_domains: Vec<String>,
@@ -156,7 +159,7 @@ impl CapabilityContext for ConfinedSecurityContext {
         self.consume_fuel(1);
         let target_path = Path::new(path_str);
 
-        // Se nenhuma raiz foi autorizada, o acesso é sumariamente negado
+        // If no root was authorized, access is summarily denied
         if self.allowed_read_roots.is_empty() {
             return Err(AslError::CapabilityViolation(format!(
                 "Read access denied: no confined root authorized for '{}'",
@@ -248,14 +251,18 @@ impl CapabilityContext for ConfinedSecurityContext {
         let fuel_cost = 100 + (body_len as u64 / 16);
         self.consume_fuel(fuel_cost);
 
-        net::execute_http_request(
+        let res = net::execute_http_request(
             method,
             url,
             headers,
             body,
             &self.allowed_domains,
             self.wall_clock_timeout_ms,
-        )
+        )?;
+
+        let resp_body_len = res.body.len();
+        self.consume_fuel(resp_body_len as u64 / 16);
+        Ok(res)
     }
 
     fn check_fuel(&self) -> Result<u64> {
@@ -282,23 +289,40 @@ mod tests {
     }
 
     #[test]
+    fn test_mock_http_fuel_metering() {
+        let resp = HttpResponsePayload {
+            status: 200,
+            headers: vec![],
+            body: "a".repeat(160),
+        };
+        let ctx = MockSecurityContext::new(5000).with_http("https://api.test/data", resp);
+        assert_eq!(ctx.fuel_consumed(), 0);
+
+        let req_body = "b".repeat(32);
+        let _ = ctx.http_request("POST", "https://api.test/data", &[], Some(&req_body)).unwrap();
+
+        // 10 base + 32/16 (2 req) + 160/16 (10 resp) = 22 fuel consumed
+        assert_eq!(ctx.fuel_consumed(), 22);
+    }
+
+    #[test]
     fn test_confined_security_context_escape_prevention() {
-        // Sem permissão: deve falhar
+        // Without root permission: must fail
         let empty_caps = SkillCapabilities::default();
         let ctx_denied = ConfinedSecurityContext::from_capabilities(&empty_caps, 1000);
         let res = ctx_denied.read_file("Cargo.toml");
         assert!(matches!(res, Err(AslError::CapabilityViolation(_))));
 
-        // Com raiz em '.', tentar escapar para /etc ou diretório pai
+        // With root '.' configured, attempting to escape parent directory must fail
         let mut caps = SkillCapabilities::default();
         caps.fs.confined_read_roots.push(".".to_string());
         let ctx_allowed = ConfinedSecurityContext::from_capabilities(&caps, 1000);
 
-        // Acesso legal dentro da raiz
+        // Legal access within root
         let valid_read = ctx_allowed.read_file("Cargo.toml");
         assert!(valid_read.is_ok());
 
-        // Tentativa maliciosa de Directory Traversal
+        // Malicious directory traversal attempt
         let escape_attempt = ctx_allowed.read_file("../../../../../etc/passwd");
         assert!(matches!(escape_attempt, Err(AslError::CapabilityViolation(_))));
     }

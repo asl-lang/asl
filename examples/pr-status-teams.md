@@ -1,11 +1,11 @@
 <!-- ⚡ ASL AUTO-GENERATED SHADOW PROJECTION | DO NOT EDIT MANUALLY -->
-<!-- CANONICAL SOURCE: ./pr-status-teams.skill | DIGEST: asl:sha256:6dee73fe02e2f80736034cc36fb20515021b5ccac2640dea5c2d481c21e16b85 -->
+<!-- CANONICAL SOURCE: ./pr-status-teams.skill | DIGEST: asl:sha256:69794ddc43a58498d8433fe9c16b941449ff8993766ecc4c3e8078e9701cc618 -->
 ---
 asl_version: "3.0"
 name: "pr-status-teams"
 description: "Gera status de PRs em Code Review (Backend e Mobile) para Microsoft Teams com zero dependências externas e zero MCP."
 asl_canonical_source: "./pr-status-teams.skill"
-asl_digest: "asl:sha256:6dee73fe02e2f80736034cc36fb20515021b5ccac2640dea5c2d481c21e16b85"
+asl_digest: "asl:sha256:69794ddc43a58498d8433fe9c16b941449ff8993766ecc4c3e8078e9701cc618"
 ---
 # pr-status-teams
 

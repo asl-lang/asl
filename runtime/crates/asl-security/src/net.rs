@@ -18,30 +18,43 @@ pub fn extract_domain(url_str: &str) -> Result<String> {
         )));
     };
 
-    let host_part = without_proto
-        .split('/')
-        .next()
-        .unwrap_or("")
-        .split(':')
+    let authority = without_proto
+        .split(['/', '?', '#'])
         .next()
         .unwrap_or("")
         .trim();
 
-    if host_part.is_empty() {
+    let host_port = authority
+        .rsplit_once('@')
+        .map(|(_, hp)| hp)
+        .unwrap_or(authority);
+
+    let host = if host_port.starts_with('[') {
+        host_port
+            .find(']')
+            .map(|i| &host_port[1..i])
+            .unwrap_or(host_port)
+    } else {
+        host_port.split(':').next().unwrap_or("")
+    }
+    .trim()
+    .trim_end_matches('.');
+
+    if host.is_empty() {
         return Err(AslError::CapabilityViolation(format!(
             "Could not determine host domain in URL: '{}'",
             url_str
         )));
     }
 
-    Ok(host_part.to_lowercase())
+    Ok(host.to_lowercase())
 }
 
 /// Verifies whether the target domain is authorized by the capabilities allowlist
 pub fn is_domain_allowed(domain: &str, allowed_domains: &[String]) -> bool {
     let target = domain.to_lowercase();
     allowed_domains.iter().any(|allowed| {
-        let a = allowed.to_lowercase();
+        let a = allowed.trim().trim_end_matches('.').to_lowercase();
         target == a || target.ends_with(&format!(".{}", a))
     })
 }
@@ -121,8 +134,27 @@ pub fn execute_http_request(
             };
             convert_response(res)
         }
+        "PATCH" => {
+            let mut b = agent.patch(url_str);
+            for (k, v) in headers {
+                b = b.header(k.as_str(), v.as_str());
+            }
+            let res = if let Some(text) = body {
+                b.send(text)
+            } else {
+                b.send_empty()
+            };
+            convert_response(res)
+        }
         "DELETE" => {
             let mut b = agent.delete(url_str);
+            for (k, v) in headers {
+                b = b.header(k.as_str(), v.as_str());
+            }
+            convert_response(b.call())
+        }
+        "HEAD" => {
+            let mut b = agent.head(url_str);
             for (k, v) in headers {
                 b = b.header(k.as_str(), v.as_str());
             }
@@ -146,14 +178,23 @@ mod tests {
     fn test_extract_domain() {
         assert_eq!(extract_domain("https://api.github.com/repos").unwrap(), "api.github.com");
         assert_eq!(extract_domain("http://localhost:8080/test").unwrap(), "localhost");
+        assert_eq!(extract_domain("https://user:pass@api.github.com:443/repos").unwrap(), "api.github.com");
+        assert_eq!(extract_domain("https://api.github.com?query=val").unwrap(), "api.github.com");
+        assert_eq!(extract_domain("https://api.github.com#frag").unwrap(), "api.github.com");
+        assert_eq!(extract_domain("https://api.github.com.").unwrap(), "api.github.com");
+        assert_eq!(extract_domain("http://[::1]:8080/test").unwrap(), "::1");
         assert!(extract_domain("ftp://ftp.example.com").is_err());
+        assert!(extract_domain("https://").is_err());
     }
 
     #[test]
     fn test_is_domain_allowed() {
-        let allowed = vec!["atlassian.net".to_string(), "api.github.com".to_string()];
+        let allowed = vec!["atlassian.net".to_string(), "api.github.com".to_string(), "example.org.".to_string()];
         assert!(is_domain_allowed("api.github.com", &allowed));
         assert!(is_domain_allowed("company.atlassian.net", &allowed));
+        assert!(is_domain_allowed("example.org", &allowed));
+        assert!(is_domain_allowed("sub.example.org", &allowed));
         assert!(!is_domain_allowed("evil.com", &allowed));
+        assert!(!is_domain_allowed("notatlassian.net", &allowed));
     }
 }
