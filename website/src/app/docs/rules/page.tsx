@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { ArrowRight, Sparkles, ShieldCheck, Cpu, Code2, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Sparkles, ShieldCheck, Cpu, Code2, AlertOctagon, Landmark, CheckCircle2 } from "lucide-react";
 
 export default function RulesDocsPage() {
   return (
@@ -14,149 +14,183 @@ export default function RulesDocsPage() {
           Declarative Rules (<code className="text-blue-400 font-mono">asl:rules</code>)
         </h1>
         <p className="text-sm text-zinc-400 mt-2 leading-relaxed max-w-3xl">
-          Complete grammar specification and compilation reference for high-level semantic rules, pattern-matching matrices, and in-memory ahead-of-time (AOT) transpilation.
+          Grammar specification and enterprise architectures for declarative policy engines, financial AML risk scoring, and zero-trust security firewalls compiled AOT to Strict Starlark L1.
         </p>
       </div>
 
-      {/* 1. Philosophy & Purpose */}
-      <section className="space-y-4 border-t border-zinc-800 pt-8">
-        <h2 className="text-xl font-bold text-white tracking-tight">1. Semantic DSL Architecture</h2>
-        <p className="text-sm text-zinc-300 leading-relaxed">
-          While ASL allows writing imperative Starlark code directly in <code className="text-zinc-200 font-mono">```asl:deterministic</code> blocks, human engineers and LLMs reason most effectively about intent, guards, and validation matrices in declarative format.
-        </p>
-        <p className="text-sm text-zinc-300 leading-relaxed">
-          The <code className="text-zinc-200 font-mono">```asl:rules</code> domain-specific language (DSL) provides formal constructs for precondition verification and pattern dispatch. The ASL parser transpiles this block in memory ahead-of-time directly into hermetic Starlark L1 bytecode before VM execution.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-          <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 space-y-1.5">
-            <span className="font-semibold text-emerald-400 font-mono">Fail-Fast Guards</span>
-            <p className="text-zinc-400">Preconditions reject invalid inputs before any pattern matching or resource-consuming logic runs.</p>
-          </div>
-          <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 space-y-1.5">
-            <span className="font-semibold text-blue-400 font-mono">Pattern Matrix</span>
-            <p className="text-zinc-400">Multi-pattern disjunction with captured alias bindings for prefixes, substrings, and suffixes.</p>
-          </div>
-          <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 space-y-1.5">
-            <span className="font-semibold text-purple-400 font-mono">Zero Overhead</span>
-            <p className="text-zinc-400">Compiles into optimized pure branch trees with zero external runtime or interpreter overhead.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* 2. Grammar Specification */}
+      {/* 1. Grammar & Clause Specification */}
       <section className="space-y-6 border-t border-zinc-800 pt-8">
         <div>
-          <h2 className="text-xl font-bold text-white tracking-tight">2. Grammar &amp; Clause Specification</h2>
-          <p className="text-sm text-zinc-400 mt-1">Formal syntax for guards, match clauses, and terminal actions.</p>
+          <h2 className="text-xl font-bold text-white tracking-tight">1. Formal Grammar &amp; Clause Primitives</h2>
+          <p className="text-sm text-zinc-400 mt-1">Syntax for fail-fast precondition assertions and pattern-matching matrices.</p>
         </div>
 
-        {/* Guard Clauses */}
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5 space-y-3">
-          <h3 className="text-sm font-semibold font-mono text-white">2.1 Guard Clauses (<code className="text-blue-400">guard:</code>)</h3>
-          <p className="text-xs text-zinc-300 leading-relaxed">
-            Evaluated sequentially before match clauses. If any guard predicate fails, execution terminates immediately with the specified rejection message.
-          </p>
-          <div className="rounded-lg border border-zinc-850 bg-black p-3 font-mono text-xs text-zinc-300 overflow-x-auto">
-            <pre>{`guard:
-  input.payload is not empty else reject("Payload cannot be empty.")
-  input.actor is not null else reject("Actor identifier is required.")
-  input.retries >= 0 else reject("Retries count cannot be negative.")`}</pre>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 space-y-2">
+            <span className="text-emerald-400 font-bold">1. Guard Clauses (Preconditions)</span>
+            <p className="text-zinc-400 font-sans">Evaluated sequentially before matching begins. Rejects invalid requests immediately.</p>
+            <pre className="text-zinc-300 bg-black p-2.5 rounded border border-zinc-850 overflow-x-auto">{`guard:
+  input.payload is not empty else reject("Empty payload")
+  input.amount > 0 else reject("Invalid amount")
+  input.verified is true else reject("Unverified account")`}</pre>
           </div>
-          <div className="overflow-x-auto rounded-lg border border-zinc-850">
-            <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-zinc-900/60 border-b border-zinc-850 text-zinc-400">
-                <tr>
-                  <th className="p-2.5">Predicate</th>
-                  <th className="p-2.5 font-sans">Semantics</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-850 text-zinc-300">
-                <tr>
-                  <td className="p-2.5 text-blue-400">is not empty / is empty</td>
-                  <td className="p-2.5 font-sans">Checks that string or list has non-zero length after trimming.</td>
-                </tr>
-                <tr>
-                  <td className="p-2.5 text-blue-400">is not null / is null</td>
-                  <td className="p-2.5 font-sans">Checks non-nullness against <code className="text-zinc-200">None</code>.</td>
-                </tr>
-                <tr>
-                  <td className="p-2.5 text-blue-400">is true / is false</td>
-                  <td className="p-2.5 font-sans">Strict boolean equivalence assertion.</td>
-                </tr>
-                <tr>
-                  <td className="p-2.5 text-blue-400">&gt;=, &lt;=, ==, !=</td>
-                  <td className="p-2.5 font-sans">Relational comparison against scalar literal values.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
 
-        {/* Pattern Matching */}
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5 space-y-3">
-          <h3 className="text-sm font-semibold font-mono text-white">2.2 Pattern Matching (<code className="text-blue-400">match:</code>)</h3>
-          <p className="text-xs text-zinc-300 leading-relaxed">
-            Evaluates candidate conditions against an expression target. The first matching <code className="text-zinc-200 font-mono">when</code> branch executes and terminates evaluation.
-          </p>
-          <div className="rounded-lg border border-zinc-850 bg-black p-3 font-mono text-xs text-zinc-300 overflow-x-auto">
-            <pre>{`match input.commit_message:
-  when starts_with any(["feat", "fix", "docs", "chore"]) as prefix:
-    accept(valid=True, type=prefix, clean_msg=input.commit_message)
-
-  when contains any(["[skip ci]", "[wip]"]):
-    reject("WIP or skip commits are barred from release pipeline.")
-
-  when equals "initial commit":
-    accept(valid=True, type="init", clean_msg="initial commit")
-
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 space-y-2">
+            <span className="text-blue-400 font-bold">2. Pattern Match Matrix</span>
+            <p className="text-zinc-400 font-sans">Multi-pattern disjunction with captured alias bindings for prefixes and substrings.</p>
+            <pre className="text-zinc-300 bg-black p-2.5 rounded border border-zinc-850 overflow-x-auto">{`match input.target:
+  when starts_with any(["prod-", "us-east-"]) as region:
+    accept(status="routed", region=region)
+  when contains any(["[urgent]", "[hotfix]"]):
+    accept(status="expedited", priority=1)
   otherwise:
-    reject("Commit message does not adhere to Conventional Commits format.")`}</pre>
+    reject("No routing policy matched")`}</pre>
           </div>
-        </div>
-
-        {/* Match Primitives */}
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5 space-y-3">
-          <h3 className="text-sm font-semibold font-mono text-white">2.3 Pattern Primitives &amp; Disjunctions</h3>
-          <ul className="text-xs text-zinc-300 space-y-2 font-mono">
-            <li><strong className="text-white">starts_with any([...]) [as &lt;var&gt;]:</strong> Matches if target string starts with any prefix in the array. Optionally binds matching prefix to variable.</li>
-            <li><strong className="text-white">ends_with any([...]) [as &lt;var&gt;]:</strong> Matches if target ends with any suffix.</li>
-            <li><strong className="text-white">contains any([...]):</strong> Matches if target contains any substring.</li>
-            <li><strong className="text-white">matches_regex(&quot;...&quot;):</strong> Matches against regex pattern.</li>
-            <li><strong className="text-white">equals &lt;expr&gt;:</strong> Exact value equality comparison.</li>
-            <li><strong className="text-white">accept(key=val, ...):</strong> Emits success dictionary conforming to <code className="text-zinc-400">output_schema</code>.</li>
-            <li><strong className="text-white">reject(&quot;message&quot;):</strong> Emits structured rejection dictionary with diagnostic error string.</li>
-            <li><strong className="text-white">otherwise:</strong> Default fallback branch when no preceding patterns match.</li>
-          </ul>
         </div>
       </section>
 
-      {/* 3. AOT Transpilation Pipeline */}
+      {/* 2. Enterprise Architecture 1: Financial AML Risk Engine */}
       <section className="space-y-4 border-t border-zinc-800 pt-8">
-        <h2 className="text-xl font-bold text-white tracking-tight">3. In-Memory AOT Transpilation Pipeline</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+            <Landmark className="h-5 w-5 text-amber-400" />
+            <span>Enterprise Case 1: Financial Settlement &amp; AML Risk Engine</span>
+          </h2>
+          <span className="text-[10px] font-mono rounded bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-amber-400">
+            Mission-Critical
+          </span>
+        </div>
         <p className="text-sm text-zinc-300 leading-relaxed">
-          The <code className="text-zinc-200 font-mono">asl-parser</code> crate processes the rules block during document ingestion:
+          High-value cross-border settlements require strict compliance checking: currency whitelists, sanction lists (OFAC), velocity thresholds, and automatic Suspicious Activity Report (SAR) tagging.
         </p>
 
-        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5 space-y-3">
-          <div className="space-y-2 text-xs text-zinc-400 font-sans">
-            <div className="flex items-start gap-2">
-              <span className="font-mono text-emerald-400 font-bold">Step 1:</span>
-              <span><strong>Lexical Analysis:</strong> Scans tokens and validates syntax indentation.</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="font-mono text-emerald-400 font-bold">Step 2:</span>
-              <span><strong>AST Construction:</strong> Builds strongly-typed <code className="text-zinc-200 font-mono">RulesBlock</code> with validated expressions.</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="font-mono text-emerald-400 font-bold">Step 3:</span>
-              <span><strong>Starlark Emission:</strong> Generates hermetic Python-dialect code wrapped in the entrypoint function, injecting safe key access (<code className="text-zinc-200 font-mono">_asl_get</code>) and pattern helpers (<code className="text-zinc-200 font-mono">_asl_starts_with_any</code>).</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="font-mono text-emerald-400 font-bold">Step 4:</span>
-              <span><strong>AOT Syntax Verification:</strong> Emitted code is verified with <code className="text-zinc-200 font-mono">AstModule::parse</code> before writing, ensuring syntax bugs can never reach production runtime.</span>
-            </div>
-          </div>
+        <div className="rounded-xl border border-zinc-800 bg-[#0c0c0c] p-4 font-mono text-xs text-zinc-300 overflow-x-auto leading-relaxed">
+          <pre>{`\`\`\`asl:rules
+# --- 1. PRE-SETTLEMENT GUARDS (FAIL-FAST COMPLIANCE) ---
+guard:
+  input.source_account is not empty else reject("ERR_SOURCE_MISSING: Origin account required.")
+  input.destination_iban is not empty else reject("ERR_DEST_MISSING: Destination IBAN required.")
+  input.amount_cents > 0 else reject("ERR_INVALID_AMOUNT: Transaction amount must be positive.")
+  input.kyc_tier >= 2 else reject("ERR_KYC_INSUFFICIENT: Settlement requires KYC Tier 2 or above.")
+
+# --- 2. MULTI-TIER SANCTION & VELOCITY MATRIX ---
+match input.destination_iban:
+  # Block sanctioned country codes immediately (OFAC compliance)
+  when starts_with any(["IR", "KP", "SY", "CU"]) as sanctioned_code:
+    reject("ERR_SANCTION_BLOCK: Transfers to jurisdiction " + sanctioned_code + " are prohibited by law.")
+
+  # Cross-border high-value threshold (FinCEN CTR threshold: >= $10,000.00 USD / 1,000,000 cents)
+  when input.amount_cents >= 1000000:
+    accept(
+      status="MANUAL_REVIEW",
+      risk_score=95,
+      requires_compliance_signoff=True,
+      fincen_ctr_flag=True,
+      clearing_channel="FEDWIRE_HEAVY"
+    )
+
+  # High-risk SWIFT corridor
+  when starts_with any(["RU", "BY", "MM"]) as high_risk_corridor:
+    accept(
+      status="ENHANCED_DUE_DILIGENCE",
+      risk_score=75,
+      requires_compliance_signoff=True,
+      fincen_ctr_flag=False,
+      clearing_channel="SWIFT_EDD"
+    )
+
+  # SEPA and Domestic Instant Clearing
+  when starts_with any(["US", "GB", "DE", "FR", "BR"]):
+    accept(
+      status="AUTO_APPROVED",
+      risk_score=5,
+      requires_compliance_signoff=False,
+      fincen_ctr_flag=False,
+      clearing_channel="INSTANT_CLEARING"
+    )
+
+  otherwise:
+    accept(
+      status="STANDARD_CLEARING",
+      risk_score=25,
+      requires_compliance_signoff=False,
+      fincen_ctr_flag=False,
+      clearing_channel="ACH_BATCH"
+    )
+\`\`\``}</pre>
+        </div>
+      </section>
+
+      {/* 3. Enterprise Architecture 2: Zero-Trust Security Gateway */}
+      <section className="space-y-4 border-t border-zinc-800 pt-8">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+            <AlertOctagon className="h-5 w-5 text-rose-400" />
+            <span>Enterprise Case 2: Autonomous Zero-Trust API Firewall</span>
+          </h2>
+          <span className="text-[10px] font-mono rounded bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 text-rose-400">
+            Security Hardened
+          </span>
+        </div>
+        <p className="text-sm text-zinc-300 leading-relaxed">
+          Protects LLM tool endpoints against prompt injection attacks, unauthorized role escalation, and tenant boundary hopping before payload reaches internal databases:
+        </p>
+
+        <div className="rounded-xl border border-zinc-800 bg-[#0c0c0c] p-4 font-mono text-xs text-zinc-300 overflow-x-auto leading-relaxed">
+          <pre>{`\`\`\`asl:rules
+# --- 1. PERIMETER AUTH & TENANT ISOLATION GUARDS ---
+guard:
+  input.tenant_id is not empty else reject("SEC_001: Missing tenant identifier.")
+  input.auth_token is not null else reject("SEC_002: Bearer authorization token required.")
+  input.actor_role is not empty else reject("SEC_003: RBAC actor role required.")
+
+# --- 2. ATTACK VECTOR & ROUTING DISPATCH MATRIX ---
+match input.query_payload:
+  # Defense-in-depth: Prompt Injection & Jailbreak Heuristic Signatures
+  when contains any(["ignore previous instructions", "system prompt", "DAN mode", "bypass rules"]):
+    reject("SEC_ATTACK_DETECTED: Prompt injection attempt logged and reported to SOC.")
+
+  # SQL Injection & Destructive Query Signatures
+  when contains any(["DROP TABLE", "UNION SELECT", ";--", "OR 1=1"]):
+    reject("SEC_SQLI_DETECTED: Malicious SQL tokens identified in query payload.")
+
+  # Privileged Management Endpoints (Requires 'cluster_admin' role)
+  when starts_with any(["/admin", "/v1/cluster", "/v1/keys"]):
+    accept(
+      authorized=input.actor_role == "cluster_admin",
+      security_zone="AIR_GAPPED_CORE",
+      audit_rate=1.0
+    )
+
+  # Read-Only Metrics & Observability Endpoints
+  when starts_with any(["/metrics", "/healthz", "/ready"]):
+    accept(
+      authorized=True,
+      security_zone="PUBLIC_PROBE",
+      audit_rate=0.01
+    )
+
+  otherwise:
+    accept(
+      authorized=input.actor_role in ["cluster_admin", "developer", "operator"],
+      security_zone="STANDARD_VPC",
+      audit_rate=0.1
+    )
+\`\`\``}</pre>
+        </div>
+      </section>
+
+      {/* 4. Compilation Pipeline */}
+      <section className="space-y-4 border-t border-zinc-800 pt-8">
+        <h2 className="text-xl font-bold text-white tracking-tight">4. AOT In-Memory Transpilation Pipeline</h2>
+        <p className="text-sm text-zinc-300 leading-relaxed">
+          The <code className="text-zinc-200 font-mono">asl-parser</code> crate transpiles rules blocks ahead-of-time directly into strict Starlark L1 code:
+        </p>
+
+        <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 space-y-2 text-xs text-zinc-400 font-mono">
+          <p><strong className="text-white">1. Defensive Path Resolution:</strong> Generates nested <code className="text-zinc-300">_asl_get(input, [&quot;a&quot;, &quot;b&quot;])</code> calls, completely eliminating runtime <code className="text-rose-400">KeyError</code> panics.</p>
+          <p><strong className="text-white">2. Pure Function Dispatch:</strong> Emits pure Pythonic branch trees with exact variable bindings (<code className="text-zinc-300">_asl_starts_with_any</code>) running in $O(N)$ bounded opcodes.</p>
+          <p><strong className="text-white">3. Zero-Allocation Mapping:</strong> Rejection payloads and acceptance structs map directly into native JSON responses matching <code className="text-zinc-300 font-mono">output_schema</code>.</p>
         </div>
       </section>
 
@@ -169,10 +203,10 @@ export default function RulesDocsPage() {
           ← Capability Context (ctx)
         </Link>
         <Link
-          href="/docs/triad"
+          href="/docs/complex-workflows"
           className="flex items-center gap-1.5 text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors"
         >
-          <span>The Triad (.skill, .tool, .asl)</span>
+          <span>Complex Multi-Stage Pipelines</span>
           <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
