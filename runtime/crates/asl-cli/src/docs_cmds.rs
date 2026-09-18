@@ -1,10 +1,11 @@
 use anyhow::{bail, Result};
 use crate::docs_rosetta::*;
+use crate::docs_ssot;
 
 /// Handles `asl docs` / `asl learn` / `asl syntax`
 pub fn handle_docs(topic: &str, ai: bool, json: bool) -> Result<()> {
     if ai {
-        println!("{}", get_ai_primer());
+        println!("{}", docs_ssot::get_ai_primer());
         return Ok(());
     }
 
@@ -13,7 +14,13 @@ pub fn handle_docs(topic: &str, ai: bool, json: bool) -> Result<()> {
         return Ok(());
     }
 
-    match topic.to_lowercase().as_str() {
+    let topic_lower = topic.to_lowercase();
+    if let Some(content) = docs_ssot::find_topic_content(&topic_lower)? {
+        println!("{}", content);
+        return Ok(());
+    }
+
+    match topic_lower.as_str() {
         "syntax" => println!("{}", get_syntax_docs()),
         "rules" => println!("{}", get_rules_docs()),
         "triad" => println!("{}", get_triad_docs()),
@@ -44,40 +51,6 @@ pub fn handle_template(target_type: &str) -> Result<()> {
         other => bail!("Unknown template '{}'. Use: skill, tool, rules, or asl.", other),
     }
     Ok(())
-}
-
-fn get_ai_primer() -> &'static str {
-    r#"# ASL 3.0 Primer for AI Agents
-Execute: `asl run <file>` or `./<file>` | ASL VM Hermetic Sandbox | Zero overhead
-File Triad: .skill (modular, auto-shadows to .md), .tool (MCP tool), .asl (native root)
-Universal Code Tag: All code blocks use strictly ```asl
-
-Structure of .skill / .tool:
-```yaml
-#!/usr/bin/env -S asl run
----
-asl_version: "3.0"
-name: "my-skill"
-description: "Clear description for LLM dispatch"
-interface:
-  entrypoint: "run"
-  protocol: "mcp-tool-v1"
-capabilities:
-  fs: ["./data"]
-limits:
-  max_fuel_opcodes: 1000000
----
-# Semantic Instructions (for LLMs)
-Instructions and prompting guidelines go here.
-
-```asl
-match input.action:
-  when "query":
-    return {"status": "ok", "term": input.term}
-  otherwise:
-    return {"error": "unknown action"}
-```
-"#
 }
 
 fn get_overview_docs() -> &'static str {
@@ -387,17 +360,17 @@ def run(ctx, input):
 }
 
 fn get_json_docs(topic: &str) -> Result<String> {
+    if topic.is_empty() || topic == "all" || topic == "overview" {
+        return Ok(docs_ssot::COMMANDS_JSON.to_string());
+    }
     let val = serde_json::json!({
         "asl_version": "3.0",
         "topic": topic,
         "runtime": "asl_vm_hermetic",
         "shebang": "#!/usr/bin/env -S asl run",
         "code_tag": "asl",
-        "triad": [".skill", ".tool", ".asl"],
-        "available_topics": [
-            "overview", "syntax", "rules", "migration", "bash",
-            "python", "starlark", "triad", "mcp", "examples", "ai"
-        ]
+        "commands": serde_json::from_str::<serde_json::Value>(docs_ssot::COMMANDS_JSON)?,
+        "topics": serde_json::from_str::<serde_json::Value>(docs_ssot::TOPICS_JSON)?,
     });
     serde_json::to_string_pretty(&val).map_err(Into::into)
 }

@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AslCliSpec",
+  "description": "Schema for the Single Source of Truth (SSOT) defining ASL CLI commands and flags.",
+  "type": "object",
+  "required": ["version", "commands"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "ASL specification version"
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Command"
+      }
+    }
+  },
+  "$defs": {
+    "Command": {
+      "type": "object",
+      "required": ["id", "name", "category", "summary", "description"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "aliases": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "category": {
+          "type": "string",
+          "enum": ["execution", "verification", "server", "compiler", "crypto", "lifecycle", "docs", "daemon"]
+        },
+        "summary": { "type": "string" },
+        "description": { "type": "string" },
+        "arguments": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Argument" }
+        },
+        "flags": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Flag" }
+        },
+        "examples": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Example" }
+        },
+        "ai_primer": {
+          "type": "object",
+          "properties": {
+            "usage": { "type": "string" },
+            "token_estimate": { "type": "integer" }
+          }
+        }
+      }
+    },
+    "Argument": {
+      "type": "object",
+      "required": ["name", "type", "required", "description"],
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "required": { "type": "boolean" },
+        "default": { "type": "string" },
+        "description": { "type": "string" }
+      }
+    },
+    "Flag": {
+      "type": "object",
+      "required": ["name", "long", "type", "description"],
+      "properties": {
+        "name": { "type": "string" },
+        "short": { "type": "string" },
+        "long": { "type": "string" },
+        "type": { "type": "string" },
+        "required": { "type": "boolean" },
+        "default": { "type": "string" },
+        "description": { "type": "string" }
+      }
+    },
+    "Example": {
+      "type": "object",
+      "required": ["cmd", "desc"],
+      "properties": {
+        "cmd": { "type": "string" },
+        "desc": { "type": "string" }
+      }
+    }
+  }
+}

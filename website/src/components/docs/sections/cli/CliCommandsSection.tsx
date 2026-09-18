@@ -1,57 +1,66 @@
 import React from "react";
+import cliSpec from "@/data/cli-spec.json";
 
 export const CliCommandsSection: React.FC = () => {
-  const commands = [
-    {
-      cmd: "asl run <file> [--input '<json>']",
-      desc: "Executes the deterministic entrypoint of a .skill, .tool, or .asl file with fuel metering and capability sandbox.",
-      example: `asl run examples/git-conventional-commit.skill --input '{"intent": "fix: bug"}'`,
-    },
-    {
-      cmd: "asl check <file>",
-      desc: "Validates syntax, verifies canonical SHA256 digest, checks YAML frontmatter schema, and verifies OCap boundaries.",
-      example: `asl check examples/security-validator.tool`,
-    },
-    {
-      cmd: "asl expand <file>",
-      desc: "Displays the in-memory compiled hermetic Starlark code generated from ASL blocks for developer inspection.",
-      example: `asl expand examples/git-conventional-commit.skill`,
-    },
-    {
-      cmd: "asl serve [--transport stdio|sse] [--port 8080] [--dir ./skills]",
-      desc: "Starts a native Model Context Protocol (MCP) server exposing loaded skills as tools over stdio or HTTP/Server-Sent Events.",
-      example: `asl serve --transport stdio --dir ./examples`,
-    },
-    {
-      cmd: "asl analyze-prefix <file>",
-      desc: "Calculates static invariant prefix length, estimates token footprint, and predicts inference KV-cache hit rate.",
-      example: `asl analyze-prefix examples/summarizer.asl`,
-    },
-    {
-      cmd: "asl sign <file> --key <priv_key>",
-      desc: "Signs the canonical skill digest using Ed25519 private key, inserting cryptographic custody signature into the frontmatter.",
-      example: `asl sign my-skill.skill --key ./author.ed25519`,
-    },
-  ];
+  const commands = cliSpec.commands || [];
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold text-white tracking-tight">
-        Subcommands &amp; Flags
-      </h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-white tracking-tight">
+          Subcommands &amp; Flags
+        </h2>
+        <span className="text-xs font-mono text-zinc-500 bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-full">
+          SSOT v{cliSpec.version} • {commands.length} Commands
+        </span>
+      </div>
+
+      <p className="text-xs text-zinc-400">
+        All subcommands are generated deterministically from the Spec-Driven Documentation (SDD) manifest in <code className="text-zinc-300">docs/spec/</code>.
+      </p>
 
       <div className="space-y-4 my-4">
-        {commands.map((c, i) => (
-          <div key={i} className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 space-y-2">
-            <div className="font-mono text-xs font-bold text-emerald-400">
-              {c.cmd}
+        {commands.map((c: any) => (
+          <div key={c.id} className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="font-mono text-xs font-bold text-emerald-400">
+                {c.ai_primer?.usage ? c.ai_primer.usage : `asl ${c.name}`}
+              </div>
+              <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded border border-zinc-700 bg-zinc-900 text-zinc-400">
+                {c.category}
+              </span>
             </div>
-            <p className="text-xs text-zinc-400">
-              {c.desc}
+
+            <p className="text-xs text-zinc-300">
+              {c.description}
             </p>
-            <div className="rounded-lg border border-zinc-850 bg-black p-2.5 font-mono text-[11px] text-zinc-300">
-              <code>$ {c.example}</code>
-            </div>
+
+            {c.flags && c.flags.length > 0 && (
+              <div className="space-y-1.5 pt-1">
+                <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Flags:</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                  {c.flags.map((f: any) => (
+                    <div key={f.long} className="text-[11px] font-mono bg-zinc-900/80 border border-zinc-850 p-1.5 rounded text-zinc-300 flex items-baseline gap-2">
+                      <span className="text-cyan-400 font-semibold">
+                        {f.short ? `-${f.short}, ` : ""}--{f.long}
+                      </span>
+                      <span className="text-zinc-500 text-[10px] truncate">{f.description}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {c.examples && c.examples.length > 0 && (
+              <div className="space-y-1 pt-1">
+                {c.examples.map((ex: any, idx: number) => (
+                  <div key={idx} className="rounded-lg border border-zinc-850 bg-black p-2.5 font-mono text-[11px] text-zinc-300">
+                    <div className="text-[10px] text-zinc-500 mb-1"># {ex.desc}</div>
+                    <code>$ {ex.cmd}</code>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>

@@ -44,6 +44,7 @@ Utilize a skill `asl-plan` (`skills/asl-plan/SKILL.md`):
 | **[PLAN-0019](./0019-self-teaching-cli-learning-system.md)** | Subsistema de Auto-Instrução na CLI e Descoberta para IAs | [ADR-0019](../adrs/0019-self-teaching-cli-learning-system.md) | **Concluído** | 4/4 Fases (100%) |
 | **[PLAN-0020](./0020-pure-asl-semantic-language-architecture.md)** | Arquitetura Pura da Linguagem Semântica ASL e Tag Universal Única (```asl) | [ADR-0020](../adrs/0020-pure-asl-semantic-language-architecture.md) | **Concluído** | 7/7 Fases (100%) |
 | **[PLAN-0021](./0021-sandboxed-autonomous-io-capabilities.md)** | Capacidades OCap Autônomas (`ctx.env`, `ctx.http` e Base64) para Skills Zero-MCP | [ADR-0021](../adrs/0021-sandboxed-autonomous-io-capabilities.md) | **Proposto** | 0/6 Fases (0%) |
+| **[PLAN-0023](./0023-spec-driven-documentation-ssot-cli-website.md)** | Spec-Driven Documentation (SDD) com SSOT para CLI e Website | [ADR-0023](../adrs/0023-spec-driven-documentation-ssot-cli-website.md) | **Em Execução** | 3/4 Fases (75%) |
 
 
 

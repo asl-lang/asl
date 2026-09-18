@@ -10,6 +10,7 @@ mod crypto_cmds;
 mod daemon_cmds;
 mod docs_cmds;
 mod docs_rosetta;
+mod docs_ssot;
 mod lifecycle_cmds;
 mod prefix_cmds;
 mod repl_cmds;
@@ -20,7 +21,7 @@ mod shadow_cmds;
 #[command(name = "asl")]
 #[command(about = "Agent Skill Language (ASL) Runtime & Tooling", long_about = None)]
 #[command(version)]
-struct Cli {
+pub(crate) struct Cli {
     #[command(subcommand)]
     command: Commands,
 }

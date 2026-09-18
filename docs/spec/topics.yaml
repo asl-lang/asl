@@ -1,0 +1,81 @@
+version: "3.0"
+topics:
+  - id: overview
+    title: "Language Overview & Quick Start"
+    summary: "Architecture of ASL 3.0, hermetic sandbox, and universal shebang execution."
+    ai_primer: |
+      # ASL 3.0 Primer for AI Agents
+      Execute: `asl run <file>` or `./<file>` | ASL VM Hermetic Sandbox | Zero overhead
+      File Triad: .skill (modular, auto-shadows to .md), .tool (MCP tool), .asl (native root)
+      Universal Code Tag: All code blocks use strictly ```asl
+    content: |
+      ========================================================================
+      ⚡ Agent Skill Language (ASL 3.0) - Language Reference & Cheat Sheet
+      ========================================================================
+
+      ASL is an open specification where programming feels just like writing
+      Markdown. Your document IS your program — combining plain prose for AI
+      agents and humans with concise ```asl code blocks. Under the hood, ASL
+      transpiles AOT into hermetic, fuel-metered Starlark in RAM.
+
+      🚀 QUICK START:
+        asl template skill > my-skill.skill    # Generate canonical skill template
+        chmod +x my-skill.skill               # Make executable
+        ./my-skill.skill                      # Run directly via universal shebang!
+        asl run my-skill.skill                # Run via hermetic runtime
+
+  - id: syntax
+    title: "YAML Frontmatter & Structure"
+    summary: "YAML frontmatter specification, headers, interface and code blocks."
+    content: |
+      ========================================================================
+      📝 ASL 3.0 Syntax & Frontmatter Reference
+      ========================================================================
+
+      Every ASL document starts with YAML frontmatter between `---` delimiters:
+      - name: Identifier of the skill or tool
+      - asl_version: "3.0"
+      - description: Natural language description for LLMs
+      - interface: entrypoint and protocol definitions
+      - capabilities: OCap permission declarations (fs, env, http, crypto)
+      - limits: Resource bounds (max_fuel_opcodes, max_memory_kib)
+
+  - id: rules
+    title: "Declarative Semantic Rules"
+    summary: "High-level pattern matching and declarative action dispatch."
+    content: |
+      ========================================================================
+      🎯 ASL Declarative Rules Syntax
+      ========================================================================
+
+      Inside ```asl blocks, declarative pattern matching executes deterministically:
+      match input.action:
+        when "query":
+          return {"status": "ok", "term": input.term}
+        otherwise:
+          return {"error": "unknown action"}
+
+  - id: triad
+    title: "The File Triad (.skill, .tool, .asl)"
+    summary: "Differences and roles of .skill, .tool, and .asl file extensions."
+    content: |
+      ========================================================================
+      🧩 The ASL Canonical File Triad
+      ========================================================================
+
+      1. .skill: Modular, dual-audience (human/AI) document with automatic shadow markdown projection.
+      2. .tool: Pure MCP tool declaration for direct agent function dispatch without shadow projection.
+      3. .asl: Native root ASL module for deterministic backend workflows.
+
+  - id: practices
+    title: "Best Practices & Daemon-Free Workflow"
+    summary: "Guidelines for working efficiently without background services."
+    content: |
+      ========================================================================
+      💡 Best Practices for Developers and AI Agents
+      ========================================================================
+
+      1. Use Shebang on Line 1: `#!/usr/bin/env -S asl run` makes skills executable.
+      2. Verify Early: Use `asl check <file>` before deployment.
+      3. On-Demand Sync: Use `asl sync .` if background daemon is disabled.
+      4. Prefix Invariance: Consolidate static prompt blocks at top for 100% KV cache hits.
