@@ -23,8 +23,8 @@ export default function HomePage() {
 
         {/* Professional Subtitle */}
         <p className="mt-5 text-sm sm:text-base text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-          Agent Skill Language (ASL) is a deterministic language and execution runtime for autonomous AI agent skills.
-          Combine natural language semantic prompts with sandboxed Starlark logic, strict capability security, and zero ambient authority.
+          Agent Skill Language (ASL) is a semantic, deterministic programming language for autonomous AI agent skills.
+          Combine natural language semantic prompts with sandboxed ASL deterministic logic, strict capability security, and zero ambient authority.
         </p>
 
         {/* Primary CTA Buttons */}
@@ -154,7 +154,7 @@ export default function HomePage() {
             Test ASL in the Browser
           </h2>
           <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl mt-1.5 leading-relaxed">
-            Write declarative semantic rules, simulate AOT transpilation to Starlark L1 bytecode, and test execution directly in WebAssembly.
+            Write declarative semantic rules in native ASL syntax, simulate AOT compilation (compatible with Starlark L1 bytecode), and test execution directly in WebAssembly.
           </p>
         </div>
 

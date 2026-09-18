@@ -177,7 +177,33 @@ export default function CapabilityContextPage() {
         </p>
 
         <div className="rounded-lg border border-zinc-850 bg-black p-4 font-mono text-xs text-zinc-300 overflow-x-auto">
-          <pre>{`def execute(ctx, input):
+          <pre>{`---
+asl_version: "3.0"
+name: "sandboxed-file-hasher"
+version: "1.0.0"
+description: "Confined file reader with fuel-aware cryptographic hashing"
+interface:
+  protocol: "mcp-tool-v1"
+  entrypoint: "execute"
+  input_schema:
+    type: "object"
+    required: ["filepath"]
+    properties:
+      filepath: { type: "string" }
+capabilities:
+  fs:
+    confined_read_roots: ["./data", "./logs"]
+limits:
+  max_fuel_opcodes: 100000
+---
+
+# 1. Intent
+Reads and cryptographically audits target files under sandboxed roots.
+
+---
+
+\`\`\`asl:deterministic
+def execute(ctx, input):
     filepath = input.get("filepath")
     
     # 1. Defensive verification of path argument
@@ -202,7 +228,8 @@ export default function CapabilityContextPage() {
         "bytes_read": len(content),
         "sha256": sha,
         "opcodes_used": ctx.fuel.consumed()
-    }`}</pre>
+    }
+\`\`\``}</pre>
         </div>
       </section>
 

@@ -57,7 +57,7 @@ Invoke this skill when the user asks to summarize staged changes or prepare a co
 ---
 
 \`\`\`asl:deterministic
-# REGION 3: Deterministic Logic Block (Starlark L1 or asl:rules)
+# REGION 3: ASL Deterministic Block (asl:deterministic or asl:rules)
 def execute(ctx, input):
     intent = input.get("intent", "").strip()
     if not intent:
@@ -81,7 +81,7 @@ def execute(ctx, input):
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3.5 space-y-1">
             <span className="font-semibold text-white font-mono">3. Deterministic Block</span>
-            <p className="text-zinc-400">Hermetic Starlark L1 code or declarative <code className="text-zinc-300 font-mono">asl:rules</code> executed with sandboxed capabilities and monotonic fuel bounds.</p>
+            <p className="text-zinc-400">Native ASL procedural code (<code className="text-zinc-300 font-mono">asl:deterministic</code>) or declarative rules (<code className="text-zinc-300 font-mono">asl:rules</code>) executed in the ASL sandboxed VM (compatible with Starlark L1).</p>
           </div>
         </div>
       </section>
@@ -107,10 +107,10 @@ def execute(ctx, input):
           <div className="rounded-xl border border-emerald-900/50 bg-emerald-950/20 p-5 space-y-2">
             <div className="flex items-center gap-2 text-emerald-400 font-bold font-mono">
               <Shield className="h-4 w-4" />
-              <span>Consumer B: The Sandboxed Host VM (Starlark)</span>
+              <span>Consumer B: The Sandboxed ASL Host VM</span>
             </div>
             <p className="text-zinc-300 leading-relaxed">
-              When the agent calls the skill, the host ASL engine validates arguments, creates an isolated memory sandbox, injects capability context handles (<code className="text-zinc-200 font-mono">ctx</code>), and executes Region 3 with guaranteed mathematical termination in finite fuel steps.
+              When the agent calls the skill, the host ASL engine validates arguments, creates an isolated memory sandbox, injects capability context handles (<code className="text-zinc-200 font-mono">ctx</code>), and executes Region 3 with guaranteed mathematical termination in finite fuel steps (100% compatible with the Starlark L1 runtime standard).
             </p>
           </div>
         </div>

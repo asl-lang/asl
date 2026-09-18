@@ -120,7 +120,7 @@ export default function UseCasesPage() {
             Placed in front of internal AI services. Uses <code className="text-zinc-200 font-mono">asl:rules</code> to intercept prompt injection attempts, detect jailbreak signatures (<code className="text-zinc-200">&quot;DAN mode&quot;</code>, <code className="text-zinc-200">&quot;ignore previous instructions&quot;</code>), enforce tenant boundary isolation, and scrub sensitive PII (credit cards, API keys) before data reaches external LLM APIs.
           </p>
           <div className="rounded-lg border border-zinc-850 bg-black p-3 font-mono text-xs text-zinc-400">
-            <span className="text-zinc-500"># Performance advantage:</span> Transpiled in-memory to strict Starlark L1, processing requests in &lt; 200 microseconds with zero garbage collection pause.
+            <span className="text-zinc-500"># Performance advantage:</span> Compiled in-memory to hermetic ASL execution bytecode (compatible with Starlark L1), processing requests in &lt; 200 microseconds with zero garbage collection pause.
           </div>
         </div>
 

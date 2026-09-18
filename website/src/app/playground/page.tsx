@@ -27,7 +27,7 @@ export default function PlaygroundPage() {
             In-Memory Transpiler
           </div>
           <p className="text-xs text-zinc-400 leading-relaxed">
-            High-level <code className="text-zinc-300">asl:rules</code> conditions are compiled Ahead-of-Time to pure, sandboxed Starlark functions without needing an external compiler.
+            High-level <code className="text-zinc-300 font-mono">asl:rules</code> conditions are compiled Ahead-of-Time to pure, sandboxed ASL deterministic functions (compatible with Starlark L1) without needing an external compiler.
           </p>
         </div>
 

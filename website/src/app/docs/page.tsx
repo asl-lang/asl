@@ -60,7 +60,7 @@ export default function DocsOverviewPage() {
           <ul className="list-disc pl-5 space-y-1 text-zinc-400">
             <li><span className="text-zinc-200 font-semibold">\mathcal&#123;M&#125; (Manifest)</span>: Immutable YAML frontmatter with capabilities, OCap bounds, and entrypoint signatures.</li>
             <li><span className="text-zinc-200 font-semibold">\mathcal&#123;P&#125; (Semantic Envelope)</span>: CommonMark prose parsed by the LLM (Consumer \alpha) for intent and context.</li>
-            <li><span className="text-zinc-200 font-semibold">\mathcal&#123;D&#125; (Deterministic Block)</span>: Strict Starlark L1 bytecode executed by the pure Rust VM (Consumer \beta).</li>
+            <li><span className="text-zinc-200 font-semibold">\mathcal&#123;D&#125; (Deterministic Block)</span>: Native ASL deterministic logic (evaluated by Consumer \beta, 100% compatible with Starlark L1 runtime).</li>
           </ul>
         </div>
 

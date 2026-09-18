@@ -92,7 +92,7 @@ export default function ScientificPaperPage() {
             <MathBlock block math={`\\mathcal{S} = \\langle \\mathcal{M}, \\mathcal{P}, \\mathcal{D} \\rangle`} />
           </div>
           <p>
-            Onde <MathBlock math={`\\mathcal{M}`} /> é o Manifesto Estruturado (YAML imutável), <MathBlock math={`\\mathcal{P}`} /> é o Envelope Semântico (CommonMark consumido pela rede neural <MathBlock math={`\\alpha`} />), e <MathBlock math={`\\mathcal{D}`} /> é o Bloco Determinístico (Starlark L1 ou Wasm avaliado pela máquina <MathBlock math={`\\beta`} />).
+            Onde <MathBlock math={`\\mathcal{M}`} /> é o Manifesto Estruturado (YAML imutável), <MathBlock math={`\\mathcal{P}`} /> é o Envelope Semântico (CommonMark consumido pela rede neural <MathBlock math={`\\alpha`} />), e <MathBlock math={`\\mathcal{D}`} /> é o Bloco Determinístico (lógica determinística ASL avaliada pela máquina <MathBlock math={`\\beta`} />, compatível com o runtime Starlark L1).
           </p>
         </section>
 
@@ -121,7 +121,7 @@ export default function ScientificPaperPage() {
             <MathBlock block math={`\\mathcal{V}(S_{t+1}) < \\mathcal{V}(S_t) \\quad \\text{e} \\quad \\mathcal{V}(S) \\le \\mathcal{B}_{\\text{fuel}}`} />
           </div>
           <p>
-            <strong>Teorema 1 (Término Bounded):</strong> Toda execução de código ASL em Starlark L1 termina em um número finito de passos estritamente delimitado por <MathBlock math={`\\mathcal{B}_{\\text{fuel}}`} />, com complexidade de tempo <MathBlock math={`\\mathcal{O}(\\mathcal{B})`} />.
+            <strong>Teorema 1 (Término Bounded):</strong> Toda execução de código ASL termina em um número finito de passos estritamente delimitado por <MathBlock math={`\\mathcal{B}_{\\text{fuel}}`} />, com complexidade de tempo <MathBlock math={`\\mathcal{O}(\\mathcal{B})`} /> (compatível com a semântica finita Starlark L1).
           </p>
         </section>
 

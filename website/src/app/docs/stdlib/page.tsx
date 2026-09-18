@@ -216,14 +216,16 @@ export default function StdlibReferencePage() {
             Fast, deterministic encoding and decoding of JSON text into ASL native structures.
           </p>
           <div className="rounded-lg border border-zinc-850 bg-black p-3 font-mono text-xs text-zinc-300 overflow-x-auto">
-            <pre>{`# json.decode: String -> native structure
-data = json.decode('{"task": "lint", "count": 42}')
-task_name = data["task"]   # "lint"
+            <pre>{`\`\`\`asl:deterministic
+# ASL JSON Serialization in execute()
+def execute(ctx, input):
+    data = json.decode('{"task": "lint", "count": 42}')
+    task_name = data["task"]   # "lint"
 
-# json.encode: Native structure -> String
-payload = {"status": "success", "processed": [1, 2, 3]}
-raw_json = json.encode(payload)
-# Returns: '{"status":"success","processed":[1,2,3]}'`}</pre>
+    payload = {"status": "success", "processed": [1, 2, 3]}
+    raw_json = json.encode(payload)
+    return {"task": task_name, "raw_json": raw_json}
+\`\`\``}</pre>
           </div>
         </div>
 
@@ -238,15 +240,16 @@ raw_json = json.encode(payload)
             </div>
           </div>
           <p className="text-xs text-zinc-300 leading-relaxed">
-            Constructs immutable record objects with dot-accessible properties.
+            Constructs immutable record objects with dot-accessible properties in ASL.
           </p>
           <div className="rounded-lg border border-zinc-850 bg-black p-3 font-mono text-xs text-zinc-300 overflow-x-auto">
-            <pre>{`# Create an immutable point record
-point = struct(x=10, y=25, label="origin")
-
-# Dot access syntax
-distance = point.x + point.y   # 35
-label = point.label            # "origin"`}</pre>
+            <pre>{`\`\`\`asl:deterministic
+# ASL Immutable Struct Records
+def execute(ctx, input):
+    point = struct(x=10, y=25, label="origin")
+    distance = point.x + point.y   # 35
+    return {"x": point.x, "y": point.y, "distance": distance}
+\`\`\``}</pre>
           </div>
         </div>
       </section>

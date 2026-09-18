@@ -14,7 +14,7 @@ export default function TypesReferencePage() {
           Types &amp; Data Model
         </h1>
         <p className="text-sm text-zinc-400 mt-2 leading-relaxed max-w-3xl">
-          Formal data type specifications, memory representation, immutability semantics, and JSON Schema boundary serialization for Agent Skill Language (ASL 3.0).
+          Formal data type specifications, memory representation, immutability semantics, and JSON Schema boundary serialization in Agent Skill Language (ASL 3.0).
         </p>
       </div>
 
@@ -22,21 +22,21 @@ export default function TypesReferencePage() {
       <section className="space-y-4 border-t border-zinc-800 pt-8">
         <h2 className="text-xl font-bold text-white tracking-tight">1. Architectural Principles</h2>
         <p className="text-sm text-zinc-300 leading-relaxed">
-          ASL deterministic execution blocks operate on a <strong>strongly-typed, hermetically-scoped</strong> runtime model derived from Google&apos;s Starlark dialect. The type system is designed to completely eliminate undefined behavior, null-pointer dereferences, and floating-point non-determinism across disparate CPU microarchitectures.
+          ASL operates on a <strong>strongly-typed, hermetically-scoped semantic runtime model</strong>. The type system is designed to eliminate undefined behavior, null-pointer dereferences, and floating-point non-determinism across disparate CPU architectures, while maintaining full binary compatibility with the Starlark L1 execution standard.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
           <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 space-y-1.5">
             <span className="font-semibold text-emerald-400 font-mono">Hermetic Boundaries</span>
-            <p className="text-zinc-400">Values entering and exiting the runtime are strictly validated against JSON Schemas declared in the skill frontmatter.</p>
+            <p className="text-zinc-400">Values entering and exiting ASL are strictly validated against JSON Schemas declared in the skill frontmatter before code executes.</p>
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 space-y-1.5">
             <span className="font-semibold text-blue-400 font-mono">Zero Pointer Hazards</span>
-            <p className="text-zinc-400">No memory pointers, no circular references, and no ambient global references. Garbage collection runs safely in an isolated per-execution arena.</p>
+            <p className="text-zinc-400">No raw pointers, no circular references, and no ambient global state. Execution memory is collected safely in an isolated per-invocation arena.</p>
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 space-y-1.5">
-            <span className="font-semibold text-purple-400 font-mono">Microarchitecture Invariance</span>
-            <p className="text-zinc-400">All arithmetic operations produce byte-identical results on x86_64, ARM64, and WebAssembly engines without divergence.</p>
+            <span className="font-semibold text-purple-400 font-mono">Architecture Invariance</span>
+            <p className="text-zinc-400">All arithmetic and string operations produce byte-identical results across x86_64, ARM64, and WebAssembly targets.</p>
           </div>
         </div>
       </section>
@@ -63,14 +63,20 @@ export default function TypesReferencePage() {
             Represents exact, unbounded mathematical integers. ASL integers do not overflow or wrap around at 32 or 64 bits. Supports decimal, hexadecimal (<code className="text-zinc-200 font-mono">0xFF</code>), binary (<code className="text-zinc-200 font-mono">0b1010</code>), and octal (<code className="text-zinc-200 font-mono">0o755</code>) literals.
           </p>
           <div className="rounded-lg border border-zinc-850 bg-black p-3 font-mono text-xs text-zinc-300 overflow-x-auto">
-            <pre>{`count = 42
-hex_mask = 0xFF00
-binary_flag = 0b1011
-large_val = 1000000000000000000000000  # Exact precision, zero overflow risk
+            <pre>{`\`\`\`asl:deterministic
+# ASL Integer Arithmetic
+def execute(ctx, input):
+    count = 42
+    hex_mask = 0xFF00
+    binary_flag = 0b1011
+    large_val = 1000000000000000000000000  # Exact precision, zero overflow risk
 
-# Integer division and modulo:
-quotient = 10 // 3   # 3 (floor division)
-remainder = 10 % 3  # 1`}</pre>
+    # Integer division and modulo:
+    quotient = 10 // 3   # 3 (floor division)
+    remainder = 10 % 3  # 1
+
+    return {"count": count, "quotient": quotient, "remainder": remainder}
+\`\`\``}</pre>
           </div>
         </div>
 
@@ -89,12 +95,15 @@ remainder = 10 % 3  # 1`}</pre>
             Contains exactly two values: <code className="text-zinc-200 font-mono">True</code> and <code className="text-zinc-200 font-mono">False</code>. Truth-value testing considers <code className="text-zinc-200 font-mono">0</code>, <code className="text-zinc-200 font-mono">&quot;&quot;</code>, <code className="text-zinc-200 font-mono">[]</code>, <code className="text-zinc-200 font-mono">&#123;&#125;</code>, and <code className="text-zinc-200 font-mono">None</code> as falsy. All other values evaluate to truthy.
           </p>
           <div className="rounded-lg border border-zinc-850 bg-black p-3 font-mono text-xs text-zinc-300 overflow-x-auto">
-            <pre>{`is_ready = True
-has_errors = False
+            <pre>{`\`\`\`asl:deterministic
+# ASL Boolean Branching
+def execute(ctx, input):
+    is_ready = input.get("ready", True)
+    has_errors = False
 
-# Truthiness testing
-if not has_errors and is_ready:
-    status = "operational"`}</pre>
+    status = "operational" if (not has_errors and is_ready) else "blocked"
+    return {"status": status, "is_ready": is_ready}
+\`\`\``}</pre>
           </div>
         </div>
 
@@ -110,17 +119,20 @@ if not has_errors and is_ready:
             <code className="text-xs font-mono text-zinc-500">type(x) == &quot;string&quot;</code>
           </div>
           <p className="text-xs text-zinc-300 leading-relaxed">
-            Immutable sequences of valid UTF-8 characters. Indexed by character position (0-indexed). Supports Python-style slicing <code className="text-zinc-200 font-mono">[start:end:step]</code>, concatenation with <code className="text-zinc-200 font-mono">+</code>, repetition with <code className="text-zinc-200 font-mono">*</code>, and template formatting.
+            Immutable sequences of valid UTF-8 characters. Indexed by character position (0-indexed). Supports slicing <code className="text-zinc-200 font-mono">[start:end:step]</code>, concatenation with <code className="text-zinc-200 font-mono">+</code>, repetition with <code className="text-zinc-200 font-mono">*</code>, and template formatting.
           </p>
           <div className="rounded-lg border border-zinc-850 bg-black p-3 font-mono text-xs text-zinc-300 overflow-x-auto">
-            <pre>{`name = "agent-executor"
-multiline = """Line 1
-Line 2 with UTF-8: 🚀"""
-
-first_char = name[0]         # "a"
-prefix = name[:5]            # "agent"
-reversed_str = name[::-1]    # "rotucexe-tnega"
-interpolated = "Hello, {}!".format("world")`}</pre>
+            <pre>{`\`\`\`asl:deterministic
+# ASL UTF-8 String Processing
+def execute(ctx, input):
+    name = input.get("agent_name", "asl-executor")
+    first_char = name[0]         # "a"
+    prefix = name[:3]            # "asl"
+    reversed_str = name[::-1]
+    formatted = "Active agent: {}".format(name)
+    
+    return {"prefix": prefix, "formatted": formatted, "reversed": reversed_str}
+\`\`\``}</pre>
           </div>
         </div>
 
@@ -145,7 +157,7 @@ interpolated = "Hello, {}!".format("world")`}</pre>
       <section className="space-y-6 border-t border-zinc-800 pt-8">
         <div>
           <h2 className="text-xl font-bold text-white tracking-tight">3. Composite Data Structures</h2>
-          <p className="text-sm text-zinc-400 mt-1">Containers and structured records for data manipulation.</p>
+          <p className="text-sm text-zinc-400 mt-1">Containers and structured records for data manipulation in ASL.</p>
         </div>
 
         {/* List */}
@@ -163,13 +175,17 @@ interpolated = "Hello, {}!".format("world")`}</pre>
             Heterogeneous ordered sequences. Items can be mutated, appended, extended, and sliced inside function bodies.
           </p>
           <div className="rounded-lg border border-zinc-850 bg-black p-3 font-mono text-xs text-zinc-300 overflow-x-auto">
-            <pre>{`items = ["git", "docker", "rust"]
-items.append("wasm")          # ["git", "docker", "rust", "wasm"]
-items[1] = "podman"           # ["git", "podman", "rust", "wasm"]
-first = items.pop(0)          # "git", items becomes ["podman", "rust", "wasm"]
+            <pre>{`\`\`\`asl:deterministic
+# ASL List Operations
+def execute(ctx, input):
+    items = ["git", "docker", "rust"]
+    items.append("asl")
+    first = items.pop(0)          # "git"
 
-# List comprehensions:
-squares = [x * x for x in range(5) if x % 2 == 0]  # [0, 4, 16]`}</pre>
+    # Comprehensions:
+    squares = [x * x for x in range(5) if x % 2 == 0]  # [0, 4, 16]
+    return {"items": items, "first": first, "squares": squares}
+\`\`\``}</pre>
           </div>
         </div>
 
@@ -188,17 +204,21 @@ squares = [x * x for x in range(5) if x % 2 == 0]  # [0, 4, 16]`}</pre>
             Key-value associative maps. Keys must be hashable immutable types (<code className="text-zinc-200 font-mono">string</code>, <code className="text-zinc-200 font-mono">int</code>, <code className="text-zinc-200 font-mono">bool</code>, <code className="text-zinc-200 font-mono">tuple</code>).
           </p>
           <div className="rounded-lg border border-zinc-850 bg-black p-3 font-mono text-xs text-zinc-300 overflow-x-auto">
-            <pre>{`config = {
-    "version": 3,
-    "enabled": True,
-    "tags": ["core", "prod"]
-}
+            <pre>{`\`\`\`asl:deterministic
+# ASL Dictionary Operations
+def execute(ctx, input):
+    config = {
+        "version": 3,
+        "enabled": True,
+        "tags": ["core", "prod"]
+    }
 
-# Defensive access (safe against missing keys):
-env = config.get("env", "development")
-
-# Key inspection:
-has_version = "version" in config   # True`}</pre>
+    # Defensive access:
+    env = config.get("env", "development")
+    is_prod = "prod" in config.get("tags", [])
+    
+    return {"env": env, "is_prod": is_prod}
+\`\`\``}</pre>
           </div>
         </div>
 
@@ -217,9 +237,15 @@ has_version = "version" in config   # True`}</pre>
             Fixed-size immutable collections. Tuples can be used as dictionary keys because of their strict immutability.
           </p>
           <div className="rounded-lg border border-zinc-850 bg-black p-3 font-mono text-xs text-zinc-300 overflow-x-auto">
-            <pre>{`point = (10, 20)
-x, y = point               # Destructuring / Unpacking
-matrix_cell = {(0, 1): "val"} # Valid as dict key`}</pre>
+            <pre>{`\`\`\`asl:deterministic
+# ASL Tuples & Destructuring
+def execute(ctx, input):
+    point = (10, 20)
+    x, y = point               # Destructuring / Unpacking
+    matrix = {(0, 1): "cell_value"} # Valid as dict key
+    
+    return {"x": x, "y": y, "val": matrix[(0, 1)]}
+\`\`\``}</pre>
           </div>
         </div>
 
@@ -235,15 +261,17 @@ matrix_cell = {(0, 1): "val"} # Valid as dict key`}</pre>
             <code className="text-xs font-mono text-zinc-500">type(x) == &quot;struct&quot;</code>
           </div>
           <p className="text-xs text-zinc-300 leading-relaxed">
-            Created via the builtin <code className="text-zinc-200 font-mono">struct(key=val)</code> constructor. Provides dot-accessible attributes and strict immutability. Used by the ASL runtime to inject capability handles on the <code className="text-zinc-200 font-mono">ctx</code> object.
+            Created via the ASL builtin <code className="text-zinc-200 font-mono">struct(key=val)</code> constructor. Provides dot-accessible attributes and strict immutability. Used by the ASL runtime to inject capability handles on the <code className="text-zinc-200 font-mono">ctx</code> object.
           </p>
           <div className="rounded-lg border border-zinc-850 bg-black p-3 font-mono text-xs text-zinc-300 overflow-x-auto">
-            <pre>{`# Creating a structured record
-user = struct(id=42, name="alice", role="admin")
-
-# Dot access
-user_name = user.name      # "alice"
-# user.name = "bob"        # COMPILE/RUNTIME ERROR: structs are immutable!`}</pre>
+            <pre>{`\`\`\`asl:deterministic
+# ASL Struct Records
+def execute(ctx, input):
+    user = struct(id=42, name="alice", role="admin")
+    
+    # Dot access syntax
+    return {"user_name": user.name, "role": user.role}
+\`\`\``}</pre>
           </div>
         </div>
       </section>
@@ -252,7 +280,7 @@ user_name = user.name      # "alice"
       <section className="space-y-4 border-t border-zinc-800 pt-8">
         <h2 className="text-xl font-bold text-white tracking-tight">4. JSON Schema Mapping Matrix</h2>
         <p className="text-sm text-zinc-300 leading-relaxed">
-          When skills are executed, arguments conforming to <code className="text-zinc-200 font-mono">input_schema</code> are deserialized into ASL types, and return values are verified against <code className="text-zinc-200 font-mono">output_schema</code>:
+          When skills are executed, arguments conforming to <code className="text-zinc-200 font-mono">input_schema</code> are deserialized into ASL native types, and return values are verified against <code className="text-zinc-200 font-mono">output_schema</code>:
         </p>
 
         <div className="overflow-x-auto rounded-lg border border-zinc-800">
@@ -261,7 +289,7 @@ user_name = user.name      # "alice"
               <tr>
                 <th className="p-3">JSON Schema Type</th>
                 <th className="p-3">ASL Runtime Type</th>
-                <th className="p-3">Rust Internal Representation</th>
+                <th className="p-3">Runtime Engine Mapping</th>
                 <th className="p-3">Serialization Behavior</th>
               </tr>
             </thead>
@@ -269,37 +297,37 @@ user_name = user.name      # "alice"
               <tr>
                 <td className="p-3 text-blue-400">&quot;string&quot;</td>
                 <td className="p-3 text-white">string</td>
-                <td className="p-3 text-zinc-400">starlark::values::string::StarlarkStr</td>
+                <td className="p-3 text-zinc-400">ASL VM (Starlark L1 compatible)</td>
                 <td className="p-3 font-sans">Strict UTF-8 encoded string.</td>
               </tr>
               <tr>
                 <td className="p-3 text-blue-400">&quot;integer&quot;</td>
                 <td className="p-3 text-white">int</td>
-                <td className="p-3 text-zinc-400">starlark::values::int::StarlarkInt</td>
+                <td className="p-3 text-zinc-400">ASL VM (Starlark L1 compatible)</td>
                 <td className="p-3 font-sans">Zero-loss unbounded integer.</td>
               </tr>
               <tr>
                 <td className="p-3 text-blue-400">&quot;boolean&quot;</td>
                 <td className="p-3 text-white">bool</td>
-                <td className="p-3 text-zinc-400">starlark::values::bool::StarlarkBool</td>
+                <td className="p-3 text-zinc-400">ASL VM (Starlark L1 compatible)</td>
                 <td className="p-3 font-sans">Strict boolean (<code className="text-zinc-200">true</code> / <code className="text-zinc-200">false</code>).</td>
               </tr>
               <tr>
                 <td className="p-3 text-blue-400">&quot;array&quot;</td>
                 <td className="p-3 text-white">list</td>
-                <td className="p-3 text-zinc-400">starlark::values::list::List</td>
+                <td className="p-3 text-zinc-400">ASL VM (Starlark L1 compatible)</td>
                 <td className="p-3 font-sans">Zero-indexed JSON array.</td>
               </tr>
               <tr>
                 <td className="p-3 text-blue-400">&quot;object&quot;</td>
                 <td className="p-3 text-white">dict</td>
-                <td className="p-3 text-zinc-400">starlark::values::dict::Dict</td>
+                <td className="p-3 text-zinc-400">ASL VM (Starlark L1 compatible)</td>
                 <td className="p-3 font-sans">String-keyed JSON object map.</td>
               </tr>
               <tr>
                 <td className="p-3 text-blue-400">&quot;null&quot;</td>
                 <td className="p-3 text-white">NoneType (None)</td>
-                <td className="p-3 text-zinc-400">starlark::values::none::NoneType</td>
+                <td className="p-3 text-zinc-400">ASL VM (Starlark L1 compatible)</td>
                 <td className="p-3 font-sans">JSON literal <code className="text-zinc-200">null</code>.</td>
               </tr>
             </tbody>

@@ -16,7 +16,7 @@ export default function CliDocsPage() {
     },
     {
       cmd: "asl expand <file>",
-      desc: "Displays the in-memory transpiled Starlark L1 code generated from asl:rules blocks for developer inspection.",
+      desc: "Displays the in-memory compiled deterministic ASL code (compatible with Starlark L1) generated from asl:rules blocks for developer inspection.",
       example: `asl expand examples/git-conventional-commit.skill`,
     },
     {

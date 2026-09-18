@@ -14,7 +14,7 @@ export default function RulesDocsPage() {
           Declarative Rules (<code className="text-blue-400 font-mono">asl:rules</code>)
         </h1>
         <p className="text-sm text-zinc-400 mt-2 leading-relaxed max-w-3xl">
-          Grammar specification and enterprise architectures for declarative policy engines, financial AML risk scoring, and zero-trust security firewalls compiled AOT to Strict Starlark L1.
+          Grammar specification and enterprise architectures for declarative policy engines, financial AML risk scoring, and zero-trust security firewalls in native ASL syntax (compatible with the Starlark L1 runtime).
         </p>
       </div>
 
@@ -22,29 +22,33 @@ export default function RulesDocsPage() {
       <section className="space-y-6 border-t border-zinc-800 pt-8">
         <div>
           <h2 className="text-xl font-bold text-white tracking-tight">1. Formal Grammar &amp; Clause Primitives</h2>
-          <p className="text-sm text-zinc-400 mt-1">Syntax for fail-fast precondition assertions and pattern-matching matrices.</p>
+          <p className="text-sm text-zinc-400 mt-1">Syntax for fail-fast precondition assertions and pattern-matching matrices in ASL.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
           <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 space-y-2">
             <span className="text-emerald-400 font-bold">1. Guard Clauses (Preconditions)</span>
             <p className="text-zinc-400 font-sans">Evaluated sequentially before matching begins. Rejects invalid requests immediately.</p>
-            <pre className="text-zinc-300 bg-black p-2.5 rounded border border-zinc-850 overflow-x-auto">{`guard:
+            <pre className="text-zinc-300 bg-black p-2.5 rounded border border-zinc-850 overflow-x-auto">{`\`\`\`asl:rules
+guard:
   input.payload is not empty else reject("Empty payload")
   input.amount > 0 else reject("Invalid amount")
-  input.verified is true else reject("Unverified account")`}</pre>
+  input.verified is true else reject("Unverified account")
+\`\`\``}</pre>
           </div>
 
           <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 space-y-2">
             <span className="text-blue-400 font-bold">2. Pattern Match Matrix</span>
             <p className="text-zinc-400 font-sans">Multi-pattern disjunction with captured alias bindings for prefixes and substrings.</p>
-            <pre className="text-zinc-300 bg-black p-2.5 rounded border border-zinc-850 overflow-x-auto">{`match input.target:
+            <pre className="text-zinc-300 bg-black p-2.5 rounded border border-zinc-850 overflow-x-auto">{`\`\`\`asl:rules
+match input.target:
   when starts_with any(["prod-", "us-east-"]) as region:
     accept(status="routed", region=region)
   when contains any(["[urgent]", "[hotfix]"]):
     accept(status="expedited", priority=1)
   otherwise:
-    reject("No routing policy matched")`}</pre>
+    reject("No routing policy matched")
+\`\`\``}</pre>
           </div>
         </div>
       </section>
@@ -184,7 +188,7 @@ match input.query_payload:
       <section className="space-y-4 border-t border-zinc-800 pt-8">
         <h2 className="text-xl font-bold text-white tracking-tight">4. AOT In-Memory Transpilation Pipeline</h2>
         <p className="text-sm text-zinc-300 leading-relaxed">
-          The <code className="text-zinc-200 font-mono">asl-parser</code> crate transpiles rules blocks ahead-of-time directly into strict Starlark L1 code:
+          The <code className="text-zinc-200 font-mono">asl-parser</code> crate compiles rules blocks ahead-of-time directly into deterministic execution bytecode (fully compatible with the Starlark L1 runtime standard):
         </p>
 
         <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 space-y-2 text-xs text-zinc-400 font-mono">

@@ -14,7 +14,7 @@ export default function ControlFlowReferencePage() {
           Variables, Loops &amp; Functions
         </h1>
         <p className="text-sm text-zinc-400 mt-2 leading-relaxed max-w-3xl">
-          Complete operational reference for variable bindings, lexical scoping, bounded iteration, and function definitions under the Axiom 5 Bounded Termination model.
+          Complete operational reference for variable bindings, lexical scoping, bounded iteration, and function definitions in Agent Skill Language (ASL 3.0) under the Axiom 5 Bounded Termination model.
         </p>
       </div>
 
@@ -22,16 +22,18 @@ export default function ControlFlowReferencePage() {
       <section className="space-y-4 border-t border-zinc-800 pt-8">
         <h2 className="text-xl font-bold text-white tracking-tight">1. Variable Bindings &amp; Scoping</h2>
         <p className="text-sm text-zinc-300 leading-relaxed">
-          Variables in ASL are strongly bound to their lexical scope. Unlike standard Python, ASL enforces strict separation between module definitions and function execution heaps to guarantee 100% thread safety and zero cross-invocation state leakage.
+          Variables in ASL are strongly bound to their lexical scope. ASL enforces strict separation between module definitions and function execution heaps to guarantee 100% thread safety, deterministic outcomes, and zero cross-invocation state leakage.
         </p>
 
         <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5 space-y-3">
           <h3 className="text-sm font-semibold font-mono text-white">1.1 Assignment &amp; Shadowing</h3>
           <p className="text-xs text-zinc-300 leading-relaxed">
-            Variables are declared upon first assignment. Inside functions, assignments create or rebind local variables. Local variables may shadow module-level constants without mutating them.
+            Variables are declared upon first assignment. Inside functions, assignments create or rebind local variables. Local variables may shadow module-level constants without mutating the outer identifier.
           </p>
           <div className="rounded-lg border border-zinc-850 bg-black p-3 font-mono text-xs text-zinc-300 overflow-x-auto">
-            <pre>{`DEFAULT_RETRIES = 3   # Module-level constant
+            <pre>{`\`\`\`asl:deterministic
+# ASL Variable Bindings & Scope
+DEFAULT_RETRIES = 3   # Module-level constant
 
 def execute(ctx, input):
     # Local variable declaration
@@ -43,14 +45,15 @@ def execute(ctx, input):
     # Multiple assignment / tuple unpacking
     status, code = ("success", 200)
     
-    return {"retries": retries, "code": code}`}</pre>
+    return {"retries": retries, "code": code, "status": status}
+\`\`\``}</pre>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
           <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 space-y-1.5">
             <span className="font-semibold text-emerald-400 font-mono">Isolated Ephemeral Heap</span>
-            <p className="text-zinc-400">Each invocation runs in a clean <code className="text-zinc-300">Module::with_temp_heap</code> sandbox. When <code className="text-zinc-300">execute()</code> returns, the heap is dropped immediately. No dirty memory survives between calls.</p>
+            <p className="text-zinc-400">Each invocation runs in a clean memory sandbox. When <code className="text-zinc-300">execute()</code> returns, the heap is dropped immediately. No dirty state survives between calls.</p>
           </div>
           <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 space-y-1.5">
             <span className="font-semibold text-rose-400 font-mono">No Global Mutability</span>
@@ -63,28 +66,31 @@ def execute(ctx, input):
       <section className="space-y-6 border-t border-zinc-800 pt-8">
         <div>
           <h2 className="text-xl font-bold text-white tracking-tight">2. Conditional Branching</h2>
-          <p className="text-sm text-zinc-400 mt-1">Deterministic branch execution and short-circuit evaluation.</p>
+          <p className="text-sm text-zinc-400 mt-1">Deterministic branch execution and short-circuit evaluation in ASL.</p>
         </div>
 
         <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5 space-y-3">
           <h3 className="text-sm font-semibold font-mono text-white">2.1 If / Elif / Else Statements</h3>
           <p className="text-xs text-zinc-300 leading-relaxed">
-            Standard Pythonic syntax with mandatory indentation (4 spaces). Conditions use short-circuit boolean logic (<code className="text-zinc-200 font-mono">and</code>, <code className="text-zinc-200 font-mono">or</code>, <code className="text-zinc-200 font-mono">not</code>).
+            Standard indented syntax (4 spaces). Conditions evaluate with short-circuit boolean logic (<code className="text-zinc-200 font-mono">and</code>, <code className="text-zinc-200 font-mono">or</code>, <code className="text-zinc-200 font-mono">not</code>).
           </p>
           <div className="rounded-lg border border-zinc-850 bg-black p-3 font-mono text-xs text-zinc-300 overflow-x-auto">
-            <pre>{`def categorize(score):
+            <pre>{`\`\`\`asl:deterministic
+# ASL Conditionals & Branching
+def categorize_risk(score, mode):
     if score >= 90:
-        grade = "A"
-    elif score >= 80:
-        grade = "B"
+        grade = "CRITICAL"
     elif score >= 70:
-        grade = "C"
+        grade = "HIGH"
+    elif score >= 40:
+        grade = "MEDIUM"
     else:
-        grade = "F"
-    return grade
-
-# Ternary Conditional Expression:
-threshold = 100 if mode == "strict" else 50`}</pre>
+        grade = "LOW"
+        
+    # Ternary Conditional Expression:
+    threshold = 100 if mode == "strict" else 50
+    return {"grade": grade, "threshold": threshold}
+\`\`\``}</pre>
           </div>
         </div>
       </section>
@@ -108,22 +114,21 @@ threshold = 100 if mode == "strict" else 50`}</pre>
             All iteration in ASL must be bounded over a finite iterable sequence (<code className="text-zinc-200 font-mono">list</code>, <code className="text-zinc-200 font-mono">dict</code>, <code className="text-zinc-200 font-mono">tuple</code>, <code className="text-zinc-200 font-mono">string</code>, or <code className="text-zinc-200 font-mono">range()</code>). The <code className="text-zinc-200 font-mono">break</code> and <code className="text-zinc-200 font-mono">continue</code> statements are fully supported.
           </p>
           <div className="rounded-lg border border-zinc-850 bg-black p-3 font-mono text-xs text-zinc-300 overflow-x-auto">
-            <pre>{`# Iterating over lists
-files = ["index.ts", "package.json", "README.md"]
-matched = []
-for f in files:
-    if f.endswith(".json"):
-        matched.append(f)
-        break  # Early exit
-
-# Iterating over dictionary key-value pairs
-scores = {"alice": 95, "bob": 82}
-for name, score in scores.items():
-    if score < 90:
-        continue
-
-# Comprehensions
-clean_lines = [line.strip() for line in raw_text.splitlines() if len(line.strip()) > 0]`}</pre>
+            <pre>{`\`\`\`asl:deterministic
+# ASL Bounded Iteration & Comprehensions
+def process_records(records):
+    sanitized = []
+    for r in records:
+        if not r.get("active"):
+            continue
+        sanitized.append(r["name"].strip())
+        if len(sanitized) >= 100:
+            break  # Bounded early exit
+            
+    # List and Dict comprehensions:
+    tags = [r.get("tag", "general") for r in records if "tag" in r]
+    return {"sanitized": sanitized, "tags": tags}
+\`\`\``}</pre>
           </div>
         </div>
 
@@ -136,7 +141,7 @@ clean_lines = [line.strip() for line in raw_text.splitlines() if len(line.strip(
             </h3>
           </div>
           <p className="text-xs text-zinc-300 leading-relaxed">
-            In general-purpose languages like Python, C, and Rust, unrestricted <code className="text-rose-300 font-mono">while</code> loops and recursive calls make the <em>Halting Problem</em> undecidable. An autonomous agent executing untrusted or LLM-generated code could enter an infinite loop or blow the call stack, causing denial of service.
+            In general-purpose languages like Python, C, and Rust, unrestricted <code className="text-rose-300 font-mono">while</code> loops and recursive calls make the <em>Halting Problem</em> undecidable. An autonomous agent executing untrusted or LLM-generated code could enter an infinite loop or blow the call stack.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
@@ -149,7 +154,7 @@ clean_lines = [line.strip() for line in raw_text.splitlines() if len(line.strip(
             <div className="rounded-lg border border-zinc-850 bg-black p-3.5 space-y-1.5">
               <span className="font-bold text-rose-400 font-mono">2. No Recursion</span>
               <p className="text-zinc-400">
-                Functions are barred from calling themselves directly or transitively. The call graph must form a Directed Acyclic Graph (DAG). Stack overflow is mathematically impossible.
+                Functions cannot call themselves directly or transitively. The call graph must form a Directed Acyclic Graph (DAG). Stack overflow is mathematically impossible.
               </p>
             </div>
           </div>
@@ -158,7 +163,7 @@ clean_lines = [line.strip() for line in raw_text.splitlines() if len(line.strip(
             <Flame className="h-5 w-5 text-amber-400 shrink-0" />
             <div>
               <strong className="text-white">Axiom 5 Bounded Termination: </strong>
-              Every execution has an explicit monotonic fuel limit <code className="text-zinc-200 font-mono">limits.max_fuel_opcodes</code>. Since all iterables are finite and each opcode decrements fuel, execution is proven to terminate in finite steps <span className="font-mono text-zinc-200">O(F)</span>.
+              Every execution has an explicit monotonic fuel limit <code className="text-zinc-200 font-mono">limits.max_fuel_opcodes</code>. Compatible with the hermetic Starlark L1 runtime standard, execution is proven to terminate in finite steps <span className="font-mono text-zinc-200">O(F)</span>.
             </div>
           </div>
         </div>
@@ -168,16 +173,17 @@ clean_lines = [line.strip() for line in raw_text.splitlines() if len(line.strip(
       <section className="space-y-6 border-t border-zinc-800 pt-8">
         <div>
           <h2 className="text-xl font-bold text-white tracking-tight">4. Functions &amp; Entrypoint Signatures</h2>
-          <p className="text-sm text-zinc-400 mt-1">Defining reusable procedures and the canonical capability entrypoint.</p>
+          <p className="text-sm text-zinc-400 mt-1">Defining procedures and the canonical capability entrypoint in ASL.</p>
         </div>
 
         <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5 space-y-3">
           <h3 className="text-sm font-semibold font-mono text-white">4.1 Function Declaration</h3>
           <p className="text-xs text-zinc-300 leading-relaxed">
-            Functions are declared with <code className="text-zinc-200 font-mono">def</code>. Parameters support positional arguments, default values, and variadic keyword arguments.
+            Functions are declared with <code className="text-zinc-200 font-mono">def</code>. Parameters support positional arguments, default values, and keyword arguments.
           </p>
           <div className="rounded-lg border border-zinc-850 bg-black p-3 font-mono text-xs text-zinc-300 overflow-x-auto">
-            <pre>{`# Pure helper function
+            <pre>{`\`\`\`asl:deterministic
+# Pure helper procedure in ASL
 def sanitize_token(token, uppercase=False):
     cleaned = token.strip().replace(" ", "_")
     return cleaned.upper() if uppercase else cleaned.lower()
@@ -187,7 +193,8 @@ def split_name(full_name):
     parts = full_name.split(" ", 1)
     if len(parts) == 2:
         return parts[0], parts[1]
-    return parts[0], ""`}</pre>
+    return parts[0], ""
+\`\`\``}</pre>
           </div>
         </div>
 
@@ -200,7 +207,7 @@ def split_name(full_name):
             </span>
           </div>
           <p className="text-xs text-zinc-300 leading-relaxed">
-            The function designated in <code className="text-zinc-200 font-mono">interface.entrypoint</code> (by default <code className="text-zinc-200 font-mono">execute</code>) must accept exactly two parameters:
+            The function designated in <code className="text-zinc-200 font-mono">interface.entrypoint</code> (by default <code className="text-zinc-200 font-mono">execute</code>) accepts exactly two parameters:
           </p>
           <ul className="text-xs text-zinc-400 space-y-1.5 list-disc pl-5">
             <li><code className="text-white font-mono">ctx</code>: The capability context struct providing sandboxed host capabilities (<code className="text-zinc-300">ctx.fs</code>, <code className="text-zinc-300">ctx.crypto</code>, <code className="text-zinc-300">ctx.fuel</code>).</li>
@@ -208,7 +215,8 @@ def split_name(full_name):
           </ul>
 
           <div className="rounded-lg border border-zinc-850 bg-black p-3 font-mono text-xs text-zinc-300 overflow-x-auto">
-            <pre>{`def execute(ctx, input):
+            <pre>{`\`\`\`asl:deterministic
+def execute(ctx, input):
     # 1. Access validated input fields
     filename = input.get("filename")
     sha_only = input.get("sha_only", False)
@@ -226,7 +234,8 @@ def split_name(full_name):
         "success": True,
         "digest": digest,
         "fuel_used": ctx.fuel.consumed(),
-    }`}</pre>
+    }
+\`\`\``}</pre>
           </div>
         </div>
       </section>
