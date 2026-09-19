@@ -12,19 +12,37 @@
       "id": "syntax",
       "title": "YAML Frontmatter & Structure",
       "summary": "YAML frontmatter specification, headers, interface and code blocks.",
-      "content": "========================================================================\n📝 ASL 3.0 Syntax & Frontmatter Reference\n========================================================================\n\nEvery ASL document starts with YAML frontmatter between `---` delimiters:\n- name: Identifier of the skill or tool\n- asl_version: \"3.0\"\n- description: Natural language description for LLMs\n- interface: entrypoint and protocol definitions\n- capabilities: OCap permission declarations (fs, env, http, crypto)\n- limits: Resource bounds (max_fuel_opcodes, max_memory_kib)\n"
+      "content": "========================================================================\n📝 ASL 3.0 Syntax & Frontmatter Reference\n========================================================================\n\nEvery ASL document starts with YAML frontmatter between `---` delimiters:\n- name: Identifier of the skill or tool\n- asl_version: \"3.0\"\n- description: Natural language description for LLMs\n- interface:\n    entrypoint: Function name to execute (default: 'run')\n    protocol: Optional protocol (e.g. 'mcp-tool-v1')\n- capabilities:\n    fs: List of allowed confined filesystem directory paths\n    domains: List of allowed HTTP domains\n    env_keys: List of allowed environment variable keys\n- limits:\n    max_fuel_opcodes: Execution fuel limit (default: 1,000,000)\n    max_heap_kib: Memory limit in KiB (default: 8,192)\n\nUniversal Code Block Tag: Use strictly ```asl for all executable logic.\n"
     },
     {
       "id": "rules",
       "title": "Declarative Semantic Rules",
       "summary": "High-level pattern matching and declarative action dispatch.",
-      "content": "========================================================================\n🎯 ASL Declarative Rules Syntax\n========================================================================\n\nInside ```asl blocks, declarative pattern matching executes deterministically:\nmatch input.action:\n  when \"query\":\n    return {\"status\": \"ok\", \"term\": input.term}\n  otherwise:\n    return {\"error\": \"unknown action\"}\n"
+      "content": "========================================================================\n🎯 ASL Declarative Rules Syntax\n========================================================================\n\nInside ```asl blocks, declarative pattern matching executes deterministically:\nmatch input.action:\n  when \"query\":\n    [guard len(input.term) > 0]\n    return {\"status\": \"ok\", \"term\": input.term}\n  when \"health\":\n    return {\"status\": \"healthy\"}\n  otherwise:\n    return {\"error\": \"unknown action\"}\n"
     },
     {
       "id": "triad",
       "title": "The File Triad (.skill, .tool, .asl)",
       "summary": "Differences and roles of .skill, .tool, and .asl file extensions.",
       "content": "========================================================================\n🧩 The ASL Canonical File Triad\n========================================================================\n\n1. .skill: Modular, dual-audience (human/AI) document with automatic shadow markdown projection.\n2. .tool: Pure MCP tool declaration for direct agent function dispatch without shadow projection.\n3. .asl: Native root ASL module for deterministic backend workflows.\n"
+    },
+    {
+      "id": "stdlib",
+      "title": "Standard Library & Built-in Functions",
+      "summary": "Built-in functions, JSON encoding/decoding, and collection utilities.",
+      "content": "========================================================================\n📚 ASL 3.0 Standard Library & Builtins\n========================================================================\n\nGlobal Built-in Functions:\n  len(x)                  - Number of items in string, list, dict\n  range(start, stop, step)- Arithmetic sequence generator\n  min(*args) / max(*args) - Smallest or largest element\n  abs(n)                  - Absolute value of integer\n  sorted(iterable)        - New sorted list\n  enumerate(iterable)     - Yields (index, value) tuples\n  zip(*iterables)         - Pairs items across sequences\n  type(x)                 - Type name string ('string', 'int', 'dict', etc.)\n  fail(msg)               - Terminates execution with error\n\nStandard Modules:\n  json.decode(str)        - Parses JSON string into ASL dict/list\n  json.encode(val)        - Serializes ASL value to JSON string\n  struct(**kwargs)        - Immutable record with dot access\n\nString Methods:\n  s.startswith(p), s.endswith(p), s.split(sep), s.join(list),\n  s.strip(), s.replace(old, new), s.lower(), s.upper()\n"
+    },
+    {
+      "id": "context",
+      "title": "Capability Context (ctx)",
+      "summary": "Object-Capability (OCap) APIs: fs, crypto, env, http, and fuel.",
+      "content": "========================================================================\n🔐 ASL Capability Context (ctx) API Reference\n========================================================================\n\nAll I/O in ASL requires explicit capability grants in the frontmatter:\n\n1. Filesystem (ctx.fs) [requires capabilities.fs]:\n   ctx.fs.read(path)          - Reads UTF-8 text file\n   ctx.fs.write(path, data)   - Writes UTF-8 text file\n   ctx.fs.exists(path)        - Checks if file exists in confined roots\n\n2. Cryptography (ctx.crypto) [Pure deterministic, zero grant needed]:\n   ctx.crypto.sha256(data)    - Computes hex-encoded SHA-256 digest\n   ctx.crypto.base64_encode(s)- Encodes string or bytes to base64\n   ctx.crypto.base64_decode(s)- Decodes base64 string\n\n3. Environment (ctx.env) [requires capabilities.env_keys]:\n   ctx.env.get(key, default)  - Safely reads whitelisted environment variable\n\n4. HTTP Client (ctx.http) [requires capabilities.domains]:\n   ctx.http.get(url)          - Performs outbound GET request\n   ctx.http.post(url, json=d) - Performs outbound POST request with JSON\n\n5. Fuel Monitoring (ctx.fuel):\n   ctx.fuel.remaining()       - Returns remaining execution opcodes\n   ctx.fuel.spent()           - Returns spent opcode count\n"
+    },
+    {
+      "id": "axioms",
+      "title": "The 7 Architectural Axioms",
+      "summary": "Inviolable principles governing safety, confinement, and determinism.",
+      "content": "========================================================================\n🏛️ The 7 Inviolable Axioms of ASL 3.0\n========================================================================\n\n1. Axiom 1 (Atomicity): .skill is self-contained with code, schema, and docs.\n2. Axiom 2 (Zero Runtime Dependencies): No Python, Node, JVM, or OS daemons.\n3. Axiom 3 (OCap Confinement): No ambient authority; all I/O gated via ctx.\n4. Axiom 4 (Hexagonal Decoupling): Ports & Adapters; engines are swappable.\n5. Axiom 5 (Deterministic Termination): Monotonic fuel metering prevents loops.\n6. Axiom 6 (Static Prefix Invariance): 100% KV-Cache reuse on LLM inference.\n7. Axiom 7 (Cognitive Boundedness): Files kept under 450 lines for instant AI ingestion.\n"
     },
     {
       "id": "practices",

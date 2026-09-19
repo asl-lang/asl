@@ -36,9 +36,18 @@ topics:
       - name: Identifier of the skill or tool
       - asl_version: "3.0"
       - description: Natural language description for LLMs
-      - interface: entrypoint and protocol definitions
-      - capabilities: OCap permission declarations (fs, env, http, crypto)
-      - limits: Resource bounds (max_fuel_opcodes, max_memory_kib)
+      - interface:
+          entrypoint: Function name to execute (default: 'run')
+          protocol: Optional protocol (e.g. 'mcp-tool-v1')
+      - capabilities:
+          fs: List of allowed confined filesystem directory paths
+          domains: List of allowed HTTP domains
+          env_keys: List of allowed environment variable keys
+      - limits:
+          max_fuel_opcodes: Execution fuel limit (default: 1,000,000)
+          max_heap_kib: Memory limit in KiB (default: 8,192)
+
+      Universal Code Block Tag: Use strictly ```asl for all executable logic.
 
   - id: rules
     title: "Declarative Semantic Rules"
@@ -51,7 +60,10 @@ topics:
       Inside ```asl blocks, declarative pattern matching executes deterministically:
       match input.action:
         when "query":
+          [guard len(input.term) > 0]
           return {"status": "ok", "term": input.term}
+        when "health":
+          return {"status": "healthy"}
         otherwise:
           return {"error": "unknown action"}
 
@@ -66,6 +78,80 @@ topics:
       1. .skill: Modular, dual-audience (human/AI) document with automatic shadow markdown projection.
       2. .tool: Pure MCP tool declaration for direct agent function dispatch without shadow projection.
       3. .asl: Native root ASL module for deterministic backend workflows.
+
+  - id: stdlib
+    title: "Standard Library & Built-in Functions"
+    summary: "Built-in functions, JSON encoding/decoding, and collection utilities."
+    content: |
+      ========================================================================
+      📚 ASL 3.0 Standard Library & Builtins
+      ========================================================================
+
+      Global Built-in Functions:
+        len(x)                  - Number of items in string, list, dict
+        range(start, stop, step)- Arithmetic sequence generator
+        min(*args) / max(*args) - Smallest or largest element
+        abs(n)                  - Absolute value of integer
+        sorted(iterable)        - New sorted list
+        enumerate(iterable)     - Yields (index, value) tuples
+        zip(*iterables)         - Pairs items across sequences
+        type(x)                 - Type name string ('string', 'int', 'dict', etc.)
+        fail(msg)               - Terminates execution with error
+
+      Standard Modules:
+        json.decode(str)        - Parses JSON string into ASL dict/list
+        json.encode(val)        - Serializes ASL value to JSON string
+        struct(**kwargs)        - Immutable record with dot access
+
+      String Methods:
+        s.startswith(p), s.endswith(p), s.split(sep), s.join(list),
+        s.strip(), s.replace(old, new), s.lower(), s.upper()
+
+  - id: context
+    title: "Capability Context (ctx)"
+    summary: "Object-Capability (OCap) APIs: fs, crypto, env, http, and fuel."
+    content: |
+      ========================================================================
+      🔐 ASL Capability Context (ctx) API Reference
+      ========================================================================
+
+      All I/O in ASL requires explicit capability grants in the frontmatter:
+
+      1. Filesystem (ctx.fs) [requires capabilities.fs]:
+         ctx.fs.read(path)          - Reads UTF-8 text file
+         ctx.fs.write(path, data)   - Writes UTF-8 text file
+         ctx.fs.exists(path)        - Checks if file exists in confined roots
+
+      2. Cryptography (ctx.crypto) [Pure deterministic, zero grant needed]:
+         ctx.crypto.sha256(data)    - Computes hex-encoded SHA-256 digest
+         ctx.crypto.base64_encode(s)- Encodes string or bytes to base64
+         ctx.crypto.base64_decode(s)- Decodes base64 string
+
+      3. Environment (ctx.env) [requires capabilities.env_keys]:
+         ctx.env.get(key, default)  - Safely reads whitelisted environment variable
+
+      4. HTTP Client (ctx.http) [requires capabilities.domains]:
+         ctx.http.get(url)          - Performs outbound GET request
+         ctx.http.post(url, json=d) - Performs outbound POST request with JSON
+
+      5. Fuel Monitoring (ctx.fuel):\n         ctx.fuel.remaining()       - Returns remaining execution opcodes
+         ctx.fuel.spent()           - Returns spent opcode count
+
+  - id: axioms
+    title: "The 7 Architectural Axioms"
+    summary: "Inviolable principles governing safety, confinement, and determinism."
+    content: |
+      ========================================================================
+      🏛️ The 7 Inviolable Axioms of ASL 3.0
+      ========================================================================
+
+      1. Axiom 1 (Atomicity): .skill is self-contained with code, schema, and docs.
+      2. Axiom 2 (Zero Runtime Dependencies): No Python, Node, JVM, or OS daemons.
+      3. Axiom 3 (OCap Confinement): No ambient authority; all I/O gated via ctx.
+      4. Axiom 4 (Hexagonal Decoupling): Ports & Adapters; engines are swappable.
+      5. Axiom 5 (Deterministic Termination): Monotonic fuel metering prevents loops.
+      6. Axiom 6 (Static Prefix Invariance): 100% KV-Cache reuse on LLM inference.
+      7. Axiom 7 (Cognitive Boundedness): Files kept under 450 lines for instant AI ingestion.
 
   - id: practices
     title: "Best Practices & Daemon-Free Workflow"
