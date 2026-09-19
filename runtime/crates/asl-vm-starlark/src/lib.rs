@@ -65,10 +65,6 @@ fn asl_natives(builder: &mut GlobalsBuilder) {
             .map_err(|e| anyhow::anyhow!("Ocap permission error: {}", e))
     }
 
-    fn asl_native_chars(s: &str) -> anyhow::Result<Vec<String>> {
-        Ok(s.chars().map(|c| c.to_string()).collect())
-    }
-
     fn asl_native_sha256(data: &str, eval: &mut Evaluator) -> anyhow::Result<String> {
         let extra = eval
             .extra
@@ -167,11 +163,12 @@ fn asl_natives(builder: &mut GlobalsBuilder) {
             .max_fuel_opcodes
             .saturating_sub(extra.context.fuel_consumed()))
     }
+}
 
-    fn _asl_matches_regex(haystack: &str, pattern: &str) -> anyhow::Result<bool> {
-        let re = regex::Regex::new(pattern)
-            .map_err(|e| anyhow::anyhow!("Invalid regular expression '{}': {}", pattern, e))?;
-        Ok(re.is_match(haystack))
+#[starlark_module]
+fn asl_pure_natives(builder: &mut GlobalsBuilder) {
+    fn asl_native_chars(s: &str) -> anyhow::Result<Vec<String>> {
+        Ok(s.chars().map(|c| c.to_string()).collect())
     }
 
     fn asl_native_is_alpha(s: &str) -> anyhow::Result<bool> {
@@ -219,47 +216,108 @@ impl EnginePort for StarlarkEngine {
         limits: &Limits,
     ) -> Result<ExecutionResult> {
         let start_time = Instant::now();
-
+        let timeout_dur = std::time::Duration::from_millis(limits.wall_clock_timeout_ms);
         let dialect = Dialect::Standard;
-        let mut globals_builder = GlobalsBuilder::standard().with(asl_natives);
+
+        let mut host_builder = GlobalsBuilder::standard().with(asl_natives).with(asl_pure_natives);
         for ext in [
             LibraryExtension::Json,
             LibraryExtension::StructType,
             LibraryExtension::Map,
             LibraryExtension::Filter,
         ] {
-            ext.add(&mut globals_builder);
+            ext.add(&mut host_builder);
         }
-        let globals = globals_builder.build();
+        let host_globals = host_builder.build();
 
-        let input_json_str = serde_json::to_string(input_args).map_err(AslError::Json)?;
-
-        let invocation_script = prelude::build_invocation_script(code, &input_json_str, entrypoint);
-
-        let ast = AstModule::parse("ASL Code", invocation_script, &dialect)
-            .map_err(|e| AslError::StarlarkError(sanitizer::sanitize_error(&e.to_string())))?;
+        let mut user_builder = GlobalsBuilder::standard().with(asl_pure_natives);
+        for ext in [
+            LibraryExtension::Json,
+            LibraryExtension::StructType,
+            LibraryExtension::Map,
+            LibraryExtension::Filter,
+        ] {
+            ext.add(&mut user_builder);
+        }
+        let user_globals = user_builder.build();
 
         let context_extra = StarlarkContextExtra { context, limits };
 
         Module::with_temp_heap(|module| {
             let mut eval = Evaluator::new(&module);
             eval.extra = Some(&context_extra);
-            eval.eval_module(ast, &globals).map_err(|e| {
+
+            if limits.max_fuel_opcodes > 0 {
+                let _ = eval.set_max_tick_count(limits.max_fuel_opcodes);
+            }
+            if limits.max_heap_kib > 0 {
+                let _ = eval.set_max_heap_size((limits.max_heap_kib * 1024) as usize);
+            }
+            eval.set_check_cancelled(Box::new(move || start_time.elapsed() > timeout_dur));
+
+            let prelude_ast = AstModule::parse("host_prelude", prelude::host_prelude_script().to_string(), &dialect)
+                .map_err(|e| AslError::StarlarkError(sanitizer::sanitize_error(&e.to_string())))?;
+            eval.eval_module(prelude_ast, &host_globals).map_err(|e| {
+                if start_time.elapsed() > timeout_dur {
+                    AslError::LimitExceeded(format!("Wall-clock timeout of {}ms exceeded", limits.wall_clock_timeout_ms))
+                } else {
+                    AslError::StarlarkError(sanitizer::sanitize_error(&e.to_string()))
+                }
+            })?;
+            let ctx_val = module.get("asl_ctx").ok_or_else(|| {
+                AslError::StarlarkError("Failed to initialize capability context".to_string())
+            })?;
+
+            let stdlib_ast = AstModule::parse("pure_stdlib", prelude::pure_stdlib_script().to_string(), &dialect)
+                .map_err(|e| AslError::StarlarkError(sanitizer::sanitize_error(&e.to_string())))?;
+            eval.eval_module(stdlib_ast, &user_globals).map_err(|e| {
                 AslError::StarlarkError(sanitizer::sanitize_error(&e.to_string()))
             })?;
 
-            let output_val = module
-                .get("asl_output_json")
-                .ok_or_else(|| AslError::EntrypointNotFound(entrypoint.to_string()))?;
-
-            let output_str = output_val.unpack_str().ok_or_else(|| {
-                AslError::StarlarkError("asl_output_json output is not a string".to_string())
+            let user_ast = AstModule::parse("ASL Code", code.to_string(), &dialect)
+                .map_err(|e| AslError::StarlarkError(sanitizer::sanitize_error(&e.to_string())))?;
+            eval.eval_module(user_ast, &user_globals).map_err(|e| {
+                if start_time.elapsed() > timeout_dur {
+                    AslError::LimitExceeded(format!("Wall-clock timeout of {}ms exceeded", limits.wall_clock_timeout_ms))
+                } else {
+                    AslError::StarlarkError(sanitizer::sanitize_error(&e.to_string()))
+                }
             })?;
 
-            let parsed_output: Value = serde_json::from_str(output_str).map_err(AslError::Json)?;
+            let entrypoint_fn = module.get(entrypoint).ok_or_else(|| {
+                AslError::EntrypointNotFound(entrypoint.to_string())
+            })?;
+
+            let input_json_str = serde_json::to_string(input_args).map_err(AslError::Json)?;
+            let input_ast = AstModule::parse(
+                "input",
+                format!("json.decode({})", serde_json::to_string(&input_json_str).map_err(AslError::Json)?),
+                &dialect,
+            ).map_err(|e| AslError::StarlarkError(sanitizer::sanitize_error(&e.to_string())))?;
+            let input_val = eval.eval_module(input_ast, &user_globals).map_err(|e| {
+                AslError::StarlarkError(sanitizer::sanitize_error(&e.to_string()))
+            })?;
+
+            let result_val = eval.eval_function(entrypoint_fn, &[ctx_val, input_val], &[]).map_err(|e| {
+                if start_time.elapsed() > timeout_dur {
+                    AslError::LimitExceeded(format!("Wall-clock timeout of {}ms exceeded", limits.wall_clock_timeout_ms))
+                } else {
+                    let err_str = e.to_string();
+                    if err_str.contains("Fuel limit exceeded") || err_str.contains("Tick limit exceeded") {
+                        AslError::LimitExceeded(err_str)
+                    } else {
+                        AslError::StarlarkError(sanitizer::sanitize_error(&err_str))
+                    }
+                }
+            })?;
+
+            let output_json_str = result_val.to_json().map_err(|e| {
+                AslError::StarlarkError(format!("Failed to serialize execution result: {}", e))
+            })?;
+            let parsed_output: Value = serde_json::from_str(&output_json_str).map_err(AslError::Json)?;
 
             let duration = start_time.elapsed();
-            let consumed = context.fuel_consumed().max(1);
+            let consumed = (context.fuel_consumed() + eval.get_total_tick_count()).max(1);
 
             Ok(ExecutionResult {
                 success: true,
@@ -280,5 +338,95 @@ mod tests {
     fn test_starlark_engine_creation() {
         let engine = StarlarkEngine;
         assert_eq!(engine.name(), "starlark-hermetic");
+    }
+
+    #[test]
+    fn test_two_stage_evaluation() {
+        let dialect = Dialect::Standard;
+
+        #[starlark_module]
+        fn host_natives(builder: &mut GlobalsBuilder) {
+            fn asl_native_secret() -> anyhow::Result<String> {
+                Ok("secret_value".to_string())
+            }
+        }
+        let mut host_builder = GlobalsBuilder::standard().with(host_natives);
+        LibraryExtension::StructType.add(&mut host_builder);
+        let host_globals = host_builder.build();
+        let user_globals = GlobalsBuilder::standard().build();
+
+        Module::with_temp_heap(|module| {
+            let mut eval = Evaluator::new(&module);
+
+            let prelude_code = r#"
+def _get_val():
+    return asl_native_secret()
+
+ctx = struct(secret = _get_val)
+"#;
+            let prelude_ast = AstModule::parse("prelude", prelude_code.to_string(), &dialect).unwrap();
+            eval.eval_module(prelude_ast, &host_globals).unwrap();
+            let ctx = module.get("ctx").unwrap();
+            // Stage 2: Good user code evaluated with user_globals
+            let good_code = r#"
+def run(c):
+    return c.secret()
+"#;
+            let good_ast = AstModule::parse("good", good_code.to_string(), &dialect).unwrap();
+            eval.eval_module(good_ast, &user_globals).unwrap();
+
+            let run_fn = module.get("run").unwrap();
+            let res = eval.eval_function(run_fn, &[ctx], &[]).unwrap();
+            assert_eq!(res.unpack_str(), Some("secret_value"));
+
+            // Stage 3: Malicious user code attempting ambient access fails
+            let bad_code = r#"
+def bad(c):
+    return asl_native_secret()
+"#;
+            let bad_ast = AstModule::parse("bad", bad_code.to_string(), &dialect).unwrap();
+            let bad_eval_res = eval.eval_module(bad_ast, &user_globals);
+            assert!(bad_eval_res.is_err(), "bad_code must fail because asl_native_secret is not in user_globals");
+        });
+    }
+
+    #[test]
+    fn test_evaluator_resource_limits() {
+        let dialect = Dialect::Standard;
+        let globals = GlobalsBuilder::standard().build();
+
+        // 1. Tick limit
+        Module::with_temp_heap(|module| {
+            let mut eval = Evaluator::new(&module);
+            eval.set_max_tick_count(10).unwrap();
+            let code = r#"
+def loop_ticks():
+    count = 0
+    for x in range(100):
+        count += 1
+    return count
+"#;
+            let ast = AstModule::parse("ticks", code.to_string(), &dialect).unwrap();
+            eval.eval_module(ast, &globals).unwrap();
+            let func = module.get("loop_ticks").unwrap();
+            let res = eval.eval_function(func, &[], &[]);
+            assert!(res.is_err(), "Tick count limit must abort execution");
+        });
+
+        // 2. Cancellation / timeout
+        Module::with_temp_heap(|module| {
+            let mut eval = Evaluator::new(&module);
+            eval.set_check_cancelled(Box::new(|| true)); // Always cancelled
+            let code = r#"
+def loop_cancel():
+    count = 0
+    for x in range(100):
+        count += 1
+    return count
+"#;
+            let ast = AstModule::parse("cancel", code.to_string(), &dialect).unwrap();
+            let res = eval.eval_module(ast, &globals);
+            assert!(res.is_err(), "Cancellation check must abort execution");
+        });
     }
 }

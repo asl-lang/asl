@@ -91,24 +91,30 @@ impl SkillManifest {
             )));
         }
 
-        let ep = self.interface.entrypoint.trim();
-        if ep.is_empty() {
-            return Err(AslError::InvalidFrontmatter(
-                "The 'interface.entrypoint' field cannot be empty".to_string(),
-            ));
-        }
-
-        if !ep.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
-            || ep.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false)
-        {
-            return Err(AslError::InvalidFrontmatter(format!(
-                "Invalid entrypoint '{}': must be a valid identifier",
-                ep
-            )));
-        }
+        validate_entrypoint_identifier(&self.interface.entrypoint)?;
 
         Ok(())
     }
+}
+
+pub fn validate_entrypoint_identifier(ep: &str) -> Result<()> {
+    let ep = ep.trim();
+    if ep.is_empty() {
+        return Err(AslError::InvalidFrontmatter(
+            "The 'interface.entrypoint' field cannot be empty".to_string(),
+        ));
+    }
+
+    if !ep.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+        || ep.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false)
+    {
+        return Err(AslError::InvalidFrontmatter(format!(
+            "Invalid entrypoint '{}': must be a valid identifier (alphanumeric or underscore, not starting with a digit)",
+            ep
+        )));
+    }
+
+    Ok(())
 }
 
 fn default_entrypoint() -> String {

@@ -233,3 +233,14 @@ def test_verbs(ctx, input):
     assert_eq!(res.output["del_status"], 204);
     assert_eq!(res.output["del_json_is_none"], true);
 }
+
+#[test]
+fn test_ambient_authority_eradication() {
+    let engine = StarlarkEngine::new();
+    let ctx = DummyContext;
+    let limits = Limits::default();
+    let script = "def run(ctx, input):\n    return asl_native_fs_read('test.txt')";
+    let res = engine.execute(script, "run", &serde_json::json!({}), &ctx, &limits);
+    assert!(res.is_err(), "Calling ambient asl_native_* directly must fail");
+}
+

@@ -54,6 +54,9 @@ pub trait CapabilityContext: Send + Sync {
         body: Option<&str>,
     ) -> Result<HttpResponsePayload>;
     fn check_fuel(&self) -> Result<u64>;
+    fn consume_fuel(&self, _amount: u64) -> Result<()> {
+        Ok(())
+    }
     fn fuel_consumed(&self) -> u64;
 }
 

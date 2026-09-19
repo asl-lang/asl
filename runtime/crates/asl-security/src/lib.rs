@@ -43,37 +43,45 @@ impl MockSecurityContext {
         self
     }
 
-    pub fn consume_fuel(&self, amount: u64) {
-        self.fuel_consumed.fetch_add(amount, Ordering::Relaxed);
+    pub fn consume_fuel(&self, amount: u64) -> Result<()> {
+        let prev = self.fuel_consumed.fetch_add(amount, Ordering::SeqCst);
+        let total = prev.saturating_add(amount);
+        if total > self.fuel_budget {
+            return Err(AslError::LimitExceeded(format!(
+                "Fuel limit exceeded: budget is {} opcodes, attempted to consume {}",
+                self.fuel_budget, total
+            )));
+        }
+        Ok(())
     }
 }
 
 impl CapabilityContext for MockSecurityContext {
     fn read_file(&self, path: &str) -> Result<Option<String>> {
-        self.consume_fuel(1);
+        self.consume_fuel(1)?;
         Ok(self.virtual_fs.read().unwrap().get(path).cloned())
     }
 
     fn write_file(&self, path: &str, content: &str) -> Result<()> {
-        self.consume_fuel(1 + (content.len() as u64 / 16));
+        self.consume_fuel(1 + (content.len() as u64 / 16))?;
         self.virtual_fs.write().unwrap().insert(path.to_string(), content.to_string());
         Ok(())
     }
 
     fn file_exists(&self, path: &str) -> bool {
-        self.consume_fuel(1);
+        let _ = self.consume_fuel(1);
         self.virtual_fs.read().unwrap().contains_key(path)
     }
 
     fn list_dir(&self, _path: &str) -> Result<Vec<String>> {
-        self.consume_fuel(1);
+        self.consume_fuel(1)?;
         let mut keys: Vec<String> = self.virtual_fs.read().unwrap().keys().cloned().collect();
         keys.sort();
         Ok(keys)
     }
 
     fn sha256(&self, data: &str) -> String {
-        self.consume_fuel(1);
+        let _ = self.consume_fuel(1);
         use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(data.as_bytes());
@@ -81,17 +89,17 @@ impl CapabilityContext for MockSecurityContext {
     }
 
     fn base64_encode(&self, data: &str) -> String {
-        self.consume_fuel(1);
+        let _ = self.consume_fuel(1);
         crypto::base64_encode(data)
     }
 
     fn base64_decode(&self, encoded: &str) -> Result<String> {
-        self.consume_fuel(1);
+        self.consume_fuel(1)?;
         crypto::base64_decode(encoded)
     }
 
     fn env_var(&self, key: &str) -> Result<Option<String>> {
-        self.consume_fuel(1);
+        self.consume_fuel(1)?;
         Ok(self.mock_env.get(key).cloned())
     }
 
@@ -103,7 +111,7 @@ impl CapabilityContext for MockSecurityContext {
         body: Option<&str>,
     ) -> Result<HttpResponsePayload> {
         let body_len = body.map(|b| b.len()).unwrap_or(0);
-        self.consume_fuel(10 + (body_len as u64 / 16));
+        self.consume_fuel(10 + (body_len as u64 / 16))?;
         let resp = if let Some(resp) = self.mock_http.get(url) {
             resp.clone()
         } else {
@@ -113,8 +121,12 @@ impl CapabilityContext for MockSecurityContext {
                 body: body.unwrap_or("{}").to_string(),
             }
         };
-        self.consume_fuel(resp.body.len() as u64 / 16);
+        self.consume_fuel(resp.body.len() as u64 / 16)?;
         Ok(resp)
+    }
+
+    fn consume_fuel(&self, amount: u64) -> Result<()> {
+        self.consume_fuel(amount)
     }
 
     fn check_fuel(&self) -> Result<u64> {
@@ -169,27 +181,35 @@ impl ConfinedSecurityContext {
         self
     }
 
-    pub fn consume_fuel(&self, amount: u64) {
-        self.fuel_consumed.fetch_add(amount, Ordering::Relaxed);
+    pub fn consume_fuel(&self, amount: u64) -> Result<()> {
+        let prev = self.fuel_consumed.fetch_add(amount, Ordering::SeqCst);
+        let total = prev.saturating_add(amount);
+        if total > self.fuel_budget {
+            return Err(AslError::LimitExceeded(format!(
+                "Fuel limit exceeded: budget is {} opcodes, attempted to consume {}",
+                self.fuel_budget, total
+            )));
+        }
+        Ok(())
     }
 }
 
 impl CapabilityContext for ConfinedSecurityContext {
     fn read_file(&self, path_str: &str) -> Result<Option<String>> {
-        self.consume_fuel(1);
+        self.consume_fuel(1)?;
         let canonical_target = fs::check_path_confinement(path_str, &self.allowed_read_roots)?;
         fs::safe_read_file(&canonical_target)
     }
 
     fn write_file(&self, path_str: &str, content: &str) -> Result<()> {
         let fuel_cost = 1 + (content.len() as u64 / 16);
-        self.consume_fuel(fuel_cost);
+        self.consume_fuel(fuel_cost)?;
         let canonical_target = fs::check_path_confinement(path_str, &self.allowed_write_roots)?;
         fs::safe_write_file(&canonical_target, content)
     }
 
     fn file_exists(&self, path_str: &str) -> bool {
-        self.consume_fuel(1);
+        let _ = self.consume_fuel(1);
         if let Ok(canonical_target) = fs::check_path_confinement(path_str, &self.allowed_read_roots) {
             canonical_target.exists()
         } else {
@@ -198,13 +218,13 @@ impl CapabilityContext for ConfinedSecurityContext {
     }
 
     fn list_dir(&self, path_str: &str) -> Result<Vec<String>> {
-        self.consume_fuel(1);
+        self.consume_fuel(1)?;
         let canonical_target = fs::check_path_confinement(path_str, &self.allowed_read_roots)?;
         fs::safe_list_dir(&canonical_target)
     }
 
     fn sha256(&self, data: &str) -> String {
-        self.consume_fuel(1);
+        let _ = self.consume_fuel(1);
         use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(data.as_bytes());
@@ -212,17 +232,17 @@ impl CapabilityContext for ConfinedSecurityContext {
     }
 
     fn base64_encode(&self, data: &str) -> String {
-        self.consume_fuel(1);
+        let _ = self.consume_fuel(1);
         crypto::base64_encode(data)
     }
 
     fn base64_decode(&self, encoded: &str) -> Result<String> {
-        self.consume_fuel(1);
+        self.consume_fuel(1)?;
         crypto::base64_decode(encoded)
     }
 
     fn env_var(&self, key: &str) -> Result<Option<String>> {
-        self.consume_fuel(1);
+        self.consume_fuel(1)?;
         if !self.allowed_env_keys.iter().any(|k| k == key || k == "*") {
             return Err(AslError::CapabilityViolation(format!(
                 "Environment variable '{}' is not authorized in capabilities.env.allow_keys ({:?})",
@@ -241,7 +261,7 @@ impl CapabilityContext for ConfinedSecurityContext {
     ) -> Result<HttpResponsePayload> {
         let body_len = body.map(|b| b.len()).unwrap_or(0);
         let fuel_cost = 100 + (body_len as u64 / 16);
-        self.consume_fuel(fuel_cost);
+        self.consume_fuel(fuel_cost)?;
 
         let res = net::execute_http_request(
             method,
@@ -253,8 +273,12 @@ impl CapabilityContext for ConfinedSecurityContext {
         )?;
 
         let resp_body_len = res.body.len();
-        self.consume_fuel(resp_body_len as u64 / 16);
+        self.consume_fuel(resp_body_len as u64 / 16)?;
         Ok(res)
+    }
+
+    fn consume_fuel(&self, amount: u64) -> Result<()> {
+        self.consume_fuel(amount)
     }
 
     fn check_fuel(&self) -> Result<u64> {

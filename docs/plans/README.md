@@ -45,6 +45,7 @@ Utilize a skill `asl-plan` (`skills/asl-plan/SKILL.md`):
 | **[PLAN-0020](./0020-pure-asl-semantic-language-architecture.md)** | Arquitetura Pura da Linguagem Semântica ASL e Tag Universal Única (```asl) | [ADR-0020](../adrs/0020-pure-asl-semantic-language-architecture.md) | **Concluído** | 7/7 Fases (100%) |
 | **[PLAN-0021](./0021-sandboxed-autonomous-io-capabilities.md)** | Capacidades OCap Autônomas (`ctx.env`, `ctx.http` e Base64) para Skills Zero-MCP | [ADR-0021](../adrs/0021-sandboxed-autonomous-io-capabilities.md) | **Proposto** | 0/6 Fases (0%) |
 | **[PLAN-0023](./0023-spec-driven-documentation-ssot-cli-website.md)** | Spec-Driven Documentation (SDD) com SSOT para CLI e Website | [ADR-0023](../adrs/0023-spec-driven-documentation-ssot-cli-website.md) | **Em Execução** | 3/4 Fases (75%) |
+| **[PLAN-0024](./0024-runtime-security-hardening-ocap-and-semantic-alignment.md)** | Endurecimento de Segurança do Runtime, Confinamento OCap Estrito e Alinhamento Semântico | [ADR-0024](../adrs/0024-runtime-security-hardening-ocap-and-semantic-alignment.md) | **Aceito** | 0/4 Fases (0%) |
 
 
 

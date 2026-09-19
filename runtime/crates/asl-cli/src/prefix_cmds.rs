@@ -118,31 +118,25 @@ pub fn handle_run(
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "run".to_string());
 
+    asl_spec::validate_entrypoint_identifier(&ep)?;
+
     let input_val: Value = serde_json::from_str(input)
         .with_context(|| format!("Argument --input is not valid JSON: {}", input))?;
 
-    let mut effective_caps = doc.manifest.capabilities.clone();
-    if !allowed_root.is_empty() {
-        let allowed_canon: Vec<PathBuf> = allowed_root
-            .iter()
-            .map(|p| fs::canonicalize(p).unwrap_or_else(|_| p.clone()))
-            .collect();
-        effective_caps.fs.confined_read_roots.retain(|r| {
-            let r_path = PathBuf::from(r);
-            let r_canon = fs::canonicalize(&r_path).unwrap_or(r_path);
-            allowed_canon.iter().any(|a| r_canon.starts_with(a))
-        });
-        effective_caps.fs.allow_write.retain(|r| {
-            let r_path = PathBuf::from(r);
-            let r_canon = fs::canonicalize(&r_path).unwrap_or(r_path);
-            allowed_canon.iter().any(|a| r_canon.starts_with(a))
-        });
-    }
+    let effective_caps = if !allowed_root.is_empty() {
+        let mut policy = asl_spec::HostSecurityPolicy::permissive();
+        policy.allowed_fs_read_roots = allowed_root.iter().map(|p| p.to_string_lossy().to_string()).collect();
+        policy.allowed_fs_write_roots = allowed_root.iter().map(|p| p.to_string_lossy().to_string()).collect();
+        policy.intersect(&doc.manifest.capabilities)?
+    } else {
+        doc.manifest.capabilities.clone()
+    };
 
     let security = ConfinedSecurityContext::from_capabilities(
         &effective_caps,
         doc.manifest.limits.max_fuel_opcodes,
-    );
+    )
+    .with_timeout_ms(doc.manifest.limits.wall_clock_timeout_ms);
 
     let result = engine
         .execute(
@@ -253,48 +247,31 @@ pub fn handle_check(
     }
 
     let ep = &doc.manifest.interface.entrypoint;
-    let mock_sec = ConfinedSecurityContext::from_capabilities(
-        &doc.manifest.capabilities,
-        doc.manifest.limits.max_fuel_opcodes,
-    );
+    asl_spec::validate_entrypoint_identifier(ep)?;
 
-    let test_input = serde_json::json!({});
-    let compile_check = engine.execute(
-        &doc.deterministic_code,
-        ep,
-        &test_input,
-        &mock_sec,
-        &doc.manifest.limits,
-    );
+    if dry_run {
+        let mock_sec = asl_security::MockSecurityContext::new(doc.manifest.limits.max_fuel_opcodes);
+        let test_input = serde_json::json!({});
+        let compile_check = engine.execute(
+            &doc.deterministic_code,
+            ep,
+            &test_input,
+            &mock_sec,
+            &doc.manifest.limits,
+        );
 
-    match compile_check {
-        Ok(res) => {
-            println!("Compilation:  ✅ Entrypoint '{}' compiled successfully", ep);
-            if dry_run {
-                println!("Dry Run:      ✅ Executed with empty input -> {:?}", res.output);
+        match compile_check {
+            Ok(res) => {
+                println!("Compilation:  ✅ Entrypoint '{}' compiled successfully", ep);
+                println!("Dry Run:      ✅ Executed safely in-memory -> {:?}", res.output);
             }
-        }
-        Err(e) => {
-            if dry_run {
+            Err(e) => {
                 eprintln!("Dry Run:      ❌ Execution failed: {}", e);
                 anyhow::bail!("Dry run execution failed: {}", e);
-            } else {
-                let err_str = e.to_string();
-                let is_input_shape_error = err_str.contains("Key not found")
-                    || err_str.contains("Index out of bounds")
-                    || err_str.contains("Ocap permission error")
-                    || err_str.contains("key not found");
-                if is_input_shape_error {
-                    println!(
-                        "Compilation:  ✅ Entrypoint '{}' syntax valid (runtime requires specific input schema)",
-                        ep
-                    );
-                } else {
-                    eprintln!("Compilation:  ❌ Failed: {}", e);
-                    anyhow::bail!("Skill failed compilation: {}", e);
-                }
             }
         }
+    } else {
+        println!("Compilation:  ✅ Entrypoint '{}' syntax valid (static check)", ep);
     }
 
     Ok(())
