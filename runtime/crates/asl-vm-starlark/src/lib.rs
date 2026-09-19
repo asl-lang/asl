@@ -186,6 +186,12 @@ fn asl_pure_natives(builder: &mut GlobalsBuilder) {
     fn asl_native_is_json(s: &str) -> anyhow::Result<bool> {
         Ok(serde_json::from_str::<serde_json::Value>(s).is_ok())
     }
+
+    fn _asl_matches_regex(haystack: &str, pattern: &str) -> anyhow::Result<bool> {
+        let re = regex::Regex::new(pattern)
+            .map_err(|e| anyhow::anyhow!("Invalid regular expression '{}': {}", pattern, e))?;
+        Ok(re.is_match(haystack))
+    }
 }
 
 pub struct StarlarkEngine;

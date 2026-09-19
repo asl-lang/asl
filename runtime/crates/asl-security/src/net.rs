@@ -102,9 +102,18 @@ pub fn execute_http_request(
         )));
     }
 
+    let host = domain.split(':').next().unwrap_or(&domain);
+    if is_private_or_metadata_host(host) {
+        return Err(AslError::CapabilityViolation(format!(
+            "Access to private/metadata IP or localhost is prohibited: '{}'",
+            host
+        )));
+    }
+
     let timeout = Duration::from_millis(if timeout_ms == 0 { 15000 } else { timeout_ms });
     let config = ureq::config::Config::builder()
         .timeout_global(Some(timeout))
+        .max_redirects(0)
         .build();
     let agent: ureq::Agent = config.into();
 
@@ -170,6 +179,27 @@ pub fn execute_http_request(
     }
 }
 
+/// Checks if a host/IP is private (RFC 1918), loopback, link-local (cloud metadata), or unspecified
+pub fn is_private_or_metadata_host(host: &str) -> bool {
+    if host.eq_ignore_ascii_case("localhost") {
+        return true;
+    }
+    if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+        match ip {
+            std::net::IpAddr::V4(ipv4) => {
+                ipv4.is_loopback()
+                    || ipv4.is_private()
+                    || ipv4.is_link_local()
+                    || ipv4.is_broadcast()
+                    || ipv4.is_unspecified()
+            }
+            std::net::IpAddr::V6(ipv6) => ipv6.is_loopback() || ipv6.is_unspecified(),
+        }
+    } else {
+        false
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -196,5 +226,18 @@ mod tests {
         assert!(is_domain_allowed("sub.example.org", &allowed));
         assert!(!is_domain_allowed("evil.com", &allowed));
         assert!(!is_domain_allowed("notatlassian.net", &allowed));
+    }
+
+    #[test]
+    fn test_ssrf_redirect_and_metadata_ip_blocked() {
+        let caps = vec!["*".to_string()];
+        let res = execute_http_request("GET", "http://169.254.169.254/latest/meta-data", &[], None, &caps, 1000);
+        assert!(matches!(res, Err(AslError::CapabilityViolation(_))));
+
+        let res_loopback = execute_http_request("GET", "http://127.0.0.1:8080/admin", &[], None, &caps, 1000);
+        assert!(matches!(res_loopback, Err(AslError::CapabilityViolation(_))));
+
+        let res_localhost = execute_http_request("GET", "http://localhost:8080/admin", &[], None, &caps, 1000);
+        assert!(matches!(res_localhost, Err(AslError::CapabilityViolation(_))));
     }
 }

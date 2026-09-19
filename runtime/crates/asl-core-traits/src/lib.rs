@@ -109,3 +109,41 @@ pub struct TranspileError {
     pub snippet: String,
     pub suggestion: Option<String>,
 }
+
+/// Validates a JSON instance against a JSON Schema using the in-memory validator.
+/// If schema is null or empty object, validation succeeds immediately.
+pub fn validate_json_schema(schema: &Value, instance: &Value) -> Result<()> {
+    if schema.is_null() || schema.as_object().map(|o| o.is_empty()).unwrap_or(false) {
+        return Ok(());
+    }
+    let validator = jsonschema::validator_for(schema)
+        .map_err(|e| asl_spec::AslError::SchemaViolation(e.to_string()))?;
+    if let Err(error) = validator.validate(instance) {
+        return Err(asl_spec::AslError::SchemaViolation(error.to_string()));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_input_schema_validation_rejection() {
+        let schema = serde_json::json!({
+            "type": "object",
+            "required": ["username"],
+            "properties": { "username": { "type": "string" } }
+        });
+        let invalid_input = serde_json::json!({ "username": 12345 });
+        assert!(validate_json_schema(&schema, &invalid_input).is_err());
+
+        let valid_input = serde_json::json!({ "username": "alice" });
+        assert!(validate_json_schema(&schema, &valid_input).is_ok());
+
+        // Empty schema should accept anything
+        assert!(validate_json_schema(&serde_json::json!({}), &invalid_input).is_ok());
+        assert!(validate_json_schema(&serde_json::Value::Null, &invalid_input).is_ok());
+    }
+}
+

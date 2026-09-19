@@ -123,6 +123,10 @@ pub fn handle_run(
     let input_val: Value = serde_json::from_str(input)
         .with_context(|| format!("Argument --input is not valid JSON: {}", input))?;
 
+    // Validate input schema
+    asl_core_traits::validate_json_schema(&doc.manifest.interface.input_schema, &input_val)
+        .with_context(|| "Input failed schema validation")?;
+
     let effective_caps = if !allowed_root.is_empty() {
         let mut policy = asl_spec::HostSecurityPolicy::permissive();
         policy.allowed_fs_read_roots = allowed_root.iter().map(|p| p.to_string_lossy().to_string()).collect();
@@ -147,6 +151,12 @@ pub fn handle_run(
             &doc.manifest.limits,
         )
         .with_context(|| "Failed deterministic ASL execution")?;
+
+    // Validate output schema if defined
+    if let Some(ref out_schema) = doc.manifest.interface.output_schema {
+        asl_core_traits::validate_json_schema(out_schema, &result.output)
+            .with_context(|| "Output failed schema validation")?;
+    }
 
     let output_str = serde_json::to_string_pretty(&result.output)?;
     println!("{}", output_str);

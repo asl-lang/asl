@@ -28,7 +28,6 @@ pub fn handle_serve(
         load_skills_recursive(path, parser, &mut skills);
     }
 
-    let mut server_caps = asl_spec::SkillCapabilities::default();
     let root_str = if path.is_dir() {
         path.to_string_lossy().to_string()
     } else {
@@ -37,8 +36,25 @@ pub fn handle_serve(
             .to_string_lossy()
             .to_string()
     };
-    server_caps.fs.confined_read_roots.push(root_str);
-    let security = ConfinedSecurityContext::from_capabilities(&server_caps, 1_000_000);
+    let mut server_caps = asl_spec::SkillCapabilities::default();
+    server_caps.fs.confined_read_roots.push(root_str.clone());
+    let fallback_security = ConfinedSecurityContext::from_capabilities(&server_caps, 1_000_000);
+
+    let root_for_factory = root_str;
+    let r_str = root_for_factory.clone();
+    let mcp_server = McpServer::with_factory(skills.clone(), engine, &fallback_security, move |skill| {
+        let mut caps = skill.manifest.capabilities.clone();
+        if !caps.fs.confined_read_roots.contains(&r_str) {
+            caps.fs.confined_read_roots.push(r_str.clone());
+        }
+        Box::new(
+            ConfinedSecurityContext::from_capabilities(
+                &caps,
+                skill.manifest.limits.max_fuel_opcodes,
+            )
+            .with_timeout_ms(skill.manifest.limits.wall_clock_timeout_ms),
+        )
+    });
 
     if transport.to_lowercase() == "http" {
         eprintln!(
@@ -47,7 +63,6 @@ pub fn handle_serve(
             port,
             skills.len()
         );
-        let mcp_server = McpServer::new(skills, engine, &security);
         let http_server =
             asl_protocol_http::McpHttpServer::with_host(mcp_server, host.to_string(), port);
         let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
@@ -59,11 +74,10 @@ pub fn handle_serve(
             "[ASL MCP Server] Started over stdio with {} skill(s) loaded",
             skills.len()
         );
-        let server = McpServer::new(skills, engine, &security);
         let stdin = std::io::stdin();
         let stdout = std::io::stdout();
 
-        server
+        mcp_server
             .run_stdio_loop(stdin.lock(), stdout.lock())
             .with_context(|| "Error in MCP stdio message loop")?;
     }
