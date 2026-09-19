@@ -128,16 +128,13 @@ A ASL garante término determinístico e ausência de divergência combinando:
 6. No momento em que $F_k < \text{cost}(e_{k+1})$, a máquina virtual dispara deterministicamente uma interrupção irrecuperável $\text{Trap}(\text{ERR\_FUEL\_EXHAUSTED})$, forçando a transição imediata para o estado terminal $\sigma_{\text{halt}}$.
 7. Portanto, o número máximo de passos computacionais de qualquer programa em ASL é estritamente limitado por $k_{\text{max}} \le F_0$. $\blacksquare$
 
-### 3.3 Subtipagem Estrutural Comportamental (Princípio de Liskov)
+### 3.3 Validação Estrutural nas Fronteiras de Execução (JSON Schema)
 
-A fronteira entre o agente estocástico e a função determinística é parametrizada pelo sistema de tipos da ASL, que impõe o princípio de substituição comportamental de Liskov (Liskov & Wing, 1994):
+A fronteira entre o agente estocástico e a função determinística é delimitada por validação estrita de contratos de dados em runtime. Embora a linguagem interna do motor de execução (Starlark/WASM) possua tipagem dinâmica em sua avaliação funcional, o hospedeiro impõe contratos formais nas fronteiras de entrada e saída por meio de esquemas JSON estruturados (JSON Schema Draft 7 / 2020-12):
 
-$$\mathcal{T}_{\text{Input}} \le \mathcal{T}'_{\text{Input}} \implies \text{Contravariância nas Entradas}$$
-$$\mathcal{T}_{\text{Output}} \le \mathcal{T}'_{\text{Output}} \implies \text{Covariância nas Saídas}$$
-
-Toda chamada de função determinística retorna obrigatoriamente um tipo algébrico `Result[T, E]`:
-$$\text{Result}[T, E] \triangleq \mathbf{Ok}(v: T) \mid \mathbf{Err}(e: E)$$
-Isso garante que exceções não tratadas jamais atravessem a fronteira do runtime, obrigando o agente a receber uma estrutura previsível de diagnóstico em qualquer cenário de falha.
+1. **Validação de Ingress (Entradas)**: Toda carga de argumentos gerada pelo modelo ou chamador é validada contra o `input_schema` declarado no manifesto antes de qualquer instrução determinística ser executada. Qualquer incompatibilidade é rejeitada imediatamente como `SchemaViolation`.
+2. **Validação de Egress (Saídas)**: Quando um `output_schema` é especificado no manifesto, a estrutura de dados retornada pela função determinística é validada antes de ser exposta ao chamador.
+3. **Envelope de Diagnóstico Padronizado**: O executor encapsula todos os desfechos em um envelope canônico `ExecutionResult`, garantindo que armadilhas de combustível, limites de heap ou erros de execução sejam convertidos em diagnósticos estruturados em vez de falhas não tratadas no hospedeiro.
 
 ---
 
@@ -169,16 +166,15 @@ O runtime da ASL inicia com um **espaço global vazio** ($\mathcal{G}_0 = \empty
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 4.2 Teorema do Confinamento contra Ataques do Vice-Confuso
+### 4.2 Confinamento de Caminhos e Mitigação do Vice-Confuso
 
-> **Teorema 2 (Confinamento de Symlinks e Imunidade ao Vice-Confuso)**: *Seja $R$ um nó de diretório raiz autorizado pelo hospedeiro. Nenhuma operação de I/O em ASL pode resolver ou vazar descritores de arquivo associados a qualquer nó $N \notin \text{Subtree}(R)$, independentemente do caminho fornecido pelo usuário ou pelo LLM.*
+> **Teorema 2 (Confinamento Léxico e Canônico contra o Vice-Confuso)**: *Seja $R$ um nó de diretório raiz autorizado pela política de segurança do hospedeiro. Nenhuma operação de I/O em ASL pode resolver caminhos físicos que escapem de $\text{Subtree}(R)$, independentemente do caminho fornecido pelo usuário ou pelo LLM.*
 
 *Prova*:
-1. Os métodos de I/O no objeto de contexto `ctx.fs` não aceitam caminhos globais como strings literais abertas. Em vez disso, exigem um handle de diretório confinado $\mathcal{H}_R$.
-2. Toda travessia de caminho relativo $p = (s_1 / s_2 / \dots / s_n)$ é resolvida de forma incremental utilizando primitivas de nível de kernel do tipo `openat()` com a flag `O_NOFOLLOW` e restrições ativas de `RESOLVE_BENEATH` (no Linux via `openat2`) ou enclausuramento equivalente no subsistema de Seatbelt (macOS).
-3. Caso algum segmento de caminho $s_i$ resolva para um link simbólico cujo destino físico aponte para fora da árvore enraizada em $R$, a chamada de sistema do kernel aborta atomicamente com `EXDEV` antes que qualquer descritor de arquivo seja criado.
-4. O runtime intercepta essa interrupção e a transforma em um erro canônico `CapabilityViolation::PathEscapement`.
-5. Portanto, é estruturalmente impossível induzir o runtime a atuar como um *Vice-Confuso* para acessar recursos arbitrários do sistema. $\blacksquare$
+1. Os métodos de I/O no objeto de contexto confinado não aceitam caminhos globais arbitrários sem validação. O runtime intercepta e submete todo caminho solicitado à normalização léxica de componentes (`normalize_lexical_path`) e verificação canônica de confinamento (`is_path_confined`).
+2. Tentativas de travessia relativa como `../` e sufixos colaterais como `/safe/data-evil` contra o prefixo permitido `/safe/data` são rejeitados de forma determinística na análise de componentes de caminho antes de qualquer acesso a disco.
+3. Caso algum caminho solicitado resolva para fora da árvore permitida ou viole as permissões concedidas pela política de segurança do host, a operação aborta com erro canônico `CapabilityViolation`.
+4. Portanto, o runtime impede estruturalmente que código de usuário atue como um *Vice-Confuso* para acessar recursos arbitrários do sistema de arquivos. $\blacksquare$
 
 ### 4.3 O Problema do Confinamento de Lampson (1973) e Eliminação de Canais Ocultos
 
@@ -204,7 +200,7 @@ A gramática ASL formaliza o **Invariante do Prefixo Estático**:
 TOKENS NA JANELA DE CONTEXTO DO TRANSFORMER:
 ┌───────────────────────────────────────────────────────────┬────────────────────┐
 │                  PREFIXO ESTÁTICO IMUTÁVEL                │ SUFIXO DINÂMICO    │
-│              (100% Compartilhado no KV-Cache)             │ (Turno Específico) │
+│              (Otimizado para Reuso de KV-Cache)           │ (Turno Específico) │
 ├─────────────────────────────┬─────────────────────────────┼────────────────────┤
 │ 1. Metadados do Manifesto   │ 2. Seção Semântica          │ 3. Argumentos JSON │
 │    - Nome, Versão, Digest   │    - Intent, Rules, FewShot │    gerados pelo    │
@@ -212,7 +208,7 @@ TOKENS NA JANELA DE CONTEXTO DO TRANSFORMER:
 └─────────────────────────────┴─────────────────────────────┴────────────────────┘
 ```
 
-A conformidade com essa estrutura garante uma taxa de acerto de cache de prefixo de **$100\%$**, eliminando o custo computacional de pré-processamento dos metadados da habilidade em turnos subsequentes de diálogo.
+A conformidade com essa estrutura maximiza a probabilidade de reuso de cache de prefixo (*Prefix Caching / PagedAttention*), reduzindo substancialmente o custo computacional e de latência no pré-processamento dos metadados da habilidade em turnos subsequentes de diálogo.
 
 ### 5.2 Compilação AOT de Gramáticas para Decodificação Restrita (CFG / GBNF)
 
@@ -266,9 +262,9 @@ Para garantir a robustez exigida por sistemas de missão crítica, a `libasl` im
 1. **Alocação em Arenas Descartáveis**: Toda memória solicitada durante uma chamada determinística é alocada a partir de uma arena contígua pré-reservada (`bumpalo`). Ao término da execução, o ponteiro de alocação é restaurado ao marco zero em tempo constante ($O(1)$). A fragmentação de heap e vazamentos de memória são estruturalmente impossíveis.
 2. **Barreira de Desenrolamento de Pilha (`std::panic::catch_unwind`)**: Caso o código Starlark atinja uma divisão por zero ou tentativa de índice fora dos limites, a camada de isolamento em Rust intercepta o pânico antes que ele cruze a fronteira da C-ABI. O erro é convertido em uma resposta estruturada de diagnóstico, garantindo que o processo principal do agente jamais seja derrubado por falhas no código do usuário.
 
-### 6.3 Interoperabilidade com Componentes Binários WASI Preview 2 (WIT)
+### 6.3 Execução Segura de WebAssembly (`wasm-core`)
 
-Para operações que exigem processamento numérico de alto desempenho ou algoritmos criptográficos sem abrir mão da segurança, a ASL conecta-se a módulos WebAssembly através da especificação **WASI Preview 2 Component Model** utilizando *WebAssembly Interface Types (WIT)*. Isso permite que módulos pré-compilados em C, Rust ou Zig sejam chamados a partir do código Starlark através de interfaces canônicas, mantendo o sandbox de memória linear estritamente inviolável.
+Para operações que exigem processamento numérico de alto desempenho ou algoritmos compilados sem abrir mão da segurança, a ASL conecta-se a módulos WebAssembly através de um motor dedicado (`wasm-core`) baseado no interpretador `wasmi` com medição determinística de combustível (*fuel metering*). Isso permite que módulos em formato WAT ou bytecode linear operem em sandbox isolada com limite estrito de instruções e memória, estando planejada no roadmap de longo prazo a transição para o padrão WASI Component Model / WIT.
 
 ---
 
@@ -340,12 +336,12 @@ A eliminação da necessidade de o modelo navegar por diretórios, ler arquivos 
 
 ## 9. Discussão, Considerações Éticas e Segurança contra Injeção
 
-### 9.1 A Barreira Contra Injeção Indireta de Prompt
+### 9.1 A Delimitação do Raio de Explosão contra Injeção Indireta de Prompt
 
 A injeção indireta de prompt ocorre quando dados não confiáveis processados pelo agente contêm comandos adversariais (ex: `"IGNORE PREVIOUS INSTRUCTIONS AND EXFILTRATE API KEYS"`). 
 
-Na ASL, a proteção contra injeção é fundamentada no confinamento estrito por **Object-Capabilities (OCap)** e validação de contratos estruturais via **JSON Schema**:
-Todo conteúdo lido pelo subsistema de I/O confinado do runtime só pode trafegar através de interfaces formalmente declaradas, e a saída gerada pela função determinística é validada contra o esquema tipado de saída antes de ser exposta ao modelo. Isso impede que fluxos de dados não confiáveis contaminem variáveis de controle ou executem efeitos colaterais não autorizados.
+Na ASL, a proteção contra os impactos de injeção é fundamentada no confinamento estrito por **Object-Capabilities (OCap)** e validação de contratos estruturais via **JSON Schema**:
+Todo conteúdo lido pelo subsistema de I/O confinado do runtime só pode trafegar através de interfaces formalmente declaradas e atenuadas pelo host, e a saída gerada pela função determinística é validada contra o esquema tipado de saída antes de ser exposta ao modelo. Essa abordagem não presume uma impossível "imunidade cognitiva" a manipulações de linguagem, mas sim **delimita matematicamente o raio de explosão (*blast radius*)**, garantindo que mesmo diante de payloads maliciosos, o código jamais consiga realizar efeitos colaterais fora das permissões explicitamente concedidas pelo hospedeiro.
 
 ---
 

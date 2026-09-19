@@ -170,6 +170,8 @@ pub struct HostSecurityPolicy {
     pub max_fuel_opcodes: u64,
     #[serde(default = "default_policy_timeout")]
     pub max_timeout_ms: u64,
+    #[serde(default = "default_policy_heap_kib")]
+    pub max_heap_kib: u64,
 }
 
 fn default_policy_fuel() -> u64 {
@@ -178,6 +180,10 @@ fn default_policy_fuel() -> u64 {
 
 fn default_policy_timeout() -> u64 {
     15_000
+}
+
+fn default_policy_heap_kib() -> u64 {
+    65_536
 }
 
 impl Default for HostSecurityPolicy {
@@ -189,8 +195,49 @@ impl Default for HostSecurityPolicy {
             allowed_env_keys: Vec::new(),
             max_fuel_opcodes: default_policy_fuel(),
             max_timeout_ms: default_policy_timeout(),
+            max_heap_kib: default_policy_heap_kib(),
         }
     }
+}
+
+fn expand_tilde(p: &str) -> std::path::PathBuf {
+    if let Some(rest) = p.strip_prefix("~/") {
+        if let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) {
+            return std::path::PathBuf::from(home).join(rest);
+        }
+    } else if p == "~" {
+        if let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) {
+            return std::path::PathBuf::from(home);
+        }
+    }
+    std::path::PathBuf::from(p)
+}
+
+fn normalize_lexical_path(p: &str) -> std::path::PathBuf {
+    use std::path::{Component, PathBuf};
+    let path = expand_tilde(p);
+    let mut out = PathBuf::new();
+    for comp in path.components() {
+        match comp {
+            Component::Prefix(prefix) => out.push(Component::Prefix(prefix)),
+            Component::RootDir => out.push(Component::RootDir),
+            Component::CurDir => {}
+            Component::ParentDir => {
+                out.pop();
+            }
+            Component::Normal(c) => out.push(c),
+        }
+    }
+    out
+}
+
+fn is_path_confined(requested_path: &str, allowed_root: &str) -> bool {
+    if allowed_root == "*" || allowed_root == "/" {
+        return true;
+    }
+    let req_norm = normalize_lexical_path(requested_path);
+    let allowed_norm = normalize_lexical_path(allowed_root);
+    req_norm.starts_with(&allowed_norm)
 }
 
 impl HostSecurityPolicy {
@@ -202,6 +249,47 @@ impl HostSecurityPolicy {
             allowed_env_keys: vec!["*".to_string()],
             max_fuel_opcodes: 10_000_000,
             max_timeout_ms: 30_000,
+            max_heap_kib: 131_072,
+        }
+    }
+
+    pub fn with_allowed_fs_read_root(mut self, root: impl Into<String>) -> Self {
+        self.allowed_fs_read_roots.push(root.into());
+        self
+    }
+
+    pub fn with_allowed_fs_write_root(mut self, root: impl Into<String>) -> Self {
+        self.allowed_fs_write_roots.push(root.into());
+        self
+    }
+
+    pub fn with_allowed_domain(mut self, domain: impl Into<String>) -> Self {
+        self.allowed_domains.push(domain.into());
+        self
+    }
+
+    pub fn with_allowed_env_key(mut self, key: impl Into<String>) -> Self {
+        self.allowed_env_keys.push(key.into());
+        self
+    }
+
+    pub fn effective_limits(&self, requested: &crate::Limits) -> crate::Limits {
+        crate::Limits {
+            max_fuel_opcodes: if requested.max_fuel_opcodes == 0 {
+                self.max_fuel_opcodes
+            } else {
+                std::cmp::min(requested.max_fuel_opcodes, self.max_fuel_opcodes)
+            },
+            wall_clock_timeout_ms: if requested.wall_clock_timeout_ms == 0 {
+                self.max_timeout_ms
+            } else {
+                std::cmp::min(requested.wall_clock_timeout_ms, self.max_timeout_ms)
+            },
+            max_heap_kib: if requested.max_heap_kib == 0 {
+                self.max_heap_kib
+            } else {
+                std::cmp::min(requested.max_heap_kib, self.max_heap_kib)
+            },
         }
     }
 
@@ -211,7 +299,7 @@ impl HostSecurityPolicy {
         // 1. FS Read
         for root in &requested.fs.confined_read_roots {
             let is_allowed = self.allowed_fs_read_roots.iter().any(|a| {
-                a == "*" || root == a || root.starts_with(a)
+                is_path_confined(root, a)
             });
             if is_allowed {
                 effective.fs.confined_read_roots.push(root.clone());
@@ -226,7 +314,7 @@ impl HostSecurityPolicy {
         // 2. FS Write
         for root in &requested.fs.allow_write {
             let is_allowed = self.allowed_fs_write_roots.iter().any(|a| {
-                a == "*" || root == a || root.starts_with(a)
+                is_path_confined(root, a)
             });
             if is_allowed {
                 effective.fs.allow_write.push(root.clone());
@@ -306,5 +394,49 @@ mod tests {
         requested.fs.confined_read_roots = vec!["/etc/passwd".to_string()];
         let denied_fs = policy.intersect(&requested);
         assert!(denied_fs.is_err());
+    }
+
+    #[test]
+    fn test_path_prefix_and_traversal_rejection() {
+        let policy = HostSecurityPolicy {
+            allowed_fs_read_roots: vec!["/safe/data".to_string()],
+            ..Default::default()
+        };
+
+        // 1. Prefix collision attempt: /safe/data-evil must be rejected
+        let mut req1 = SkillCapabilities::default();
+        req1.fs.confined_read_roots = vec!["/safe/data-evil".to_string()];
+        assert!(policy.intersect(&req1).is_err(), "/safe/data-evil must be rejected");
+
+        // 2. Traversal attempt: /safe/data/../secret must be rejected
+        let mut req2 = SkillCapabilities::default();
+        req2.fs.confined_read_roots = vec!["/safe/data/../secret".to_string()];
+        assert!(policy.intersect(&req2).is_err(), "/safe/data/../secret must be rejected");
+
+        // 3. Valid subpath: /safe/data/sub/file.txt must succeed
+        let mut req3 = SkillCapabilities::default();
+        req3.fs.confined_read_roots = vec!["/safe/data/sub/file.txt".to_string()];
+        assert!(policy.intersect(&req3).is_ok(), "/safe/data/sub/file.txt must succeed");
+    }
+
+    #[test]
+    fn test_effective_limits_calculation() {
+        let policy = HostSecurityPolicy {
+            max_fuel_opcodes: 500_000,
+            max_timeout_ms: 10_000,
+            max_heap_kib: 32_768,
+            ..Default::default()
+        };
+
+        let requested = crate::Limits {
+            max_fuel_opcodes: 1_000_000,
+            wall_clock_timeout_ms: 20_000,
+            max_heap_kib: 65_536,
+        };
+
+        let eff = policy.effective_limits(&requested);
+        assert_eq!(eff.max_fuel_opcodes, 500_000);
+        assert_eq!(eff.wall_clock_timeout_ms, 10_000);
+        assert_eq!(eff.max_heap_kib, 32_768);
     }
 }

@@ -100,7 +100,7 @@ use serde_json::Value;
 
 /// Porta abstrata de execução de código determinístico
 pub trait EnginePort: Send + Sync {
-    /// Nome identificador do motor (ex: "starlark-hermetic", "wasm-component")
+    /// Nome identificador do motor (ex: "starlark-hermetic", "wasm-core")
     fn name(&self) -> &'static str;
 
     /// Avalia uma função determinística dentro de um contexto com capacidades limitadas

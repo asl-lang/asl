@@ -68,9 +68,9 @@ impl CapabilityContext for MockSecurityContext {
         Ok(())
     }
 
-    fn file_exists(&self, path: &str) -> bool {
-        let _ = self.consume_fuel(1);
-        self.virtual_fs.read().unwrap().contains_key(path)
+    fn file_exists(&self, path: &str) -> Result<bool> {
+        self.consume_fuel(1)?;
+        Ok(self.virtual_fs.read().unwrap().contains_key(path))
     }
 
     fn list_dir(&self, _path: &str) -> Result<Vec<String>> {
@@ -80,17 +80,17 @@ impl CapabilityContext for MockSecurityContext {
         Ok(keys)
     }
 
-    fn sha256(&self, data: &str) -> String {
-        let _ = self.consume_fuel(1);
+    fn sha256(&self, data: &str) -> Result<String> {
+        self.consume_fuel(1)?;
         use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(data.as_bytes());
-        hex::encode(hasher.finalize())
+        Ok(hex::encode(hasher.finalize()))
     }
 
-    fn base64_encode(&self, data: &str) -> String {
-        let _ = self.consume_fuel(1);
-        crypto::base64_encode(data)
+    fn base64_encode(&self, data: &str) -> Result<String> {
+        self.consume_fuel(1)?;
+        Ok(crypto::base64_encode(data))
     }
 
     fn base64_decode(&self, encoded: &str) -> Result<String> {
@@ -208,12 +208,12 @@ impl CapabilityContext for ConfinedSecurityContext {
         fs::safe_write_file(&canonical_target, content)
     }
 
-    fn file_exists(&self, path_str: &str) -> bool {
-        let _ = self.consume_fuel(1);
+    fn file_exists(&self, path_str: &str) -> Result<bool> {
+        self.consume_fuel(1)?;
         if let Ok(canonical_target) = fs::check_path_confinement(path_str, &self.allowed_read_roots) {
-            canonical_target.exists()
+            Ok(canonical_target.exists())
         } else {
-            false
+            Ok(false)
         }
     }
 
@@ -223,17 +223,17 @@ impl CapabilityContext for ConfinedSecurityContext {
         fs::safe_list_dir(&canonical_target)
     }
 
-    fn sha256(&self, data: &str) -> String {
-        let _ = self.consume_fuel(1);
+    fn sha256(&self, data: &str) -> Result<String> {
+        self.consume_fuel(1)?;
         use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(data.as_bytes());
-        hex::encode(hasher.finalize())
+        Ok(hex::encode(hasher.finalize()))
     }
 
-    fn base64_encode(&self, data: &str) -> String {
-        let _ = self.consume_fuel(1);
-        crypto::base64_encode(data)
+    fn base64_encode(&self, data: &str) -> Result<String> {
+        self.consume_fuel(1)?;
+        Ok(crypto::base64_encode(data))
     }
 
     fn base64_decode(&self, encoded: &str) -> Result<String> {
@@ -347,7 +347,7 @@ mod tests {
     fn test_security_context_crypto_and_fuel() {
         let mock_ctx = MockSecurityContext::new(5000);
         assert_eq!(mock_ctx.fuel_consumed(), 0);
-        let hash = mock_ctx.sha256("hello");
+        let hash = mock_ctx.sha256("hello").unwrap();
         assert_eq!(hash, "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824");
         assert_eq!(mock_ctx.fuel_consumed(), 1);
         assert_eq!(mock_ctx.check_fuel().unwrap(), 4999);
@@ -356,7 +356,7 @@ mod tests {
         let confined_ctx = ConfinedSecurityContext::from_capabilities(&empty_caps, 7777);
         assert_eq!(confined_ctx.fuel_consumed(), 0);
         assert_eq!(confined_ctx.check_fuel().unwrap(), 7777);
-        assert_eq!(confined_ctx.sha256("asl"), "a12e45b23513ff84c05054772fedffc35f0b8a1bc87fb819906b3318b86dfd7a");
+        assert_eq!(confined_ctx.sha256("asl").unwrap(), "a12e45b23513ff84c05054772fedffc35f0b8a1bc87fb819906b3318b86dfd7a");
         assert_eq!(confined_ctx.fuel_consumed(), 1);
         assert_eq!(confined_ctx.check_fuel().unwrap(), 7776);
     }

@@ -23,14 +23,14 @@
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │                                 OS 10 PILARES ARQUITETURAIS DO ASL 3.0                                  │
 ├───────────────────────────────┬───────────────────────────────┬────────────────────────────────────────┤
-│ 1. DUALIDADE PROSA-CÓDIGO     │ 2. PROVA DE TÉRMINO & ESTADOS │ 3. SUBTIPAGEM E CONTRATOS              │
-│ • Papéis Semânticos Rígidos   │ • Invariantes & Fuel-Metering │ • Tipagem Algébrica Result[T, E]       │
+│ 1. DUALIDADE PROSA-CÓDIGO     │ 2. PROVA DE TÉRMINO & ESTADOS │ 3. VALIDAÇÃO DE CONTRATOS              │
+│ • Papéis Semânticos Rígidos   │ • Invariantes & Fuel-Metering │ • JSON Schema Ingress/Egress           │
 ├───────────────────────────────┼───────────────────────────────┼────────────────────────────────────────┤
 │ 4. OBJECT-CAPABILITIES (ocap) │ 5. CONFINAMENTO FORMAL        │ 6. DEFESA CONTRA INJEÇÃO INDIRETA      │
-│ • Zero Autoridade Ambiente    │ • Normalização de Envelopes   │ • Taint Tracking de Payloads           │
+│ • Zero Autoridade Ambiente    │ • Normalização de Envelopes   │ • Confinamento de Blast Radius         │
 ├───────────────────────────────┼───────────────────────────────┼────────────────────────────────────────┤
-│ 7. REUSO DE KV-CACHE          │ 8. DECODIFICAÇÃO GUIADA (CFG) │ 9. EXTENSIBILIDADE COMPONENT MODEL     │
-│ • Prefixo Estático Invariante │ • GBNF AOT & Token Masking    │ • Interface Types (WASI Preview 2 WIT) │
+│ 7. REUSO DE KV-CACHE          │ 8. DECODIFICAÇÃO GUIADA (CFG) │ 9. EXTENSIBILIDADE WEBASSEMBLY         │
+│ • Prefixo Estático Otimizado  │ • GBNF AOT & Token Masking    │ • Sandboxing Determinado (wasm-core)   │
 ├───────────────────────────────┴───────────────────────────────┴────────────────────────────────────────┤
 │ 10. ENGENHARIA DE SISTEMAS EM RUST DE ALTO DESEMPENHO                                                  │
 │ • Segurança de Memória, Zero-Copy C-ABI & Barreira de Captura de Panics (catch_unwind)                 │
@@ -57,11 +57,11 @@
 
 ---
 
-### 1.3 Subtipagem Estrutural Comportamental e Contratos de Fronteira
-*Fundamento: Teoria de Tipos, Modularidade e Contratos Formais de Substituição.*
+### 1.3 Validação Estrutural nas Fronteiras e Contratos de Dados
+*Fundamento: Teoria de Tipos, Modularidade e Contratos de Fronteira.*
 > **Diagnóstico & Solução Arquitetural**:
-> O modelo de tipos entre o LLM e o runtime não pode ser frágil contra a evolução temporal de arquivos `.skill`.
-> O ASL adota **Regras de Subtipagem Estrutural Comportamental**: entradas devem ser estritamente *contravariantes* (aceitando superconjuntos de dados sem quebrar) e saídas devem ser *covariantes* (garantindo que o retorno satisfaça o contrato original do chamador). O tipo `Result[T, E]` é uma primitiva formal de primeira classe, impedindo exceções não tratadas entre a fronteira simbólica do agente e o runtime.
+> O modelo de dados entre o LLM e o runtime não pode ser frágil contra a evolução temporal de arquivos `.skill`.
+> O ASL adota **Validação Estrita de Contratos de Fronteira via JSON Schema**: entradas são validadas contra o `input_schema` antes da execução e saídas contra o `output_schema` opcional. O executor encapsula todo desfecho no envelope canônico `ExecutionResult`, garantindo que exceções, estouro de fuel e falhas sejam transformadas em diagnósticos estruturados previsíveis para o agente e o hospedeiro.
 
 ---
 
@@ -69,7 +69,7 @@
 *Fundamento: Segurança Baseada em Objetos-Capacidade (ocap) e POLA.*
 > **Diagnóstico & Solução Arquitetural**:
 > Modelos tradicionais de permissões sofrem do **Ataque do Vice-Confuso (Confused Deputy Attack)** quando verificam caminhos de arquivos como strings literais, permitindo fuga por symlinks ou `../../`.
-> O ASL adota **Capabilities de Primeira Classe como Handles Criptográficos Não-Falsificáveis**: o host passa handles atenuados onde o kernel do runtime resolve canonicamente diretórios autorizados e impede a resolução de qualquer symlink fora da raiz concedida.
+> O ASL adota **Capabilities de Primeira Classe e Políticas Explícitas do Host**: o host delimita a política de segurança (`HostSecurityPolicy`) que sofre interseção obrigatória com as capacidades solicitadas pela skill. O runtime resolve canonicamente diretórios autorizados e impede a resolução ou travessia de qualquer caminho fora da raiz concedida.
 
 ---
 
@@ -81,11 +81,11 @@
 
 ---
 
-### 1.6 Barreira Semântica de Taint Tracking contra Injeção Indireta
+### 1.6 Confinamento de Blast Radius contra Injeção Indireta
 *Fundamento: Segurança de IA e Defesa em Profundidade contra Injeção Indireta de Prompt.*
 > **Diagnóstico & Solução Arquitetural**:
 > A maior vulnerabilidade operacional em agentes é a **Injeção Indireta de Prompt (Indirect Prompt Injection)** oriunda de dados externos não confiáveis.
-> O ASL implementa **Taint Tracking**: qualquer dado lido do mundo externo através de uma capability (disco, rede) é encapsulado no envelope `<asl:untrusted_content>`, impedindo que o LLM execute comandos contidos no payload sem sanitização prévia.
+> O ASL combate esse risco através do **Confinamento Estrito por Capabilities (OCap)**: o script determinístico opera sem autoridade ambiente e com rede/filesystem estritamente limitados à política concedida pelo hospedeiro. Isso delimita o raio de explosão (*blast radius*), garantindo que dados maliciosos não consigam executar comandos arbitrários no sistema.
 
 ---
 
@@ -93,7 +93,7 @@
 *Fundamento: Arquitetura de Inferência Neural e Reuso de Cache de Tensores de Atenção.*
 > **Diagnóstico & Solução Arquitetural**:
 > Os motores modernos de inferência operam com reaproveitamento de KV-Cache. Se um arquivo incluir variáveis dinâmicas no topo do prompt, todo o KV-Cache é invalidado.
-> O formato `.skill` impõe a **Regra do Prefixo Estático Imutável**: o manifesto e as instruções semânticas são bit-a-bit idênticos entre todas as invocações, relegando parâmetros dinâmicos de sessão estritamente ao final do payload de inferência.
+> O formato `.skill` impõe a **Regra do Prefixo Estático Imutável**: o manifesto e as instruções semânticas são bit-a-bit idênticos entre todas as invocações, relegando parâmetros dinâmicos de sessão estritamente ao final do payload de inferência para maximizar a taxa de acerto de cache de prefixo (*Prompt Caching / PagedAttention*).
 
 ---
 
@@ -105,11 +105,11 @@
 
 ---
 
-### 1.9 Extensibilidade Binária Segura via WebAssembly Component Model
+### 1.9 Extensibilidade Binária Segura via WebAssembly (`wasm-core`)
 *Fundamento: Máquinas Virtuais Herméticas e Interfaces Canônicas de Baixo Acoplamento.*
 > **Diagnóstico & Solução Arquitetural**:
 > A interoperabilidade entre código determinístico e módulos de alta performance exige proteção contra colisões de memória.
-> O ASL adota o padrão **WebAssembly Interface Types (WIT)** do WASI Preview 2, permitindo que módulos nativos se conectem via Canonical ABI com isolamento total de memória linear.
+> O ASL implementa o motor `wasm-core` baseado em `wasmi` com medição de combustível (*fuel metering*), permitindo execução em sandbox com isolamento total de memória linear e roadmap de evolução para WASI Component Model / WIT.
 
 ---
 
@@ -133,13 +133,13 @@ A consolidação da especificação técnica formaliza o padrão **ASL 3.0 (Omni
 ├───────────────────────────────────────┼────────────────────────────────────────────────────────────────┤
 │ 1. Prosa Markdown Caótica             │ Divisão Semântica Rígida: Intent, Activation, Examples, Rules  │
 │ 2. Término Não Comprovado             │ Variante Monotônica Decrescente + Fuel Metering em Bytecode    │
-│ 3. Evolução Frágil de Tipos           │ Subtipagem Estrutural (Contravariante em In, Covariante em Out)│
-│ 4. Vice-Confuso em Paths              │ Handles de Diretório Atenuados (sem strings livres de caminhos)│
+│ 3. Evolução Frágil de Tipos           │ Validação Estrita de Contratos de Fronteira (JSON Schema)      │
+│ 4. Vice-Confuso em Paths              │ Políticas do Host + Confinamento Canônico/Léxico de Diretórios │
 │ 5. Canais Ocultos/Leaks               │ Normalização Estrita de Envelopes de Erro em Tempo e Memória   │
-│ 6. Injeção Indireta de Prompt         │ Taint Tracking com Delimitadores `<asl:untrusted_content>`     │
-│ 7. Invalidação de KV-Cache            │ Arquitetura de Prefixo Estático Imutável (Bit-for-Bit Idêntico)│
+│ 6. Injeção Indireta de Prompt         │ Delimitação de Blast Radius via Sandbox OCap e Políticas Host  │
+│ 7. Invalidação de KV-Cache            │ Arquitetura de Prefixo Estático Otimizado (Bit-for-Bit)        │
 │ 8. Retentativa de Schema              │ Exportador AOT de Gramáticas CFG/GBNF para Token Masking       │
-│ 9. FFI sem Padrão Seguro              │ Interface Types (WIT) do WASI 0.2 via Canonical ABI            │
+│ 9. FFI sem Padrão Seguro              │ Execução Determinística WASM Core com Roadmap para WASI WIT    │
 │ 10. Panics e Colapso de C-ABI         │ Captura de Pânico Segura, Arenas de Heap Isoladas e Tracing    │
 └───────────────────────────────────────┴────────────────────────────────────────────────────────────────┘
 ```
@@ -353,7 +353,7 @@ void asl_runtime_free(asl_runtime_t* rt);
 ## 5. Projeções e Métricas Atualizadas (ASL 3.0)
 
 $$\begin{aligned}
-\text{Eficiência de KV-Cache} &= 100\% \quad (\text{Prefixo estático imutável}) \\
+\text{Eficiência de KV-Cache} &= \text{Otimizada} \quad (\text{Prefixo estático imutável}) \\
 \text{Erro Sintático na Inferência} &= 0.0\% \quad (\text{Compilação de Gramática GBNF/CFG}) \\
 \text{Latência de Execução In-Process} &\le 35\ \mu\text{s} \quad (\text{Arenas de memória em Rust})
 \end{aligned}$$
@@ -361,10 +361,10 @@ $$\begin{aligned}
 | Atributo de Engenharia | Padrão Legado (`SKILL.md` + Scripts) | ASL v1 / v2 | ASL 3.0 (Conselho dos 10) |
 | :--- | :--- | :--- | :--- |
 | **Economia de Tokens** | 0% (Base: ~2.100 tokens) | 70.7% (~550 tokens) | **93.2% (~140 tokens com MCP + CFG)** |
-| **Reuso de KV-Cache** | Desalinhado / Frequente invalidação | Parcial | **100% (Prefixo Estático Bit-a-Bit)** |
-| **Segurança contra Injeção** | Nula (Shell vulnerável a RCE) | Básica | **Total (Taint Tracking + Confinamento)** |
+| **Reuso de KV-Cache** | Desalinhado / Frequente invalidação | Parcial | **Otimizado (Prefixo Estático Bit-a-Bit)** |
+| **Segurança contra Injeção** | Nula (Shell vulnerável a RCE) | Básica | **Confinamento OCap (Delimitação de Blast Radius)** |
 | **Garantia de Término** | Timeout arbitrário de processo | Fuel genérico | **Variante Monotônica Comprovada** |
-| **Padrão de Ferramenta** | Scripts soltos | CLI proprietário | **Nativo MCP + WIT Component Model** |
+| **Padrão de Ferramenta** | Scripts soltos | CLI proprietário | **Nativo MCP + WASM Core (Roadmap WIT)** |
 | **Estabilidade de Runtime** | Falhas frequentes de ambiente | Process fork | **Imune a Panics (C-ABI Isolada)** |
 
 ---

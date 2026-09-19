@@ -32,11 +32,11 @@ impl CapabilityContext for DummyContext {
     fn read_file(&self, _path: &str) -> Result<Option<String>> {
         Ok(None)
     }
-    fn sha256(&self, data: &str) -> String {
-        format!("hash-{}", data)
+    fn sha256(&self, data: &str) -> Result<String> {
+        Ok(format!("hash-{}", data))
     }
-    fn base64_encode(&self, data: &str) -> String {
-        data.to_string()
+    fn base64_encode(&self, data: &str) -> Result<String> {
+        Ok(data.to_string())
     }
     fn base64_decode(&self, encoded: &str) -> Result<String> {
         Ok(encoded.to_string())

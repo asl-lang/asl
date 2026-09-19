@@ -84,11 +84,16 @@ pub fn handle_optimize_prefix(skill_file: &Path, in_place: bool) -> Result<()> {
 }
 
 /// Handles the `asl run` command with zero-touch shadow projection announcing and `--no-shadow` support
+#[allow(clippy::too_many_arguments)]
 pub fn handle_run(
     skill_file: &Path,
     entrypoint: Option<String>,
     input: &str,
     allowed_root: &[PathBuf],
+    allow_domain: &[String],
+    allow_env: &[String],
+    policy_path: Option<&Path>,
+    permissive: bool,
     no_shadow: bool,
     parser: &CommonMarkYamlParser,
     engine: &StarlarkEngine,
@@ -123,40 +128,41 @@ pub fn handle_run(
     let input_val: Value = serde_json::from_str(input)
         .with_context(|| format!("Argument --input is not valid JSON: {}", input))?;
 
-    // Validate input schema
-    asl_core_traits::validate_json_schema(&doc.manifest.interface.input_schema, &input_val)
-        .with_context(|| "Input failed schema validation")?;
-
-    let effective_caps = if !allowed_root.is_empty() {
-        let mut policy = asl_spec::HostSecurityPolicy::permissive();
-        policy.allowed_fs_read_roots = allowed_root.iter().map(|p| p.to_string_lossy().to_string()).collect();
-        policy.allowed_fs_write_roots = allowed_root.iter().map(|p| p.to_string_lossy().to_string()).collect();
-        policy.intersect(&doc.manifest.capabilities)?
+    let mut policy = if permissive {
+        asl_spec::HostSecurityPolicy::permissive()
+    } else if let Some(p) = policy_path {
+        let p_content = fs::read_to_string(p)
+            .with_context(|| format!("Failed to read policy file: {:?}", p))?;
+        serde_json::from_str(&p_content)
+            .with_context(|| format!("Failed to parse policy file as JSON: {:?}", p))?
     } else {
-        doc.manifest.capabilities.clone()
+        asl_spec::HostSecurityPolicy::default()
     };
+
+    for r in allowed_root {
+        policy = policy.with_allowed_fs_read_root(r.to_string_lossy().to_string());
+        policy = policy.with_allowed_fs_write_root(r.to_string_lossy().to_string());
+    }
+    for d in allow_domain {
+        policy = policy.with_allowed_domain(d);
+    }
+    for e in allow_env {
+        policy = policy.with_allowed_env_key(e);
+    }
+
+    let effective_caps = policy.intersect(&doc.manifest.capabilities)?;
+    let effective_limits = policy.effective_limits(&doc.manifest.limits);
 
     let security = ConfinedSecurityContext::from_capabilities(
         &effective_caps,
-        doc.manifest.limits.max_fuel_opcodes,
+        effective_limits.max_fuel_opcodes,
     )
-    .with_timeout_ms(doc.manifest.limits.wall_clock_timeout_ms);
+    .with_timeout_ms(effective_limits.wall_clock_timeout_ms);
 
-    let result = engine
-        .execute(
-            &doc.deterministic_code,
-            &ep,
-            &input_val,
-            &security,
-            &doc.manifest.limits,
-        )
+    let executor = asl_core_traits::SkillExecutor::new(engine, &security);
+    let result = executor
+        .execute(&doc, Some(&ep), &input_val, &effective_limits)
         .with_context(|| "Failed deterministic ASL execution")?;
-
-    // Validate output schema if defined
-    if let Some(ref out_schema) = doc.manifest.interface.output_schema {
-        asl_core_traits::validate_json_schema(out_schema, &result.output)
-            .with_context(|| "Output failed schema validation")?;
-    }
 
     let output_str = serde_json::to_string_pretty(&result.output)?;
     println!("{}", output_str);
@@ -259,16 +265,16 @@ pub fn handle_check(
     let ep = &doc.manifest.interface.entrypoint;
     asl_spec::validate_entrypoint_identifier(ep)?;
 
+    // Static code validation without execution
+    engine
+        .validate(&doc.deterministic_code, ep)
+        .map_err(|e| anyhow::anyhow!("Static check failed: {}", e))?;
+
     if dry_run {
         let mock_sec = asl_security::MockSecurityContext::new(doc.manifest.limits.max_fuel_opcodes);
         let test_input = serde_json::json!({});
-        let compile_check = engine.execute(
-            &doc.deterministic_code,
-            ep,
-            &test_input,
-            &mock_sec,
-            &doc.manifest.limits,
-        );
+        let executor = asl_core_traits::SkillExecutor::new(engine, &mock_sec);
+        let compile_check = executor.execute(&doc, Some(ep), &test_input, &doc.manifest.limits);
 
         match compile_check {
             Ok(res) => {
@@ -281,7 +287,7 @@ pub fn handle_check(
             }
         }
     } else {
-        println!("Compilation:  ✅ Entrypoint '{}' syntax valid (static check)", ep);
+        println!("Compilation:  ✅ Entrypoint '{}' syntax and declaration valid (static check)", ep);
     }
 
     Ok(())

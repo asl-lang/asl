@@ -24,7 +24,7 @@ pub struct JsonRpcResponse {
 }
 
 pub type ContextFactory<'a> =
-    Box<dyn Fn(&SkillDocument) -> Box<dyn CapabilityContext> + Send + Sync + 'a>;
+    Box<dyn Fn(&SkillDocument) -> Result<Box<dyn CapabilityContext>, asl_spec::AslError> + Send + Sync + 'a>;
 
 pub struct McpServer<'a> {
     skills: Vec<SkillDocument>,
@@ -51,7 +51,7 @@ impl<'a> McpServer<'a> {
         skills: Vec<SkillDocument>,
         engine: &'a dyn EnginePort,
         fallback_context: &'a dyn CapabilityContext,
-        factory: impl Fn(&SkillDocument) -> Box<dyn CapabilityContext> + Send + Sync + 'a,
+        factory: impl Fn(&SkillDocument) -> Result<Box<dyn CapabilityContext>, asl_spec::AslError> + Send + Sync + 'a,
     ) -> Self {
         Self {
             skills,
@@ -133,81 +133,60 @@ impl<'a> McpServer<'a> {
 
                 match matched_skill {
                     Some(skill) => {
-                        // 1. Input schema validation
-                        if let Err(e) = asl_core_traits::validate_json_schema(
-                            &skill.manifest.interface.input_schema,
-                            &arguments,
-                        ) {
-                            return Some(JsonRpcResponse {
-                                jsonrpc: "2.0".to_string(),
-                                id: req.id,
-                                result: None,
-                                error: Some(serde_json::json!({
-                                    "code": -32602,
-                                    "message": format!("Input schema validation error: {}", e)
-                                })),
-                            });
-                        }
-
-                        // 2. Ephemeral isolated security context per tool call
                         let ephemeral_ctx_box;
                         let exec_context: &dyn CapabilityContext = if let Some(ref factory) = self.context_factory {
-                            ephemeral_ctx_box = factory(skill);
-                            ephemeral_ctx_box.as_ref()
+                            match factory(skill) {
+                                Ok(ctx) => {
+                                    ephemeral_ctx_box = ctx;
+                                    ephemeral_ctx_box.as_ref()
+                                }
+                                Err(e) => {
+                                    return Some(JsonRpcResponse {
+                                        jsonrpc: "2.0".to_string(),
+                                        id: req.id,
+                                        result: None,
+                                        error: Some(serde_json::json!({
+                                            "code": -32000,
+                                            "message": format!("Capability policy violation: {}", e)
+                                        })),
+                                    });
+                                }
+                            }
                         } else {
                             self.context
                         };
 
-                        let exec_res = self.engine.execute(
-                            &skill.deterministic_code,
-                            &skill.manifest.interface.entrypoint,
-                            &arguments,
-                            exec_context,
-                            &skill.manifest.limits,
-                        );
+                        let executor = asl_core_traits::SkillExecutor::new(self.engine, exec_context);
+                        let exec_res = executor.execute(skill, None, &arguments, &skill.manifest.limits);
 
                         match exec_res {
-                            Ok(res) => {
-                                // 3. Output schema validation if present
-                                if let Some(ref out_schema) = skill.manifest.interface.output_schema {
-                                    if let Err(e) = asl_core_traits::validate_json_schema(
-                                        out_schema,
-                                        &res.output,
-                                    ) {
-                                        return Some(JsonRpcResponse {
-                                            jsonrpc: "2.0".to_string(),
-                                            id: req.id,
-                                            result: None,
-                                            error: Some(serde_json::json!({
-                                                "code": -32000,
-                                                "message": format!("Output schema validation error: {}", e)
-                                            })),
-                                        });
-                                    }
-                                }
-
+                            Ok(res) => Some(JsonRpcResponse {
+                                jsonrpc: "2.0".to_string(),
+                                id: req.id,
+                                result: Some(serde_json::json!({
+                                    "content": [{
+                                        "type": "text",
+                                        "text": serde_json::to_string_pretty(&res.output).unwrap_or_default()
+                                    }],
+                                    "isError": !res.success
+                                })),
+                                error: None,
+                            }),
+                            Err(e) => {
+                                let (code, msg) = match &e {
+                                    asl_spec::AslError::SchemaViolation(msg) => (-32602, format!("Input schema validation error: {}", msg)),
+                                    _ => (-32000, format!("ASL execution error: {}", e)),
+                                };
                                 Some(JsonRpcResponse {
                                     jsonrpc: "2.0".to_string(),
                                     id: req.id,
-                                    result: Some(serde_json::json!({
-                                        "content": [{
-                                            "type": "text",
-                                            "text": serde_json::to_string_pretty(&res.output).unwrap_or_default()
-                                        }],
-                                        "isError": !res.success
+                                    result: None,
+                                    error: Some(serde_json::json!({
+                                        "code": code,
+                                        "message": msg,
                                     })),
-                                    error: None,
                                 })
                             }
-                            Err(e) => Some(JsonRpcResponse {
-                                jsonrpc: "2.0".to_string(),
-                                id: req.id,
-                                result: None,
-                                error: Some(serde_json::json!({
-                                    "code": -32000,
-                                    "message": format!("ASL execution error: {}", e)
-                                })),
-                            }),
                         }
                     }
                     None => Some(JsonRpcResponse {

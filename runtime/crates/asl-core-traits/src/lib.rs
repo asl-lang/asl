@@ -4,8 +4,13 @@ use serde_json::Value;
 
 /// Porta de execução de lógica determinística (Hexagonal Engine Port)
 pub trait EnginePort: Send + Sync {
-    /// Identificador do motor (ex: "starlark-hermetic", "wasm-component")
+    /// Identificador do motor (ex: "starlark-hermetic", "wasm-core")
     fn name(&self) -> &'static str;
+
+    /// Valida estaticamente se o código é bem formado e se o entrypoint está declarado
+    fn validate(&self, _code: &str, _entrypoint: &str) -> Result<()> {
+        Ok(())
+    }
 
     /// Executa uma função determinística do skill com isolamento de contexto e limits
     fn execute(
@@ -34,16 +39,16 @@ pub trait CapabilityContext: Send + Sync {
             "Filesystem write capability is not enabled in this context".to_string(),
         ))
     }
-    fn file_exists(&self, _path: &str) -> bool {
-        false
+    fn file_exists(&self, _path: &str) -> Result<bool> {
+        Ok(false)
     }
     fn list_dir(&self, _path: &str) -> Result<Vec<String>> {
         Err(asl_spec::AslError::CapabilityViolation(
             "Directory listing capability is not enabled in this context".to_string(),
         ))
     }
-    fn sha256(&self, data: &str) -> String;
-    fn base64_encode(&self, data: &str) -> String;
+    fn sha256(&self, data: &str) -> Result<String>;
+    fn base64_encode(&self, data: &str) -> Result<String>;
     fn base64_decode(&self, encoded: &str) -> Result<String>;
     fn env_var(&self, key: &str) -> Result<Option<String>>;
     fn http_request(
@@ -122,6 +127,50 @@ pub fn validate_json_schema(schema: &Value, instance: &Value) -> Result<()> {
         return Err(asl_spec::AslError::SchemaViolation(error.to_string()));
     }
     Ok(())
+}
+
+/// Unified deterministic skill executor enforcing schema validation and host boundaries.
+pub struct SkillExecutor<'a> {
+    engine: &'a dyn EnginePort,
+    context: &'a dyn CapabilityContext,
+}
+
+impl<'a> SkillExecutor<'a> {
+    pub fn new(engine: &'a dyn EnginePort, context: &'a dyn CapabilityContext) -> Self {
+        Self { engine, context }
+    }
+
+    pub fn execute(
+        &self,
+        doc: &SkillDocument,
+        entrypoint: Option<&str>,
+        input: &Value,
+        limits: &Limits,
+    ) -> Result<asl_spec::ExecutionResult> {
+        let ep = entrypoint.unwrap_or(&doc.manifest.interface.entrypoint);
+        asl_spec::validate_entrypoint_identifier(ep)?;
+
+        // 1. Input schema validation
+        validate_json_schema(&doc.manifest.interface.input_schema, input)
+            .map_err(|e| asl_spec::AslError::SchemaViolation(format!("Input schema validation failed: {}", e)))?;
+
+        // 2. Engine execution
+        let result = self.engine.execute(
+            &doc.deterministic_code,
+            ep,
+            input,
+            self.context,
+            limits,
+        )?;
+
+        // 3. Output schema validation if present
+        if let Some(ref out_schema) = doc.manifest.interface.output_schema {
+            validate_json_schema(out_schema, &result.output)
+                .map_err(|e| asl_spec::AslError::SchemaViolation(format!("Output schema validation failed: {}", e)))?;
+        }
+
+        Ok(result)
+    }
 }
 
 #[cfg(test)]

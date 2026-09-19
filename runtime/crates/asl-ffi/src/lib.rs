@@ -1,7 +1,7 @@
-use asl_core_traits::{EnginePort, ParserPort};
+use asl_core_traits::{ParserPort, SkillExecutor};
 use asl_parser::CommonMarkYamlParser;
 use asl_security::ConfinedSecurityContext;
-use asl_spec::SkillDocument;
+use asl_spec::{HostSecurityPolicy, SkillDocument};
 use asl_vm_starlark::StarlarkEngine;
 use serde_json::Value;
 use std::ffi::{CStr, CString};
@@ -97,16 +97,17 @@ pub unsafe extern "C" fn asl_skill_free(skill: *mut asl_skill_t) {
     }
 }
 
-/// Executa um entrypoint da skill com argumentos JSON e barreira de pânico.
+/// Executa um entrypoint da skill com argumentos JSON e política de segurança do host explícita.
 ///
 /// # Safety
 /// Os ponteiros passados devem ser válidos ou nulos. Strings devem ser terminadas em nulo (UTF-8).
 #[no_mangle]
-pub unsafe extern "C" fn asl_skill_execute(
+pub unsafe extern "C" fn asl_skill_execute_with_policy(
     rt: *mut asl_runtime_t,
     skill: *mut asl_skill_t,
     entrypoint: *const c_char,
     json_args: *const c_char,
+    json_policy: *const c_char,
 ) -> *mut asl_exec_result_t {
     let result = catch_unwind(AssertUnwindSafe(|| {
         let start = Instant::now();
@@ -144,17 +145,44 @@ pub unsafe extern "C" fn asl_skill_execute(
             }
         };
 
+        let host_policy: HostSecurityPolicy = if json_policy.is_null() {
+            HostSecurityPolicy::default()
+        } else {
+            let str_res = CStr::from_ptr(json_policy).to_str();
+            match str_res {
+                Ok(s) if s.trim().is_empty() => HostSecurityPolicy::default(),
+                Ok(s) => match serde_json::from_str(s) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        return make_error_result(&format!("JSON host policy invalid: {}", e), 0);
+                    }
+                },
+                Err(e) => {
+                    return make_error_result(&format!("JSON host policy not valid UTF-8: {}", e), 0);
+                }
+            }
+        };
+
+        let effective_caps = match host_policy.intersect(&skill_ref.doc.manifest.capabilities) {
+            Ok(c) => c,
+            Err(e) => {
+                return make_error_result(&format!("Host security policy error: {}", e), 0);
+            }
+        };
+        let effective_limits = host_policy.effective_limits(&skill_ref.doc.manifest.limits);
+
         let security = ConfinedSecurityContext::from_capabilities(
-            &skill_ref.doc.manifest.capabilities,
-            skill_ref.doc.manifest.limits.max_fuel_opcodes,
+            &effective_caps,
+            effective_limits.max_fuel_opcodes,
         );
 
-        match rt_ref.engine.execute(
-            &skill_ref.doc.deterministic_code,
-            &ep,
+        let executor = SkillExecutor::new(&rt_ref.engine, &security);
+
+        match executor.execute(
+            &skill_ref.doc,
+            Some(&ep),
             &args_val,
-            &security,
-            &skill_ref.doc.manifest.limits,
+            &effective_limits,
         ) {
             Ok(exec_res) => {
                 let duration_ns = start.elapsed().as_nanos() as u64;
@@ -177,6 +205,20 @@ pub unsafe extern "C" fn asl_skill_execute(
     }));
 
     result.unwrap_or_else(|_| make_error_result("Panic caught during in-process execution.", 0))
+}
+
+/// Executa um entrypoint da skill com argumentos JSON e política de segurança padrão do host.
+///
+/// # Safety
+/// Os ponteiros passados devem ser válidos ou nulos. Strings devem ser terminadas em nulo (UTF-8).
+#[no_mangle]
+pub unsafe extern "C" fn asl_skill_execute(
+    rt: *mut asl_runtime_t,
+    skill: *mut asl_skill_t,
+    entrypoint: *const c_char,
+    json_args: *const c_char,
+) -> *mut asl_exec_result_t {
+    asl_skill_execute_with_policy(rt, skill, entrypoint, json_args, std::ptr::null())
 }
 
 /// Libera o resultado da execução e a string JSON associada.
@@ -269,6 +311,58 @@ def calc(ctx, input):
             asl_runtime_free(std::ptr::null_mut());
             asl_skill_free(std::ptr::null_mut());
             asl_exec_result_free(std::ptr::null_mut());
+        }
+    }
+
+    #[test]
+    fn test_ffi_schema_validation_and_policy() {
+        const SCHEMA_SKILL: &str = r#"---
+asl_version: "3.0"
+name: "ffi-schema-skill"
+description: "Skill with input schema"
+interface:
+  entrypoint: "check"
+  input_schema:
+    type: "object"
+    required: ["code"]
+    properties:
+      code:
+        type: "string"
+---
+# Semantic Section
+Validates input.
+
+```asl
+def check(ctx, input):
+    return {"accepted": input["code"]}
+```
+"#;
+        unsafe {
+            let rt = asl_runtime_init();
+            let c_src = CString::new(SCHEMA_SKILL).unwrap();
+            let skill = asl_skill_load(rt, c_src.as_ptr());
+            assert!(!skill.is_null());
+
+            // 1. Invalid input schema (code is integer, expected string)
+            let bad_args = CString::new(r#"{"code": 12345}"#).unwrap();
+            let res_bad = asl_skill_execute(rt, skill, std::ptr::null(), bad_args.as_ptr());
+            assert_eq!((*res_bad).success, 0);
+            let out_str = CStr::from_ptr((*res_bad).json_output).to_str().unwrap();
+            assert!(out_str.contains("schema validation failed") || out_str.contains("SchemaViolation"));
+            asl_exec_result_free(res_bad);
+
+            // 2. Valid input schema with policy
+            let good_args = CString::new(r#"{"code": "secret"}"#).unwrap();
+            let policy = CString::new(r#"{"allowed_fs_read_paths": [], "allowed_fs_write_paths": []}"#).unwrap();
+            let res_good = asl_skill_execute_with_policy(rt, skill, std::ptr::null(), good_args.as_ptr(), policy.as_ptr());
+            assert_eq!((*res_good).success, 1);
+            let good_out = CStr::from_ptr((*res_good).json_output).to_str().unwrap();
+            let val: Value = serde_json::from_str(good_out).unwrap();
+            assert_eq!(val["accepted"], "secret");
+            asl_exec_result_free(res_good);
+
+            asl_skill_free(skill);
+            asl_runtime_free(rt);
         }
     }
 }

@@ -210,11 +210,11 @@ mod tests {
         fn read_file(&self, _path: &str) -> Result<Option<String>> {
             Ok(None)
         }
-        fn sha256(&self, _data: &str) -> String {
-            "".to_string()
+        fn sha256(&self, _data: &str) -> Result<String> {
+            Ok("".to_string())
         }
-        fn base64_encode(&self, data: &str) -> String {
-            data.to_string()
+        fn base64_encode(&self, data: &str) -> Result<String> {
+            Ok(data.to_string())
         }
         fn base64_decode(&self, encoded: &str) -> Result<String> {
             Ok(encoded.to_string())

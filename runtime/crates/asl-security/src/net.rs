@@ -179,25 +179,46 @@ pub fn execute_http_request(
     }
 }
 
-/// Checks if a host/IP is private (RFC 1918), loopback, link-local (cloud metadata), or unspecified
+use std::net::ToSocketAddrs;
+
+/// Checks if an IP address is private (RFC 1918), loopback, link-local (cloud metadata), or unspecified
+pub fn is_prohibited_ip(ip: &std::net::IpAddr) -> bool {
+    match ip {
+        std::net::IpAddr::V4(ipv4) => {
+            ipv4.is_loopback()
+                || ipv4.is_private()
+                || ipv4.is_link_local()
+                || ipv4.is_broadcast()
+                || ipv4.is_unspecified()
+                || ipv4.octets() == [169, 254, 169, 254]
+        }
+        std::net::IpAddr::V6(ipv6) => {
+            ipv6.is_loopback()
+                || ipv6.is_unspecified()
+                || (ipv6.segments()[0] & 0xfe00) == 0xfc00
+                || (ipv6.segments()[0] & 0xffc0) == 0xfe80
+        }
+    }
+}
+
+/// Checks if a host/IP is private (RFC 1918), loopback, link-local (cloud metadata), or unspecified,
+/// including pre-connection DNS resolution checks to mitigate DNS rebinding SSRF.
 pub fn is_private_or_metadata_host(host: &str) -> bool {
     if host.eq_ignore_ascii_case("localhost") {
         return true;
     }
     if let Ok(ip) = host.parse::<std::net::IpAddr>() {
-        match ip {
-            std::net::IpAddr::V4(ipv4) => {
-                ipv4.is_loopback()
-                    || ipv4.is_private()
-                    || ipv4.is_link_local()
-                    || ipv4.is_broadcast()
-                    || ipv4.is_unspecified()
-            }
-            std::net::IpAddr::V6(ipv6) => ipv6.is_loopback() || ipv6.is_unspecified(),
-        }
-    } else {
-        false
+        return is_prohibited_ip(&ip);
     }
+    let check_target = format!("{}:80", host);
+    if let Ok(addrs) = check_target.to_socket_addrs() {
+        for addr in addrs {
+            if is_prohibited_ip(&addr.ip()) {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 #[cfg(test)]

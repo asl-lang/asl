@@ -23,20 +23,20 @@ A arquitetura concebida por Jean Catarina fundamenta-se nos avanços e preceitos
    - A prosa de linguagem natural foi estruturada em papéis semânticos rígidos (*Intent*, *Activation Criteria*, *Security Boundary*, *Few-Shot Exemplars*), eliminando ruído estocástico na interpretação da IA.
 2. **Término Algébrico e Lógica Temporal (Princípio de Lamport)**:
    - O término da execução foi formalmente provado por meio de uma **Função Variante Monotônica Decrescente** atrelada a *Fuel Metering* de bytecode, prevenindo livelocks sem depender de relógio de parede.
-3. **Subtipagem Estrutural Comportamental (Princípio de Liskov)**:
-   - Estabelecimento de **Subtipagem Estrutural Comportamental** (entradas contravariantes e saídas covariantes) com `Result[T, E]` nativo, permitindo evolução segura de versões do `.skill`.
+3. **Validação Estrutural nas Fronteiras de Execução**:
+   - Validação estrita de contratos de dados via **JSON Schema** (entradas e saídas) com envelopes padronizados de diagnóstico (`ExecutionResult`), eliminando panics não tratados entre a fronteira do agente e o runtime.
 4. **Segurança por Objetos-Capacidade (Princípio de Mark S. Miller)**:
-   - Eliminação de ataques do Vice-Confuso (*Confused Deputy*) substituindo strings de caminhos por **Handles de Diretório Atenuados**, impedindo fuga de symlinks fora do workspace.
+   - Eliminação de autoridade ambiente e defesa contra o Vice-Confuso (*Confused Deputy*) através de **Políticas Explícitas do Host**, normalização léxica e confinamento canônico de caminhos.
 5. **O Problema do Confinamento (Teorema de Butler Lampson)**:
-   - Resolução do **Problema do Confinamento** (Lampson 1973), normalizando envelopes de erro e eliminando vazamento de dados através de Canais Ocultos (*Covert Channels*).
-6. **Defesa em Profundidade contra Injeção Indireta (Constitutional AI)**:
-   - Proteção contra **Injeção Indireta de Prompt** usando rastreamento de mancha (*Taint Tracking*) e encapsulamento em tags `<asl:untrusted_content>`.
+   - Mitigação do **Problema do Confinamento** (Lampson 1973), normalizando envelopes de erro e eliminando vazamento de dados através de Canais Ocultos (*Covert Channels*).
+6. **Defesa em Profundidade contra Injeção Indireta**:
+   - Delimitação estrita do raio de explosão (*blast radius*) de **Injeção Indireta de Prompt** usando isolamento OCap, sandboxing de rede com verificação prévia de DNS e restrição de sistema de arquivos.
 7. **Otimização de Prefixo Estático e Dinâmica de KV-Cache**:
-   - Implementação da **Otimização de Prefixo Estático Imutável**, garantindo **100% de reuso de KV-Cache** em servidores modernos de inferência (vLLM, SGLang, TensorRT).
+   - Implementação da **Otimização de Prefixo Estático Imutável**, maximizando o reaproveitamento de **KV-Cache** em servidores modernos de inferência (vLLM, SGLang, TensorRT).
 8. **Compilação AOT de Gramáticas e Token Masking**:
    - Substituição de validação post-hoc em runtime por **Compilação AOT de Gramáticas (CFG / GBNF)**, forçando o LLM a ter 0% de erro sintático no primeiro turno.
-9. **Extensibilidade via WebAssembly Component Model**:
-   - Padronização da conexão de componentes binários de alta performance através de **Interface Types (WIT)** do **WASI Preview 2**.
+9. **Extensibilidade via WebAssembly (`wasm-core`)**:
+   - Execução determinística em WebAssembly com medição de combustível via `wasmi`, com roadmap de evolução para WASI Component Model / WIT.
 10. **Resiliência e Engenharia de Baixo Nível em Rust**:
     - Blindagem da biblioteca `libasl` com **Barreiras de Captura de Pânico (`catch_unwind`)** e **Arenas de Memória Isoladas**, garantindo zero panics na C-ABI e observabilidade nativa DTrace/eBPF.
 
@@ -47,10 +47,10 @@ A arquitetura concebida por Jean Catarina fundamenta-se nos avanços e preceitos
 | Métrica / Recurso | Padrão Legado (`SKILL.md` + Scripts) | ASL v1 / v2 | ASL 3.0 (Jean Catarina / Cadente) |
 | :--- | :--- | :--- | :--- |
 | **Tokens por Invocação** | $\sim 2.100\text{ tokens}$ | $\sim 550\text{ tokens}$ | **$\sim 140\text{ tokens}$ ($-93.2\%$)** |
-| **Reuso de KV-Cache** | Desalinhado / Invalidação frequente | Parcial | **$100\%$ (Prefixo Estático Bit-a-Bit)** |
+| **Reuso de KV-Cache** | Desalinhado / Invalidação frequente | Parcial | **Otimizado (Prefixo Estático Bit-a-Bit)** |
 | **Latência por Execução** | $195\text{ ms}$ (Python/Node) | $1.8\text{ ms}$ (CLI) | **$< 0.035\text{ ms}$ ($35\ \mu\text{s}$ via FFI)** |
 | **Garantia Sintática no LLM** | Nula / Erros em runtime | JSON Schema pós-geração | **Gramática CFG/GBNF (0% de erro)** |
-| **Protocolo de Integração** | Scripts bash soltos | CLI customizado | **Nativo MCP + WASI Preview 2 WIT** |
+| **Protocolo de Integração** | Scripts bash soltos | CLI customizado | **Nativo MCP + WASM Core (Roadmap WASI WIT)** |
 | **Estabilidade de FFI** | Inexistente | Básica | **Imune a Panics (C-ABI com Arenas)** |
 
 ### 🔬 Como é Metrificada a Redução de 93.2% de Tokens? (Fundamentação Científica)

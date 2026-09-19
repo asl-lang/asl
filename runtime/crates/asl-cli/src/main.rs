@@ -45,6 +45,22 @@ enum Commands {
         #[arg(long)]
         allowed_root: Vec<PathBuf>,
 
+        /// Allowed network domains for Host Policy
+        #[arg(long)]
+        allow_domain: Vec<String>,
+
+        /// Allowed environment keys for Host Policy
+        #[arg(long)]
+        allow_env: Vec<String>,
+
+        /// Path to host security policy file (JSON or YAML)
+        #[arg(long)]
+        policy: Option<PathBuf>,
+
+        /// Enables permissive host policy for testing/dev (grants all capabilities)
+        #[arg(long)]
+        permissive: bool,
+
         /// Skips automatic Markdown shadow projection
         #[arg(long)]
         no_shadow: bool,
@@ -88,6 +104,26 @@ enum Commands {
         /// Port for HTTP server (only used when --transport http)
         #[arg(short, long, default_value = "8080")]
         port: u16,
+
+        /// Allowed host roots for intersection with requested capabilities
+        #[arg(long)]
+        allowed_root: Vec<PathBuf>,
+
+        /// Allowed network domains for Host Policy
+        #[arg(long)]
+        allow_domain: Vec<String>,
+
+        /// Allowed environment keys for Host Policy
+        #[arg(long)]
+        allow_env: Vec<String>,
+
+        /// Path to host security policy file (JSON or YAML)
+        #[arg(long)]
+        policy: Option<PathBuf>,
+
+        /// Enables permissive host policy for testing/dev
+        #[arg(long)]
+        permissive: bool,
     },
 
     /// Compiles .skill JSON schema into LLM constrained sampling grammars
@@ -237,6 +273,10 @@ fn main() -> Result<()> {
             entrypoint,
             input,
             allowed_root,
+            allow_domain,
+            allow_env,
+            policy,
+            permissive,
             no_shadow,
         } => {
             prefix_cmds::handle_run(
@@ -244,6 +284,10 @@ fn main() -> Result<()> {
                 entrypoint,
                 &input,
                 &allowed_root,
+                &allow_domain,
+                &allow_env,
+                policy.as_deref(),
+                permissive,
                 no_shadow,
                 &parser,
                 &engine,
@@ -267,8 +311,25 @@ fn main() -> Result<()> {
             transport,
             host,
             port,
+            allowed_root,
+            allow_domain,
+            allow_env,
+            policy,
+            permissive,
         } => {
-            server_cmds::handle_serve(&path, &transport, &host, port, &parser, &engine)?;
+            server_cmds::handle_serve(
+                &path,
+                &transport,
+                &host,
+                port,
+                &allowed_root,
+                &allow_domain,
+                &allow_env,
+                policy.as_deref(),
+                permissive,
+                &parser,
+                &engine,
+            )?;
         }
 
         Commands::CompileGrammar { skill_file, format } => {

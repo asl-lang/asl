@@ -200,10 +200,10 @@ $$\mathbf{v}_{\mathcal{S}} = \text{Encoder}\left( \text{Manifest.Name} \ \Vert \
 | Dimensão Científica | Abordagem Legada (Scripts Python / Bash Soltos) | Abordagem Monolítica (Todas as skills no Prompt) | Abordagem ASL + MCP Gateway | Abordagem ASL + Two-Tier Paging |
 | :--- | :--- | :--- | :--- | :--- |
 | **Sobrecarga de Contexto** | Desconhecida (Agente navega diretórios via `ls`/`cat`) | Catastrófica ($> 100\text{k}$ tokens) | **Mínima** (Apenas esquemas JSON) | **Quase nula** (~$25$ tokens/skill) |
-| **Taxa de Acerto de KV-Cache** | $0\%$ (Comandos dinâmicos poluem histórico) | $0\%$ (Saturação e alterações frequentes) | **$85\% - 95\%$** (Prefixo estável de tools) | **$100\%$** (Tabela imutável no topo) |
+| **Taxa de Acerto de KV-Cache** | $0\%$ (Comandos dinâmicos poluem histórico) | $0\%$ (Saturação e alterações frequentes) | **$85\% - 95\%$** (Prefixo estável de tools) | **Otimizado** (Tabela imutável no topo) |
 | **Garantia de Tipagem** | Nula (Strings brutas em stdout) | Baixa (Texto livre) | **Rigorosa** (JSON Schema via MCP) | **Rigorosa** (Gramáticas GBNF/Regex AOT) |
 | **Resiliência a Falhas** | Baixa (Scripts falham por dependências de OS) | Média (Alucinação frequente) | **Alta** (Runtime Rust embutido) | **Máxima** (Execução local determinística) |
-| **Imunidade a Injeção** | Nula (RCE direta no shell) | Nula (Prompt injection) | **Total** (Sandbox de Capabilities ocap) | **Total** (Sandbox de Capabilities ocap) |
+| **Confinamento de Injeção** | Nula (RCE direta no shell) | Nula (Prompt injection) | **Alto** (Delimitação de blast radius OCap) | **Alto** (Delimitação de blast radius OCap) |
 
 ---
 

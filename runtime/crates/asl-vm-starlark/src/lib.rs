@@ -51,7 +51,7 @@ fn asl_natives(builder: &mut GlobalsBuilder) {
             .extra
             .and_then(|e| e.downcast_ref::<StarlarkContextExtra>())
             .ok_or_else(|| anyhow::anyhow!("ASL context not configured"))?;
-        Ok(extra.context.file_exists(path))
+        extra.context.file_exists(path).map_err(|e| anyhow::anyhow!("Fuel/Ocap error: {}", e))
     }
 
     fn asl_native_fs_list(path: &str, eval: &mut Evaluator) -> anyhow::Result<Vec<String>> {
@@ -70,7 +70,7 @@ fn asl_natives(builder: &mut GlobalsBuilder) {
             .extra
             .and_then(|e| e.downcast_ref::<StarlarkContextExtra>())
             .ok_or_else(|| anyhow::anyhow!("ASL context not configured"))?;
-        Ok(extra.context.sha256(data))
+        extra.context.sha256(data).map_err(|e| anyhow::anyhow!("Fuel limit exceeded: {}", e))
     }
 
     fn asl_native_base64_encode(data: &str, eval: &mut Evaluator) -> anyhow::Result<String> {
@@ -78,7 +78,7 @@ fn asl_natives(builder: &mut GlobalsBuilder) {
             .extra
             .and_then(|e| e.downcast_ref::<StarlarkContextExtra>())
             .ok_or_else(|| anyhow::anyhow!("ASL context not configured"))?;
-        Ok(extra.context.base64_encode(data))
+        extra.context.base64_encode(data).map_err(|e| anyhow::anyhow!("Fuel limit exceeded: {}", e))
     }
 
     fn asl_native_base64_decode(encoded: &str, eval: &mut Evaluator) -> anyhow::Result<String> {
@@ -208,9 +208,40 @@ impl Default for StarlarkEngine {
     }
 }
 
+fn build_globals(with_host: bool) -> starlark::environment::Globals {
+    let mut b = GlobalsBuilder::standard().with(asl_pure_natives);
+    if with_host {
+        b = b.with(asl_natives);
+    }
+    for ext in [LibraryExtension::Json, LibraryExtension::StructType, LibraryExtension::Map, LibraryExtension::Filter] {
+        ext.add(&mut b);
+    }
+    b.build()
+}
+
 impl EnginePort for StarlarkEngine {
     fn name(&self) -> &'static str {
         "starlark-hermetic"
+    }
+
+    fn validate(&self, code: &str, entrypoint: &str) -> Result<()> {
+        let dialect = Dialect::Standard;
+        let ast = AstModule::parse("ASL Code", code.to_string(), &dialect)
+            .map_err(|e| AslError::StarlarkError(sanitizer::sanitize_error(&e.to_string())))?;
+        let user_globals = build_globals(false);
+        Module::with_temp_heap(|m| {
+            let mut eval = Evaluator::new(&m);
+            eval.eval_module(ast, &user_globals)
+                .map_err(|e| AslError::StarlarkError(sanitizer::sanitize_error(&e.to_string())))?;
+            match m.get(entrypoint) {
+                Some(val) if val.get_type() == "function" => Ok(()),
+                Some(_) => Err(AslError::StarlarkError(format!(
+                    "Entrypoint '{}' is declared but is not a function",
+                    entrypoint
+                ))),
+                None => Err(AslError::EntrypointNotFound(entrypoint.to_string())),
+            }
+        })
     }
 
     fn execute(
@@ -224,33 +255,36 @@ impl EnginePort for StarlarkEngine {
         let start_time = Instant::now();
         let timeout_dur = std::time::Duration::from_millis(limits.wall_clock_timeout_ms);
         let dialect = Dialect::Standard;
-
-        let mut host_builder = GlobalsBuilder::standard().with(asl_natives).with(asl_pure_natives);
-        for ext in [
-            LibraryExtension::Json,
-            LibraryExtension::StructType,
-            LibraryExtension::Map,
-            LibraryExtension::Filter,
-        ] {
-            ext.add(&mut host_builder);
-        }
-        let host_globals = host_builder.build();
-
-        let mut user_builder = GlobalsBuilder::standard().with(asl_pure_natives);
-        for ext in [
-            LibraryExtension::Json,
-            LibraryExtension::StructType,
-            LibraryExtension::Map,
-            LibraryExtension::Filter,
-        ] {
-            ext.add(&mut user_builder);
-        }
-        let user_globals = user_builder.build();
+        let host_globals = build_globals(true);
+        let user_globals = build_globals(false);
 
         let context_extra = StarlarkContextExtra { context, limits };
 
-        Module::with_temp_heap(|module| {
-            let mut eval = Evaluator::new(&module);
+        let host_frozen = Module::with_temp_heap(|host_module| -> Result<starlark::environment::FrozenModule> {
+            {
+                let mut host_eval = Evaluator::new(&host_module);
+                host_eval.extra = Some(&context_extra);
+                let prelude_ast = AstModule::parse("host_prelude", prelude::host_prelude_script().to_string(), &dialect)
+                    .map_err(|e| AslError::StarlarkError(sanitizer::sanitize_error(&e.to_string())))?;
+                host_eval.eval_module(prelude_ast, &host_globals).map_err(|e| {
+                    AslError::StarlarkError(sanitizer::sanitize_error(&e.to_string()))
+                })?;
+            }
+            host_module.freeze().map_err(|e| {
+                AslError::StarlarkError(format!("Failed to freeze host module: {:?}", e))
+            })
+        })?;
+        let ctx_frozen = host_frozen.get("asl_ctx").map_err(|e| {
+            AslError::StarlarkError(format!("Failed to initialize capability context: {}", e))
+        })?;
+
+        Module::with_temp_heap(|user_module| {
+            let ctx_val = unsafe {
+                user_module.frozen_heap().add_reference(ctx_frozen.owner());
+                starlark::values::Value::new_frozen(ctx_frozen.unchecked_frozen_value())
+            };
+
+            let mut eval = Evaluator::new(&user_module);
             eval.extra = Some(&context_extra);
 
             if limits.max_fuel_opcodes > 0 {
@@ -260,19 +294,6 @@ impl EnginePort for StarlarkEngine {
                 let _ = eval.set_max_heap_size((limits.max_heap_kib * 1024) as usize);
             }
             eval.set_check_cancelled(Box::new(move || start_time.elapsed() > timeout_dur));
-
-            let prelude_ast = AstModule::parse("host_prelude", prelude::host_prelude_script().to_string(), &dialect)
-                .map_err(|e| AslError::StarlarkError(sanitizer::sanitize_error(&e.to_string())))?;
-            eval.eval_module(prelude_ast, &host_globals).map_err(|e| {
-                if start_time.elapsed() > timeout_dur {
-                    AslError::LimitExceeded(format!("Wall-clock timeout of {}ms exceeded", limits.wall_clock_timeout_ms))
-                } else {
-                    AslError::StarlarkError(sanitizer::sanitize_error(&e.to_string()))
-                }
-            })?;
-            let ctx_val = module.get("asl_ctx").ok_or_else(|| {
-                AslError::StarlarkError("Failed to initialize capability context".to_string())
-            })?;
 
             let stdlib_ast = AstModule::parse("pure_stdlib", prelude::pure_stdlib_script().to_string(), &dialect)
                 .map_err(|e| AslError::StarlarkError(sanitizer::sanitize_error(&e.to_string())))?;
@@ -290,7 +311,7 @@ impl EnginePort for StarlarkEngine {
                 }
             })?;
 
-            let entrypoint_fn = module.get(entrypoint).ok_or_else(|| {
+            let entrypoint_fn = user_module.get(entrypoint).ok_or_else(|| {
                 AslError::EntrypointNotFound(entrypoint.to_string())
             })?;
 
@@ -340,60 +361,44 @@ impl EnginePort for StarlarkEngine {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_starlark_engine_creation() {
-        let engine = StarlarkEngine;
-        assert_eq!(engine.name(), "starlark-hermetic");
+    struct TestCtx;
+    impl CapabilityContext for TestCtx {
+        fn read_file(&self, p: &str) -> Result<Option<String>> { Ok(if p == "test.txt" { Some("secret".into()) } else { None }) }
+        fn file_exists(&self, p: &str) -> Result<bool> { Ok(p == "test.txt") }
+        fn sha256(&self, _: &str) -> Result<String> { Ok("h".into()) }
+        fn base64_encode(&self, d: &str) -> Result<String> { Ok(d.into()) }
+        fn base64_decode(&self, e: &str) -> Result<String> { Ok(e.into()) }
+        fn env_var(&self, _: &str) -> Result<Option<String>> { Ok(None) }
+        fn http_request(&self, _: &str, _: &str, _: &[(String, String)], _: Option<&str>) -> Result<asl_core_traits::HttpResponsePayload> {
+            Ok(asl_core_traits::HttpResponsePayload { status: 200, headers: vec![], body: "{}".into() })
+        }
+        fn check_fuel(&self) -> Result<u64> { Ok(1_000_000) }
+        fn fuel_consumed(&self) -> u64 { 0 }
     }
 
     #[test]
-    fn test_two_stage_evaluation() {
-        let dialect = Dialect::Standard;
+    fn test_starlark_engine_creation() {
+        assert_eq!(StarlarkEngine.name(), "starlark-hermetic");
+    }
 
-        #[starlark_module]
-        fn host_natives(builder: &mut GlobalsBuilder) {
-            fn asl_native_secret() -> anyhow::Result<String> {
-                Ok("secret_value".to_string())
-            }
-        }
-        let mut host_builder = GlobalsBuilder::standard().with(host_natives);
-        LibraryExtension::StructType.add(&mut host_builder);
-        let host_globals = host_builder.build();
-        let user_globals = GlobalsBuilder::standard().build();
+    #[test]
+    fn test_no_ambient_authority_in_user_module() {
+        let engine = StarlarkEngine;
+        let limits = Limits::default();
+        let ctx = TestCtx;
 
-        Module::with_temp_heap(|module| {
-            let mut eval = Evaluator::new(&module);
+        // 1. Legal access via ctx argument succeeds
+        let good_code = "def run(ctx, input):\n    return ctx.fs.read('test.txt')\n";
+        let res = engine.execute(good_code, "run", &serde_json::json!({}), &ctx, &limits).unwrap();
+        assert_eq!(res.output, "secret");
 
-            let prelude_code = r#"
-def _get_val():
-    return asl_native_secret()
+        // 2. Malicious ambient access to asl_ctx must fail (not in user module scope)
+        let bad_code1 = "def run(ctx, input):\n    return asl_ctx.fs.read('test.txt')\n";
+        assert!(engine.execute(bad_code1, "run", &serde_json::json!({}), &ctx, &limits).is_err());
 
-ctx = struct(secret = _get_val)
-"#;
-            let prelude_ast = AstModule::parse("prelude", prelude_code.to_string(), &dialect).unwrap();
-            eval.eval_module(prelude_ast, &host_globals).unwrap();
-            let ctx = module.get("ctx").unwrap();
-            // Stage 2: Good user code evaluated with user_globals
-            let good_code = r#"
-def run(c):
-    return c.secret()
-"#;
-            let good_ast = AstModule::parse("good", good_code.to_string(), &dialect).unwrap();
-            eval.eval_module(good_ast, &user_globals).unwrap();
-
-            let run_fn = module.get("run").unwrap();
-            let res = eval.eval_function(run_fn, &[ctx], &[]).unwrap();
-            assert_eq!(res.unpack_str(), Some("secret_value"));
-
-            // Stage 3: Malicious user code attempting ambient access fails
-            let bad_code = r#"
-def bad(c):
-    return asl_native_secret()
-"#;
-            let bad_ast = AstModule::parse("bad", bad_code.to_string(), &dialect).unwrap();
-            let bad_eval_res = eval.eval_module(bad_ast, &user_globals);
-            assert!(bad_eval_res.is_err(), "bad_code must fail because asl_native_secret is not in user_globals");
-        });
+        // 3. Malicious ambient access to _asl_http_call must fail
+        let bad_code2 = "def run(ctx, input):\n    return _asl_http_call('GET', 'http://evil.com')\n";
+        assert!(engine.execute(bad_code2, "run", &serde_json::json!({}), &ctx, &limits).is_err());
     }
 
     #[test]
