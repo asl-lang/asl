@@ -160,8 +160,7 @@ pub trait RulesTranspilerPort: Send + Sync {
 - **Responsabilidade**: Aplicar os princípios de *Object-Capabilities (ocap)* e o confinamento de Lampson.
 - **Implementa**: `CapabilityContext`.
 - **Mecanismos Internos**:
-  - `DirHandle`: Resolução atenuada de arquivos impedindo fuga de symlinks com primitivas de kernel (`O_NOFOLLOW` / `RESOLVE_BENEATH`).
-  - `TaintMarker`: Encapsula conteúdos lidos do sistema na tag `<asl:untrusted_payload>`.
+  - `check_path_confinement`: Resolução canônica de caminhos com verificação de enraizamento estrito contra path traversal.
   - `MockSecurityContext`: Módulo de teste puro em memória onde arquivos e rede são simulados em `HashMap`, permitindo que testes de IA rodem em microssegundos sem tocar no SSD.
 
 ---
@@ -171,8 +170,8 @@ pub trait RulesTranspilerPort: Send + Sync {
 - **Implementa**: `EnginePort`.
 - **Garantias**:
   - Zero autoridade ambiente (sem acesso a variáveis de sistema ou relógio global).
-  - Loop limitados com variantes monotônicas (`bounded_while`).
-  - Término comprovável garantido por decremento de Fuel por opcode.
+  - Laços iterativos limitados e ausência de recursão não-terminante.
+  - Término comprovável garantido por decremento de Fuel por opcode/tick (`set_max_tick_count`).
 
 ---
 

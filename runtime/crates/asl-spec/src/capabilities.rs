@@ -279,10 +279,12 @@ mod tests {
 
     #[test]
     fn test_host_security_policy_intersection() {
-        let mut policy = HostSecurityPolicy::default();
-        policy.allowed_fs_read_roots = vec!["/safe/dir".to_string()];
-        policy.allowed_domains = vec!["api.github.com".to_string()];
-        policy.allowed_env_keys = vec!["API_KEY".to_string()];
+        let policy = HostSecurityPolicy {
+            allowed_fs_read_roots: vec!["/safe/dir".to_string()],
+            allowed_domains: vec!["api.github.com".to_string()],
+            allowed_env_keys: vec!["API_KEY".to_string()],
+            ..Default::default()
+        };
 
         let mut requested = SkillCapabilities::default();
         requested.fs.confined_read_roots = vec!["/safe/dir/file.txt".to_string()];
